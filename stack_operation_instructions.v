@@ -36,8 +36,8 @@ Definition exts_independent_op (f : externals -> list EVMWord -> EVMWord) : Prop
 
 
 
-(* A total "table" *)
-Definition table (K V : Type) : Type := K -> V.
+(* A total "map" *)
+Definition map (K V : Type) : Type := K -> V.
 
 
 (* An implementation of a stack operation instructions *)
@@ -45,16 +45,16 @@ Inductive stack_op_impl :=
 | OpImp (n : nat) (f : externals -> list EVMWord -> EVMWord) (H_comm : option (commutative_op f)) (H_exts_ind: option (exts_independent_op f)).
 
 
-Definition stack_op_instr_table := table stack_op_instr stack_op_impl.
+Definition stack_op_instr_map := map stack_op_instr stack_op_impl.
 
-Definition empty_itable {A : Type} (def : A) : table stack_op_instr A :=
+Definition empty_imap {A : Type} (def : A) : map stack_op_instr A :=
   (fun _ =>  def).
 
-Definition updatei {A : Type} (m : table stack_op_instr A) (x : stack_op_instr) (v : A) :=
+Definition updatei {A : Type} (m : map stack_op_instr A) (x : stack_op_instr) (v : A) :=
   fun x' => if x =?i x' then v else m x'.
 
 Notation "x '|->i' v ';' m" := (updatei m x v) (at level 100, v at next level, right associativity).
-Notation "x '|->i' v" := (updatei (empty_itable (OpImp 0 (fun (_:externals) (_:list EVMWord) => WZero) None None)) x v) (at level 100).
+Notation "x '|->i' v" := (updatei (empty_imap (OpImp 0 (fun (_:externals) (_:list EVMWord) => WZero) None None)) x v) (at level 100).
 
 
 
@@ -489,7 +489,7 @@ Proof.
 Qed.
 
 
-Definition evm_stack_opm : stack_op_instr_table :=
+Definition evm_stack_opm : stack_op_instr_map :=
   ADD |->i OpImp 2 evm_add (Some add_comm) (Some add_exts_ind);
   MUL |->i OpImp 2 evm_mul (Some mul_comm) (Some mul_exts_ind);
   SUB |->i OpImp 2 evm_sub None (Some sub_exts_ind);

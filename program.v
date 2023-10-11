@@ -64,7 +64,7 @@ Inductive stack_op_instr :=
 | SELFBALANCE
 | BASEFEE
 | GAS
-| JUMPI.
+| JUMPI. (* This is implemented with a different semantics!! It does not really jump. We need it to handle blocks that end with JUMPI but their corresponding optimized one ends with JMP *)
 
 
 Definition eqb_stack_op_instr (a b: stack_op_instr) : bool :=
