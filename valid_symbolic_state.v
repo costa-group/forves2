@@ -35,11 +35,11 @@ Module ValidSymbolicState.
 Definition valid_sstack_value (maxidx: nat) (value : sstack_val) : Prop :=
   match value with
   | Val _ => True
-  | InStackVar _ => True
+  | InVar _ => True
   | FreshVar idx => idx < maxidx
   end.
 
-(* All InStackVar in the sstack are smaller than instk_height and all the 
+(* All InVar in the sstack are smaller than instk_height and all the 
    FreshVar in the sstack are less than maxidx *)
 Fixpoint valid_sstack (maxidx: nat) (sstk : sstack) : Prop :=
   match sstk with
@@ -94,18 +94,14 @@ Fixpoint valid_bindings (maxid: nat) (sb: sbindings) (ops: stack_op_instr_map): 
 Definition valid_smap (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): Prop :=
   valid_bindings maxidx sb ops.
 
-Definition valid_context (cs : constraints): Prop :=
-  exists (v : assignment), is_sat_assignment cs v = true.
 
 Definition valid_sstate (sst: sstate) (ops: stack_op_instr_map): Prop :=
-  let ctx := get_context_sst sst in
   let sstk := get_stack_sst sst in
   let smem := get_memory_sst sst in
   let sstrg := get_storage_sst sst in
   let m := get_smap_sst sst in
   let maxidx := get_maxidx_smap m in
   let sb := get_bindings_smap m in
-    valid_context ctx /\
     valid_smap maxidx sb ops /\ 
     valid_sstack maxidx sstk /\
     valid_smemory maxidx smem /\
@@ -636,7 +632,7 @@ Proof.
     destruct sv eqn:E_sv.
     + simpl. exists (SymBasicVal (Val val)). exists maxidx. exists [].
       split; try reflexivity.
-    + simpl. exists (SymBasicVal (InStackVar var)). exists maxidx. exists [].
+    + simpl. exists (SymBasicVal (InVar var)). exists maxidx. exists [].
       split; try reflexivity.
     + simpl in H_valid_bs.
       simpl in H_valid_sv.
@@ -644,7 +640,7 @@ Proof.
   - intros sv instk_height maxidx ops H_valid_sv H_valid_bs.
     destruct sv eqn:E_sv.
     + simpl. exists (SymBasicVal (Val val)). exists maxidx. exists (p :: sb'). split; try reflexivity.
-    + simpl. exists (SymBasicVal (InStackVar var)). exists maxidx. exists (p :: sb'). split; try reflexivity.
+    + simpl. exists (SymBasicVal (InVar var)). exists maxidx. exists (p :: sb'). split; try reflexivity.
     + destruct p as [key value].      
       simpl in H_valid_bs.
       destruct H_valid_bs as [H_valid_bs_0 [H_valid_bs_1 H_valid_bs_2]].

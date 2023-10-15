@@ -74,6 +74,11 @@ Inductive block_info :=
 Inductive sha3_info :=
 | SHA3Info (f: sha3_op) (H_sha3: (sha3_op_assumptions f)).
 
+Definition get_sha3_info_op (sha3 :sha3_info) :=
+  match sha3 with
+  | SHA3Info f _ => f
+  end.
+
 Inductive chunk :=
 | Chunk (size : nat) (content : word size).
 

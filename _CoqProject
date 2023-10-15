@@ -12,3 +12,8 @@ constraints.v
 symbolic_state.v
 eval_common.v
 symbolic_state_eval.v
+valid_symbolic_state.v
+symbolic_state_cmp.v
+memory_ops_solvers.v
+storage_ops_solvers.v
+symbolic_execution.v

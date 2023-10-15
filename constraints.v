@@ -26,24 +26,25 @@ Definition constraints : Type := list constraint.
 
 Definition assignment : Type := nat -> EVMWord.
 
-Definition is_sat_assignment_c (c : constraint) (v : assignment) : bool :=
+Definition is_model_c (c : constraint) (model : assignment) : bool :=
   true.
 
-Fixpoint is_sat_assignment (cs : constraints) (v : assignment) : bool :=
+Fixpoint is_model (cs : constraints) (model : assignment) : bool :=
   match cs with
   | [] => true
-  | c::cs' => if (is_sat_assignment_c c v) then is_sat_assignment cs' v else false
+  | c::cs' => if (is_model_c c model) then is_model cs' model else false
   end.
 
-Definition is_sat (cs : constraints) :=
-  true.
+Definition is_sat (cs : constraints) : Prop :=
+  exists (model : assignment), is_model cs model = true.
 
 Definition imp_checker : Type := constraints -> constraint -> bool.
 
 Definition imp_checker_snd (chkr : imp_checker) : Prop :=
   forall cs c,
     chkr cs c = true ->
-    forall v, is_sat_assignment cs v = true -> is_sat_assignment_c c v = true.
+    forall model, is_model cs model = true -> is_model_c c model = true.
 
 
 End Constraints.
+

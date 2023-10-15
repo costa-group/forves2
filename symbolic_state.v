@@ -11,9 +11,6 @@ Import Program.
 Require Import FORVES2.stack_operation_instructions.
 Import StackOpInstrs.
 
-Require Import FORVES2.constraints.
-Import Constraints.
-
 Require Import List.
 Import ListNotations.
 
@@ -24,7 +21,7 @@ Module SymbolicState.
 
 Inductive sstack_val : Type :=
 | Val (val: EVMWord)
-| InStackVar (var: nat)
+| InVar (var: nat)
 | FreshVar (var: nat).
 
 Definition sstack : Type := list sstack_val.
@@ -110,7 +107,7 @@ Definition not_basic_value_smv (smv: smap_value) :=
 Fixpoint follow_in_smap (sv: sstack_val) (maxidx: nat) (sb: sbindings) : option follow_in_smap_ret_t :=
   match sv with
   | Val v => Some (FollowSmapVal (SymBasicVal (Val v)) maxidx sb)
-  | InStackVar n => Some (FollowSmapVal (SymBasicVal (InStackVar n)) maxidx sb)
+  | InVar n => Some (FollowSmapVal (SymBasicVal (InVar n)) maxidx sb)
   | FreshVar idx =>
       match sb with
       | [] => None
@@ -129,86 +126,59 @@ Fixpoint follow_in_smap (sv: sstack_val) (maxidx: nat) (sb: sbindings) : option 
 (* Symbolic state: type, constructor, getters and setters *)
 
 Inductive sstate :=
-| SymExState (ctx: constraints) (sstk: sstack) (smem: smemory) (sstg: sstorage) (sexts : sexternals) (sm: smap).
+| SymExState (sstk: sstack) (smem: smemory) (sstg: sstorage) (sexts : sexternals) (sm: smap).
 
-Definition make_sst (ctx: constraints) (sstk: sstack) (smem: smemory) (sstrg: sstorage) (sexts : sexternals) (sm: smap) : sstate :=
-  SymExState ctx sstk smem sstrg sexts sm.
-
-(*
-Definition gen_empty_sstate (instk_height: nat) : sstate :=
-  let ids := seq 0 instk_height in
-  let sstk := List.map InStackVar ids in
-  make_sst instk_height sstk empty_smemory empty_sstorage empty_scontext empty_smap.
-
-Definition get_instk_height_sst (sst: sstate) : nat :=
-  match sst with
-  | SymExState instk_height _ _ _ _ _ => instk_height
-  end.
-
-Definition set_instk_height_sst (sst: sstate) (instk_height : nat) : sstate :=
-  match sst with
-  | SymExState _ sstk smem sstrg sctx sm => SymExState instk_height sstk smem sstrg sctx sm
-  end.
- *)
-
-Definition get_context_sst (sst: sstate) : constraints :=
-  match sst with
-  | SymExState ctx _ _ _ _ _ => ctx
-  end.
-
-Definition set_context_sst (sst: sstate) (ctx: constraints) : sstate :=
-  match sst with
-  | SymExState _ sstk smem sstrg sexts sm => SymExState ctx sstk smem sstrg sexts sm
-  end.
+Definition make_sst (sstk: sstack) (smem: smemory) (sstrg: sstorage) (sexts : sexternals) (sm: smap) : sstate :=
+  SymExState sstk smem sstrg sexts sm.
 
 Definition get_stack_sst (sst: sstate) : sstack :=
   match sst with
-  | SymExState _ sstk _ _ _ _ => sstk
+  | SymExState sstk _ _ _ _ => sstk
   end.
 
 Definition set_stack_sst (sst: sstate) (sstk: sstack) : sstate :=
   match sst with
-  | SymExState instk_height _ smem sstrg sctx sm => SymExState instk_height sstk smem sstrg sctx sm
+  | SymExState _ smem sstrg sctx sm => SymExState sstk smem sstrg sctx sm
   end.
 
 Definition get_memory_sst (sst: sstate) : smemory :=
   match sst with
-  | SymExState _ _ smem _ _ _ => smem
+  | SymExState _ smem _ _ _ => smem
   end.
 
 Definition set_memory_sst (sst: sstate) (smem: smemory) : sstate :=
   match sst with
-  | SymExState instk_height sstk _ sstrg sctx sm => SymExState instk_height sstk smem sstrg sctx sm
+  | SymExState sstk _ sstrg sctx sm => SymExState sstk smem sstrg sctx sm
   end.
 
 Definition get_storage_sst (sst : sstate) : sstorage :=
   match sst with
-  | SymExState _ _ _ sstrg _ _ => sstrg
+  | SymExState _ _ sstrg _ _ => sstrg
   end.
 
 Definition set_storage_sst (sst : sstate) (sstrg: sstorage) : sstate :=
   match sst with
-  | SymExState instk_height sstk smem _ sctx sm => SymExState instk_height sstk smem sstrg sctx sm
+  | SymExState sstk smem _ sctx sm => SymExState sstk smem sstrg sctx sm
   end.
 
 Definition get_externals_sst (sst : sstate) : sexternals :=
   match sst with
-  | SymExState _ _ _ _ sexts _ => sexts
+  | SymExState _ _ _ sexts _ => sexts
   end.
 
 Definition set_externals_sst (sst : sstate) (sexts: sexternals) : sstate :=
   match sst with
-  | SymExState ctx sstk smem sstrg _ sm => SymExState ctx sstk smem sstrg sexts sm
+  | SymExState sstk smem sstrg _ sm => SymExState sstk smem sstrg sexts sm
   end.
 
 Definition get_smap_sst (sst : sstate) : smap :=
   match sst with
-  | SymExState _ _ _ _ _ sm => sm
+  | SymExState _ _ _ _ sm => sm
   end.
 
 Definition set_smap_sst (sst : sstate) (sm: smap) : sstate :=
   match sst with
-  | SymExState ctx sstk smem sstrg sexts _ => SymExState ctx sstk smem sstrg sexts sm
+  | SymExState sstk smem sstrg sexts _ => SymExState sstk smem sstrg sexts sm
   end.
 
  
@@ -216,39 +186,6 @@ Definition set_smap_sst (sst : sstate) (sm: smap) : sstate :=
 
 (* Facts *)
 
-
-
-Lemma ctx_preserved_when_updating_stack_sst:
-  forall sst sstk,
-    get_context_sst (set_stack_sst sst sstk) = get_context_sst sst.
-Proof.
-  destruct sst.
-  reflexivity.
-Qed.
-
-Lemma context_preserved_when_updating_smap_sst:
-  forall sst m,
-    get_context_sst (set_smap_sst sst m) = get_context_sst sst.
-Proof.
-  destruct sst.
-  reflexivity.
-Qed.
-
-Lemma context_preserved_when_updating_storage_sst:
-  forall sst sstrg,
-    get_context_sst (set_storage_sst sst sstrg) = get_context_sst sst.
-Proof.
-  destruct sst.
-  reflexivity.
-Qed.
-
-Lemma context_preserved_when_updating_memory_sst:
-  forall sst smem,
-    get_context_sst (set_memory_sst sst smem) = get_context_sst sst.
-Proof.
-  destruct sst.
-  reflexivity.
-Qed.
 
 Lemma smap_preserved_when_updating_stack_sst:
   forall sst sstk,
