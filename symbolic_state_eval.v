@@ -129,9 +129,8 @@ Fixpoint eval_sstack_val' (d : nat) (sv : sstack_val) (model : assignment) (mem:
                         | None => None
                         | Some size =>
                             let mem := update_memory mem mem_updates in (* apply updates to the memory *)
-                            match (get_keccak256_exts exts) with
-                            | SHA3Info f_sha3 _ => Some (f_sha3 (wordToNat size) (mload' mem offset (wordToNat size))) (* ... apply it to the corresponding data *)
-                            end
+                            let f_sha3 := (get_sha3_info_op (get_keccak256_exts exts)) in (* get the sha3 function from the context and ... *)
+                            Some (f_sha3 (wordToNat size) (mload' mem offset (wordToNat size))) (* ... apply it to the corresponding data *)
                         end
                     end
                 end

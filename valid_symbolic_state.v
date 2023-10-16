@@ -39,8 +39,7 @@ Definition valid_sstack_value (maxidx: nat) (value : sstack_val) : Prop :=
   | FreshVar idx => idx < maxidx
   end.
 
-(* All InVar in the sstack are smaller than instk_height and all the 
-   FreshVar in the sstack are less than maxidx *)
+(* All the FreshVar in the sstack are less than maxidx *)
 Fixpoint valid_sstack (maxidx: nat) (sstk : sstack) : Prop :=
   match sstk with
   | [] => True
@@ -524,7 +523,7 @@ Proof.
 Qed.
 
 
-(* when adding a value of the map, it key is smaller that maxidx of th enew map *)
+(* when adding a value of the map, it key is smaller that maxidx of the new map *)
 Lemma add_to_smap_key_lt_maxidx:
   forall m m' key smv,
     (key,m') = add_to_smap m smv ->
