@@ -107,7 +107,7 @@ Definition valid_sstate (sst: sstate) (ops: stack_op_instr_map): Prop :=
     valid_smemory maxidx smem /\
     valid_sstorage maxidx sstrg.
 
-(*
+
 
 (*Lemma fresh_var_gt_map_maxidx_S:
   forall sb maxidx,
@@ -131,12 +131,12 @@ Qed.*)
 
 
 Lemma valid_sstack_app:
-  forall instk_height maxidx l1 l2,
-    valid_sstack instk_height maxidx l1 ->
-    valid_sstack instk_height maxidx l2 ->
-    valid_sstack instk_height maxidx (l1++l2).
+  forall maxidx l1 l2,
+    valid_sstack maxidx l1 ->
+    valid_sstack maxidx l2 ->
+    valid_sstack maxidx (l1++l2).
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction l1 as [|sv l1' IHl1'].
   - intros l2 H_l1 H_l2.
     simpl.
@@ -153,12 +153,12 @@ Proof.
 Qed.
 
 Lemma valid_sstack_app1:
-  forall instk_height maxidx l1 l2,
-    valid_sstack instk_height maxidx (l1++l2) ->
-    valid_sstack instk_height maxidx l1 /\
-    valid_sstack instk_height maxidx l2.
+  forall maxidx l1 l2,
+    valid_sstack maxidx (l1++l2) ->
+    valid_sstack maxidx l1 /\
+    valid_sstack maxidx l2.
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction l1 as [|sv l1' IHl1'].
   - intros l2 H_l1_l2.
     simpl.
@@ -179,29 +179,32 @@ Proof.
 Qed.
 
 Lemma valid_sstack_value_S_maxidx:
-  forall instk_height maxidx sv,
-    valid_sstack_value instk_height maxidx sv ->
-    valid_sstack_value instk_height (S maxidx) sv.
+  forall maxidx sv,
+    valid_sstack_value maxidx sv ->
+    valid_sstack_value (S maxidx) sv.
 Proof.
-  intros instk_height maxidx sv H_valid_sv.
+  intros maxidx sv H_valid_sv.
   destruct sv; simpl; try auto.
 Qed.
 
+(*
+(* TODO: This lemma becomes obsolete after removing instk_height *)
 Lemma valid_sstack_value_S_instk_height:
-  forall instk_height maxidx sv,
-    valid_sstack_value instk_height maxidx sv ->
-    valid_sstack_value (S instk_height) maxidx sv.
+  forall maxidx sv,
+    valid_sstack_value maxidx sv ->
+    valid_sstack_value  maxidx sv.
 Proof.
-  intros instk_height maxidx sv H_valid_sv.
+  intros maxidx sv H_valid_sv.
   destruct sv; simpl; try auto.
 Qed.
+ *)
 
 Lemma valid_sstack_S_maxidx:
-  forall instk_height maxidx l,
-    valid_sstack instk_height maxidx l ->
-    valid_sstack instk_height (S maxidx) l.
+  forall maxidx l,
+    valid_sstack maxidx l ->
+    valid_sstack (S maxidx) l.
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction l as [|sv l' IHl'].
   - intuition.
   - simpl.
@@ -212,12 +215,16 @@ Proof.
     + apply IHl'. apply H_l_1.
 Qed.
 
+
+(*
+(* TODO: This lemma becomes obsolete after removing instk_height *)
+
 Lemma valid_sstack_S_instk_height:
-  forall instk_height maxidx l,
-    valid_sstack instk_height maxidx l ->
-    valid_sstack (S instk_height) maxidx l.
+  forall maxidx l,
+    valid_sstack maxidx l ->
+    valid_sstack maxidx l.
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction l as [|sv l' IHl'].
   - intuition.
   - simpl.
@@ -227,7 +234,10 @@ Proof.
     + apply valid_sstack_value_S_instk_height. apply H_l_0.
     + apply IHl'. apply H_l_1.
 Qed.
+*)
 
+(*
+(* TODO: This lemma is not needed in its current form, we don't have gen_empty_state anymore. Should be replaced by something else later *)
 Lemma valid_empty_sstate:
   forall k ops, valid_sstate (gen_empty_sstate k) ops.
 Proof.
@@ -253,17 +263,17 @@ Proof.
   + simpl.
     intuition.
 Qed.
-
+*)
 
 
 Lemma add_to_smap_valid_smap:
-  forall instk_height idx m m' smv ops,
-    valid_smap instk_height (get_maxidx_smap m) (get_bindings_smap m) ops ->
-    valid_smap_value instk_height (get_maxidx_smap m) ops smv ->
+  forall idx m m' smv ops,
+    valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
+    valid_smap_value (get_maxidx_smap m) ops smv ->
     add_to_smap m smv = (idx, m') ->
-    valid_smap instk_height (get_maxidx_smap m') (get_bindings_smap m') ops.
+    valid_smap (get_maxidx_smap m') (get_bindings_smap m') ops.
 Proof. 
-  intros instk_height idx m m' smv ops H_valid_m H_valid_smv H_add.
+  intros idx m m' smv ops H_valid_m H_valid_smv H_add.
 
   destruct m as [maxidx sb] eqn:E_m.
   destruct m' as [maxidx' sb'] eqn:E_m'.
@@ -292,13 +302,13 @@ Proof.
 Qed. 
 
 Lemma add_to_smap_valid_sstack:
-  forall instk_height idx m m' smv sstk ops,
-    valid_sstack instk_height (get_maxidx_smap m) sstk ->
-    valid_smap_value instk_height (get_maxidx_smap m) ops smv ->
+  forall idx m m' smv sstk ops,
+    valid_sstack (get_maxidx_smap m) sstk ->
+    valid_smap_value (get_maxidx_smap m) ops smv ->
     add_to_smap m smv = (idx, m') ->
-    valid_sstack instk_height (get_maxidx_smap m') sstk.
+    valid_sstack (get_maxidx_smap m') sstk.
 Proof.
-  intros instk_height idx m m' smv sstk ops H_valid_sstk H_valid_smv H_add_to_map.
+  intros idx m m' smv sstk ops H_valid_sstk H_valid_smv H_add_to_map.
   destruct m as [maxid sb] eqn:E_m.
   destruct m' as [maxid' sb'] eqn:E_m'.
   assert (H_add_to_map' := H_add_to_map).
@@ -313,13 +323,13 @@ Proof.
 Qed.
 
 Lemma add_to_smap_valid_sstack_value:
-  forall instk_height idx m m' smv sv ops,
-    valid_sstack_value instk_height (get_maxidx_smap m) sv ->
-    valid_smap_value instk_height (get_maxidx_smap m) ops smv ->
+  forall idx m m' smv sv ops,
+    valid_sstack_value (get_maxidx_smap m) sv ->
+    valid_smap_value (get_maxidx_smap m) ops smv ->
     add_to_smap m smv = (idx, m') ->
-    valid_sstack_value instk_height (get_maxidx_smap m') sv.
+    valid_sstack_value (get_maxidx_smap m') sv.
 Proof.
-  intros instk_height idx m m' smv sv ops H_valid_sv H_valid_smv H_add_to_smap.
+  intros idx m m' smv sv ops H_valid_sv H_valid_smv H_add_to_smap.
   destruct m as [maxid sb] eqn:E_m.
   destruct m' as [maxid' sb'] eqn:E_m'.
   simpl.
@@ -349,11 +359,11 @@ Proof.
  *)
 
 Lemma valid_smemory_update_S_maxidx:
-  forall instk_height maxidx u,
-    valid_smemory_update instk_height maxidx u ->
-    valid_smemory_update instk_height (S maxidx) u.
+  forall maxidx u,
+    valid_smemory_update maxidx u ->
+    valid_smemory_update (S maxidx) u.
 Proof.
-  intros instk_height maxidx u H_valid_u.
+  intros maxidx u H_valid_u.
   destruct u as [offset value|offset value].
   - simpl.
     simpl in H_valid_u.
@@ -374,11 +384,11 @@ Proof.
 Qed.
 
 Lemma valid_smemory_S_maxidx:
-  forall instk_height maxidx smem,
-    valid_smemory instk_height maxidx smem ->
-    valid_smemory instk_height (S maxidx) smem.
+  forall maxidx smem,
+    valid_smemory maxidx smem ->
+    valid_smemory (S maxidx) smem.
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction smem as [|u smem' IHsmem'].
   - auto.
   - simpl.
@@ -390,13 +400,13 @@ Proof.
     + apply IHsmem'.
       apply H_valid_smem_1.
 Qed.
-    
+
 Lemma valid_sstorage_update_S_maxidx:
-  forall instk_height maxidx u,
-    valid_sstorage_update instk_height maxidx u ->
-    valid_sstorage_update instk_height (S maxidx) u.
+  forall maxidx u,
+    valid_sstorage_update maxidx u ->
+    valid_sstorage_update (S maxidx) u.
 Proof.
-  intros instk_height maxidx u H_valid_u.
+  intros maxidx u H_valid_u.
   destruct u as [offset value].
   simpl.
   simpl in H_valid_u.
@@ -409,11 +419,11 @@ Proof.
 Qed.
 
 Lemma valid_sstorage_S_maxidx:
-  forall instk_height maxidx sstrg,
-    valid_sstorage instk_height maxidx sstrg ->
-    valid_sstorage instk_height (S maxidx) sstrg.
+  forall maxidx sstrg,
+    valid_sstorage maxidx sstrg ->
+    valid_sstorage (S maxidx) sstrg.
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction sstrg as [|u sstrg' IHsstrg'].
   - auto.
   - simpl.
@@ -427,13 +437,13 @@ Proof.
 Qed.
 
 Lemma add_to_smap_valid_smemory:
-  forall instk_height idx m m' smv smem ops,
-    valid_smemory instk_height (get_maxidx_smap m) smem ->
-    valid_smap_value instk_height (get_maxidx_smap m) ops smv ->
+  forall idx m m' smv smem ops,
+    valid_smemory (get_maxidx_smap m) smem ->
+    valid_smap_value (get_maxidx_smap m) ops smv ->
     add_to_smap m smv = (idx, m') ->
-    valid_smemory instk_height (get_maxidx_smap m') smem.
+    valid_smemory (get_maxidx_smap m') smem.
 Proof.
-  intros instk_height idx m m' smv smem ops H_valid_smem H_valid_smv H_add_to_map.
+  intros idx m m' smv smem ops H_valid_smem H_valid_smv H_add_to_map.
   destruct m as [maxid sb] eqn:E_m.
   destruct m' as [maxid' sb'] eqn:E_m'.
   assert (H_add_to_map' := H_add_to_map).
@@ -448,13 +458,13 @@ Proof.
 Qed.
 
 Lemma add_to_smap_valid_sstorage:
-  forall instk_height idx m m' smv sstrg ops,
-    valid_sstorage instk_height (get_maxidx_smap m) sstrg ->
-    valid_smap_value instk_height (get_maxidx_smap m) ops smv ->
+  forall idx m m' smv sstrg ops,
+    valid_sstorage (get_maxidx_smap m) sstrg ->
+    valid_smap_value (get_maxidx_smap m) ops smv ->
     add_to_smap m smv = (idx, m') ->
-    valid_sstorage instk_height (get_maxidx_smap m') sstrg.
+    valid_sstorage (get_maxidx_smap m') sstrg.
 Proof.
-  intros instk_height idx m m' smv sstrg ops H_valid_sstrg H_valid_smv H_add_to_map.
+  intros idx m m' smv sstrg ops H_valid_sstrg H_valid_smv H_add_to_map.
   destruct m as [maxid sb] eqn:E_m.
   destruct m' as [maxid' sb'] eqn:E_m'.
   assert (H_add_to_map' := H_add_to_map).
@@ -471,7 +481,7 @@ Qed.
 Lemma add_to_map_valid_sstate:
   forall sst idx m smv ops,
     valid_sstate sst ops ->
-    valid_smap_value (get_instk_height_sst sst) (get_maxidx_smap (get_smap_sst sst)) ops smv ->
+    valid_smap_value (get_maxidx_smap (get_smap_sst sst)) ops smv ->
     (idx,m) = add_to_smap (get_smap_sst sst) smv ->
     valid_sstate (set_smap_sst sst m) ops.
 Proof. 
@@ -479,7 +489,6 @@ Proof.
 
   unfold valid_sstate.
   rewrite set_and_then_get_smap_sst.
-  rewrite instk_height_preserved_when_updating_smap_sst.
   rewrite sstack_preserved_when_updating_smap_sst.
   rewrite smemory_preserved_when_updating_smap_sst.
   rewrite sstorage_preserved_when_updating_smap_sst.
@@ -491,26 +500,26 @@ Proof.
 
   (* The case of smap *)
   - symmetry in H_add_to_smap.
-    pose proof (add_to_smap_valid_smap (get_instk_height_sst sst) idx (get_smap_sst sst) m smv ops H_valid_sst_0 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_smap.
+    pose proof (add_to_smap_valid_smap idx (get_smap_sst sst) m smv ops H_valid_sst_0 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_smap.
     apply H_add_to_smap_valid_smap.
 
   - split.
 
     (* The case of ssstack *)
     + symmetry in H_add_to_smap.
-      pose proof (add_to_smap_valid_sstack (get_instk_height_sst sst) idx (get_smap_sst sst) m smv (get_stack_sst sst) ops H_valid_sst_1 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_sstack.
+      pose proof (add_to_smap_valid_sstack idx (get_smap_sst sst) m smv (get_stack_sst sst) ops H_valid_sst_1 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_sstack.
       apply H_add_to_smap_valid_sstack.
 
     + split.
 
     (* The case of smemory *)
     * symmetry in H_add_to_smap.
-      pose proof (add_to_smap_valid_smemory (get_instk_height_sst sst) idx (get_smap_sst sst) m smv (get_memory_sst sst) ops  H_valid_sst_2 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_smemory.
+      pose proof (add_to_smap_valid_smemory idx (get_smap_sst sst) m smv (get_memory_sst sst) ops  H_valid_sst_2 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_smemory.
       apply H_add_to_smap_valid_smemory.
         
     (* The case of sstorage *)
     * symmetry in H_add_to_smap.
-      pose proof (add_to_smap_valid_sstorage (get_instk_height_sst sst) idx (get_smap_sst sst) m smv (get_storage_sst sst) ops H_valid_sst_3 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_sstorage.
+      pose proof (add_to_smap_valid_sstorage idx (get_smap_sst sst) m smv (get_storage_sst sst) ops H_valid_sst_3 H_valid_smap_value H_add_to_smap) as H_add_to_smap_valid_sstorage.
       apply H_add_to_smap_valid_sstorage.
 Qed.
 
@@ -533,16 +542,16 @@ Qed.
 
 
 Lemma valid_follow_in_smap:
-  forall sb sv instk_height maxidx ops smv maxidx' sb',
-    valid_sstack_value instk_height maxidx sv ->
-    valid_bindings instk_height maxidx sb ops ->
+  forall sb sv maxidx ops smv maxidx' sb',
+    valid_sstack_value maxidx sv ->
+    valid_bindings maxidx sb ops ->
     follow_in_smap sv maxidx sb = Some (FollowSmapVal smv maxidx' sb') ->
-    valid_smap_value instk_height maxidx' ops smv /\
-      valid_bindings instk_height maxidx' sb' ops /\
+    valid_smap_value maxidx' ops smv /\
+      valid_bindings maxidx' sb' ops /\
       (not_basic_value_smv smv = true -> maxidx > maxidx').
 Proof.
   induction sb as [|p sb'' IHsb''].
-  - intros sv instk_height maxidx ops smv maxidx' sb' H_valid_sv H_valid_sb H_follow.
+  - intros sv maxidx ops smv maxidx' sb' H_valid_sv H_valid_sb H_follow.
     destruct sv eqn:E_sv.
     + simpl in H_valid_sv.
       simpl in H_valid_sb.
@@ -564,7 +573,7 @@ Proof.
       simpl.
       split; try intuition.
     + discriminate.
-  - intros sv instk_height maxidx ops smv maxidx' sb' H_valid_sv H_valid_sb H_follow.
+  - intros sv maxidx ops smv maxidx' sb' H_valid_sv H_valid_sb H_follow.
     destruct sv eqn:E_sv.
     + simpl in H_valid_sv.
       simpl in H_valid_sb.
@@ -598,9 +607,9 @@ Proof.
            simpl in H_valid_sb_1.
            rewrite E_is_fresh_var_value in H_valid_sb_1.
 
-           assert(H_valid_sstack_value_FreshVar_idx': valid_sstack_value instk_height idx (FreshVar idx')). intuition.
+           assert(H_valid_sstack_value_FreshVar_idx': valid_sstack_value idx (FreshVar idx')). intuition.
 
-           pose proof (IHsb'' (FreshVar idx') instk_height idx ops smv maxidx' sb' H_valid_sstack_value_FreshVar_idx' H_valid_sb_2 H_follow) as IHsb''_0.
+           pose proof (IHsb'' (FreshVar idx') idx ops smv maxidx' sb' H_valid_sstack_value_FreshVar_idx' H_valid_sb_2 H_follow) as IHsb''_0.
            intuition.
            
         ** injection H_follow as  H_value H_idx H_sb''.
@@ -614,21 +623,21 @@ Proof.
                ***** intro H_not_basic_value.
                destruct value; try intuition.
       * apply Nat.eqb_neq in E_n_var.
-        assert(H_valid_sstack_value_FreshVar_idx': valid_sstack_value instk_height idx (FreshVar var)). simpl. intuition.
-        pose proof (IHsb'' (FreshVar var) instk_height idx ops smv maxidx' sb' H_valid_sstack_value_FreshVar_idx' H_valid_sb_2 H_follow) as IHsb''_0.
+        assert(H_valid_sstack_value_FreshVar_idx': valid_sstack_value idx (FreshVar var)). simpl. intuition.
+        pose proof (IHsb'' (FreshVar var) idx ops smv maxidx' sb' H_valid_sstack_value_FreshVar_idx' H_valid_sb_2 H_follow) as IHsb''_0.
         intuition.
 Qed.
 
 Lemma follow_in_smap_suc:
-  forall sb sv instk_height maxidx ops,
-    valid_sstack_value instk_height maxidx sv ->
-    valid_bindings instk_height maxidx sb ops ->
+  forall sb sv maxidx ops,
+    valid_sstack_value maxidx sv ->
+    valid_bindings maxidx sb ops ->
     exists smv maxidx' sb',
       follow_in_smap sv maxidx sb = Some (FollowSmapVal smv maxidx' sb') /\
         is_fresh_var_smv smv = None.
 Proof.
   induction sb as [| p sb' IHsb'].
-  - intros sv instk_height maxidx ops H_valid_sv H_valid_bs.
+  - intros sv maxidx ops H_valid_sv H_valid_bs.
     destruct sv eqn:E_sv.
     + simpl. exists (SymBasicVal (Val val)). exists maxidx. exists [].
       split; try reflexivity.
@@ -637,7 +646,7 @@ Proof.
     + simpl in H_valid_bs.
       simpl in H_valid_sv.
       intuition.
-  - intros sv instk_height maxidx ops H_valid_sv H_valid_bs.
+  - intros sv maxidx ops H_valid_sv H_valid_bs.
     destruct sv eqn:E_sv.
     + simpl. exists (SymBasicVal (Val val)). exists maxidx. exists (p :: sb'). split; try reflexivity.
     + simpl. exists (SymBasicVal (InVar var)). exists maxidx. exists (p :: sb'). split; try reflexivity.
@@ -648,7 +657,7 @@ Proof.
       simpl.
       destruct (key =? var) eqn:E_key_var.
       * destruct (is_fresh_var_smv value) as [idx'|] eqn:E_is_fresh_var_smv_value.
-        ** apply IHsb' with (instk_height:=instk_height)(ops:=ops).
+        ** apply IHsb' with (ops:=ops).
            *** simpl.
                destruct value; try discriminate.
                simpl in E_is_fresh_var_smv_value.
@@ -660,7 +669,7 @@ Proof.
         ** exists value. exists key. exists sb'.
            split; try reflexivity.
            apply E_is_fresh_var_smv_value.
-      * apply IHsb' with (instk_height:=instk_height)(ops:=ops).
+      * apply IHsb' with (ops:=ops).
         ** simpl.
            apply Nat.eqb_neq in E_key_var. intuition.
         ** apply H_valid_bs_2.
@@ -669,12 +678,12 @@ Qed.
 
 (* Elements (using nth_error) of a valid sstack are also valid *)
 Lemma valid_sstack_nth:
-  forall instk_height maxidx sstk sv k,
-    valid_sstack instk_height maxidx sstk ->
+  forall maxidx sstk sv k,
+    valid_sstack maxidx sstk ->
     nth_error sstk k = Some sv ->
-      valid_sstack_value instk_height maxidx sv.
+      valid_sstack_value maxidx sv.
 Proof.
-  intros instk_height maxidx sstk sv.
+  intros maxidx sstk sv.
   revert sstk.  
   induction sstk as [|a sstk' IHsstk'].
   - intros. destruct k; discriminate.
@@ -696,11 +705,11 @@ Qed.
 
 (* firstn of a valid sstack is valid *)
 Lemma valid_sstack_firstn:
-  forall instk_height maxidx sstk k,
-    valid_sstack instk_height maxidx sstk ->
-    valid_sstack instk_height maxidx (firstn k sstk).
+  forall maxidx sstk k,
+    valid_sstack maxidx sstk ->
+    valid_sstack maxidx (firstn k sstk).
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction sstk as [|a sstk' IHsstk'].
   - intros; destruct k; reflexivity.
   - intros k H_valid_sstk.
@@ -717,11 +726,11 @@ Qed.
 
 (* skipn of a valid sstack is valid *)
 Lemma valid_sstack_skipn:
-  forall instk_height maxidx sstk k,
-    valid_sstack instk_height maxidx sstk ->
-    valid_sstack instk_height maxidx (skipn k sstk).
+  forall maxidx sstk k,
+    valid_sstack maxidx sstk ->
+    valid_sstack maxidx (skipn k sstk).
 Proof.
-  intros instk_height maxidx.
+  intros maxidx.
   induction sstk as [|a sstk' IHsstk'].
   - intros; destruct k; reflexivity.
   - intros k H_valid_sstk.
@@ -739,12 +748,12 @@ Qed.
 
 (* sv::sstk is valid when sv and sstk are valid *)
 Lemma valid_sstack_cons:
-  forall instk_height maxidx sstk sv,
-    valid_sstack instk_height maxidx sstk ->
-    valid_sstack_value instk_height maxidx sv ->
-    valid_sstack instk_height maxidx (sv::sstk).
+  forall maxidx sstk sv,
+    valid_sstack maxidx sstk ->
+    valid_sstack_value maxidx sv ->
+    valid_sstack maxidx (sv::sstk).
 Proof.
-  intros instk_height maxidx sskt sv H_valid_sstk H_valid_sv.
+  intros maxidx sskt sv H_valid_sstk H_valid_sv.
   simpl.
   split.
   - apply H_valid_sv.
@@ -753,39 +762,39 @@ Qed.
 
 (* a memory update is valid when its ofsset and value are valid *)
 Lemma valid_smemory_update_ov:
-  forall instk_height maxidx soffset svalue,
-    valid_sstack_value instk_height maxidx soffset ->
-    valid_sstack_value instk_height maxidx svalue ->
-    valid_smemory_update instk_height maxidx (U_MSTORE sstack_val soffset svalue) /\
-      valid_smemory_update instk_height maxidx (U_MSTORE8 sstack_val soffset svalue).
+  forall maxidx soffset svalue,
+    valid_sstack_value maxidx soffset ->
+    valid_sstack_value maxidx svalue ->
+    valid_smemory_update maxidx (U_MSTORE sstack_val soffset svalue) /\
+      valid_smemory_update maxidx (U_MSTORE8 sstack_val soffset svalue).
 
 Proof.
-  intros instk_height maxidx soffset svalue H_valid_offset H_valid_value.
+  intros maxidx soffset svalue H_valid_offset H_valid_value.
   unfold valid_smemory_update.
   intuition.
 Qed.
 
 (* a memory is still valid when extended with a valid update *)
 Lemma valid_smemeory_when_extended_with_valid_update:
-  forall instk_height maxidx u smem,
-    valid_smemory_update instk_height maxidx u ->
-    valid_smemory instk_height maxidx smem ->
-    valid_smemory instk_height maxidx (u::smem).
+  forall maxidx u smem,
+    valid_smemory_update maxidx u ->
+    valid_smemory maxidx smem ->
+    valid_smemory maxidx (u::smem).
 Proof.
-  intros instk_height maxidx u smem H_valid_u H_valid_smem.
+  intros maxidx u smem H_valid_u H_valid_smem.
   simpl.
   intuition.
 Qed.
 
 (* a storage update is valid when its key and value are valid *)
 Lemma valid_sstorage_update_kv:
-  forall instk_height maxidx skey svalue,
-    valid_sstack_value instk_height maxidx skey ->
-    valid_sstack_value instk_height maxidx svalue ->
-    valid_sstorage_update instk_height maxidx (U_SSTORE sstack_val skey svalue).
+  forall maxidx skey svalue,
+    valid_sstack_value maxidx skey ->
+    valid_sstack_value maxidx svalue ->
+    valid_sstorage_update maxidx (U_SSTORE sstack_val skey svalue).
 
 Proof.
-  intros instk_height maxidx soffset svalue H_valid_skey H_valid_value.
+  intros maxidx soffset svalue H_valid_skey H_valid_value.
   unfold valid_sstorage_update.
   intuition.
 Qed.
@@ -793,23 +802,23 @@ Qed.
 
 (* a storage is still valid when extended with a valid update *)
 Lemma valid_sstorage_when_extended_with_valid_update:
-  forall instk_height maxidx u sstrg,
-    valid_sstorage_update instk_height maxidx u ->
-    valid_sstorage instk_height maxidx sstrg ->
-    valid_sstorage instk_height maxidx (u::sstrg).
+  forall maxidx u sstrg,
+    valid_sstorage_update maxidx u ->
+    valid_sstorage maxidx sstrg ->
+    valid_sstorage maxidx (u::sstrg).
 Proof.
-  intros instk_height maxidx u sstrg H_valid_u H_valid_sstrg.
+  intros maxidx u sstrg H_valid_u H_valid_sstrg.
   simpl.
   intuition.
 Qed.
 
 (* FreshVar idx is valid when idx < maxidx *)
 Lemma valid_sstack_val_freshvar:
-  forall instk_height maxidx idx,
+  forall maxidx idx,
     idx < maxidx ->
-    valid_sstack_value instk_height maxidx (FreshVar idx).
+    valid_sstack_value maxidx (FreshVar idx).
 Proof.
-  intros instk_height maxidx idx H_id_lt_maxid.
+  intros maxidx idx H_id_lt_maxid.
   simpl.
   apply H_id_lt_maxid.
 Qed.
@@ -820,21 +829,21 @@ Qed.
 (* Lemmas about generation of valid smap values *)
 
 Lemma metapush_valid_smv:
-  forall instk_height maxidx ops cat v,
-    valid_smap_value instk_height maxidx ops (SymMETAPUSH cat v).
+  forall maxidx ops cat v,
+    valid_smap_value maxidx ops (SymMETAPUSH cat v).
 Proof.
   intros.
   reflexivity.
 Qed.
 
 Lemma op_instr_valid_smv:
-  forall instk_height maxidx ops label nargs args f H1 H2,
-    valid_sstack instk_height maxidx args ->
+  forall maxidx ops label nargs args f H1 H2,
+    valid_sstack maxidx args ->
     ops label = OpImp nargs f H1 H2 ->
     length args = nargs ->
-    valid_smap_value instk_height maxidx ops (SymOp label args).
+    valid_smap_value maxidx ops (SymOp label args).
 Proof.
-  intros instk_height maxidx ops label nargs args f H1 H2 H_valid_args H_label H_len.
+  intros maxidx ops label nargs args f H1 H2 H_valid_args H_label H_len.
   simpl.
   unfold valid_stack_op_instr.
   rewrite H_label.
@@ -842,17 +851,17 @@ Proof.
   - apply H_len.
   - apply H_valid_args.
 Qed.
-  
+
 
 (* a memory update is valid when its key and value are valid *)
 Lemma sha3_smv:
-  forall instk_height maxidx ops smem soffset ssize,
-    valid_smemory instk_height maxidx smem -> (* The memory is valid *)
-    valid_sstack_value instk_height maxidx soffset ->
-    valid_sstack_value instk_height maxidx ssize ->
-    valid_smap_value instk_height maxidx ops (SymSHA3 soffset ssize smem).
+  forall maxidx ops smem soffset ssize,
+    valid_smemory maxidx smem -> (* The memory is valid *)
+    valid_sstack_value maxidx soffset ->
+    valid_sstack_value maxidx ssize ->
+    valid_smap_value maxidx ops (SymSHA3 soffset ssize smem).
 Proof.
-  intros instk_height maxidx ops smem soffset ssize H_valid_smem H_valid_soffset H_valid_ssize.
+  intros maxidx ops smem soffset ssize H_valid_smem H_valid_soffset H_valid_ssize.
   unfold valid_smap_value.
   split.
   - apply H_valid_soffset.
@@ -862,19 +871,19 @@ Proof.
 Qed.
 
 Lemma symsload_valid_smv:
-  forall instk_height maxidx skey sstrg ops,
-    valid_sstack_value instk_height maxidx skey ->
-    valid_sstorage instk_height maxidx sstrg ->
-    valid_smap_value instk_height maxidx ops (SymSLOAD skey sstrg).
+  forall maxidx skey sstrg ops,
+    valid_sstack_value maxidx skey ->
+    valid_sstorage maxidx sstrg ->
+    valid_smap_value maxidx ops (SymSLOAD skey sstrg).
 Proof.
-  intros instk_height maxidx skey sstrg ops H_valid_skey H_valid_sstrg.
+  intros maxidx skey sstrg ops H_valid_skey H_valid_sstrg.
   simpl.
   intuition.
 Qed.
 
 Lemma empty_sstrg_is_valid:
-  forall instk_height maxidx,
-    valid_sstorage instk_height maxidx empty_sstorage.
+  forall maxidx,
+    valid_sstorage maxidx empty_sstorage.
 Proof.
   intros.
   simpl.
@@ -882,14 +891,14 @@ Proof.
 Qed.
 
 Lemma valid_sstack_val_freshvar_Sn_n:
-  forall instk_height idx,
-    valid_sstack_value instk_height (S idx) (FreshVar idx).
+  forall idx,
+    valid_sstack_value (S idx) (FreshVar idx).
 Proof.
-  intros instk_height idx.
+  intros idx.
   simpl.
   intuition.
 Qed.
 
- *)
+
 
 End ValidSymbolicState.
