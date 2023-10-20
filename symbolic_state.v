@@ -27,6 +27,7 @@ Inductive sstack_val : Type :=
 Definition sstack : Type := list sstack_val.
 Definition empty_sstack : sstack := [].
 
+
 (* Symbolic memory *)
 
 Inductive memory_update (A : Type) : Type :=
