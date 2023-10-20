@@ -218,7 +218,7 @@ Definition get_keccak256_exts (c : externals) :=
   match c with
   | Exts _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ x _ _ _ _ _ => x
   end.
-
+ 
 Definition get_tags_exts (c : externals) :=
   match c with
   | Exts _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ x _ _ _ _ => x

@@ -151,12 +151,10 @@ Definition sstore_c (st : state) (ops : stack_op_instr_map) : option state :=
 Definition sha3_c (st : state) (ops : stack_op_instr_map) : option state :=
   match get_stack_st st with
   | offset::size::stk =>
-      match get_keccak256_exts (get_externals_st st) with
-        | SHA3Info f _ =>
-            let v := f (wordToNat size) (mload' (get_memory_st st) offset (wordToNat size)) in
-            let st' := set_stack_st st (v::stk) in
-            Some st'
-      end
+      let f := (get_sha3_info_op (get_keccak256_exts (get_externals_st st))) in
+      let v := f (wordToNat size) (mload' (get_memory_st st) offset (wordToNat size)) in
+      let st' := set_stack_st st (v::stk) in
+      Some st'
   | _ => None
   end.
 
