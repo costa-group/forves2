@@ -33,8 +33,8 @@ Import ListNotations.
 Module SymbolicExecution.
 
 
-Definition push_s (value : EVMWord) :=
-  fun (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) =>
+Definition push_s (value : EVMWord) (ctx: constraints) :=
+  fun (sst : sstate) (ops: stack_op_instr_map) =>
     let sstk := get_stack_sst sst in
     match push (Val value) sstk with
     | None => None

@@ -1430,42 +1430,42 @@ Proof.
   apply H_eval_sstorage.
 Qed.
 
-(*
+
 (* push_s is a sound symbolic transformer *)
 Lemma push_snd:
   forall w, snd_state_transformer (push_c w) (push_s w).
 Proof.
   intro w.
   unfold snd_state_transformer.
-  intros sst sst' ops H_valid_sst H_push_s.
+  intros ctx sst sst' ops H_is_sat H_valid_sst H_push_s.
   split.
 
   (* Validity *)
-  - pose proof (push_valid_sst sst sst' w ops H_valid_sst H_push_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (push_valid_sst ctx sst sst' w ops H_is_sat H_valid_sst H_push_s) as H_valid_sst'. apply H_valid_sst'.
 
   (* Soundness *)
-  - intros init_st st H_st_inst_sst.
-    pose proof (st_is_instance_of_sst_stk_len init_st st sst ops H_st_inst_sst) as H_inst_stk_len.
-    destruct H_inst_stk_len as [H_inst_stk_len_l H_inst_stk_len_r].
+  - intros st model H_is_model H_st_inst_sst.
+    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as H_inst_stk_len.
+(*    destruct H_inst_stk_len as [H_inst_stk_len_l H_inst_stk_len_r]. *)
     unfold push_s in H_push_s.
     unfold push in H_push_s.
     destruct (length (get_stack_sst sst) <? StackSize) eqn:E_stk_len; try discriminate.
     exists (set_stack_st st (w::(get_stack_st st))).
     unfold push_c.
     unfold push.
-    rewrite <- H_inst_stk_len_l.
+    rewrite <- H_inst_stk_len.
     rewrite E_stk_len.
     split.
     + reflexivity. 
     + injection H_push_s as H_sst'.
       rewrite <- H_sst'.
       unfold st_is_instance_of_sst in H_st_inst_sst.
-      destruct H_st_inst_sst as [st' H_st_inst_sst].
+      destruct H_st_inst_sst as [mem [strg [exts [st' H_st_inst_sst]]]].
       destruct H_st_inst_sst as [H_st_inst_sst_l H_st_inst_sst_r].
       unfold st_is_instance_of_sst.
-      exists (set_stack_st st' (w::(get_stack_st st'))).
+      exists mem. exists strg. exists exts. exists (set_stack_st st' (w::(get_stack_st st'))).
       split.
-      ++ pose proof (eval_sstate_w w sst init_st st' ops  H_st_inst_sst_l) as H_eval_sstate_w.
+      ++ pose proof (eval_sstate_w model w sst st' mem strg exts ops H_st_inst_sst_l) as H_eval_sstate_w.
          apply H_eval_sstate_w.
       ++ apply eq_execution_states_ext in H_st_inst_sst_r.
          rewrite H_st_inst_sst_r.
@@ -1481,16 +1481,15 @@ Proof.
 
   intros cat v.
   unfold snd_state_transformer.
-  intros sst sst' ops H_valid_sst H_metapush_s.
+  intros ctx sst sst' ops H_is_sat H_valid_sst H_metapush_s.
   split.
 
   (* Validity *)
-  - pose proof (metapush_valid_sst sst sst' cat v ops H_valid_sst H_metapush_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (metapush_valid_sst ctx sst sst' cat v ops H_is_sat H_valid_sst H_metapush_s) as H_valid_sst'. apply H_valid_sst'.
 
   (* Soundness *)
-  - intros init_st st H_st_inst_sst.
-    pose proof (st_is_instance_of_sst_stk_len init_st st sst ops H_st_inst_sst) as H_inst_stk_len.
-    destruct H_inst_stk_len as [H_inst_stk_len_l H_inst_stk_len_r].
+  - intros st model H_is_model H_st_inst_sst.
+    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as H_inst_stk_len.
     unfold metapush_s in H_metapush_s.
     destruct (add_to_smap (get_smap_sst sst) (SymMETAPUSH cat v)) as [key' sm'] eqn:E_add_to_smap.
     unfold push in H_metapush_s.
@@ -1500,25 +1499,25 @@ Proof.
     unfold push.
     injection H_metapush_s as H_sst'.
 
-    rewrite <- H_inst_stk_len_l.
+    rewrite <- H_inst_stk_len.
     rewrite E_stk_len.
 
-    exists (set_stack_st st (get_tags_ctx (get_context_st st) cat v :: get_stack_st st)).
+    exists (set_stack_st st (get_tags_exts (get_externals_st st) cat v :: get_stack_st st)).
     split; try reflexivity.
 
-    pose proof (st_is_instance_of_sst_stk_len init_st st sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
-    destruct E_stack_len_st_eq_sst as [E_stack_len_st_eq_sst_l E_stack_len_st_eq_sst_r].
+    assert (H_st_inst_sst' := H_st_inst_sst).
+
+    unfold st_is_instance_of_sst in H_st_inst_sst'.
+    destruct H_st_inst_sst' as [mem [strg [exts [st' [H_st_inst_sst'_l H_st_inst_sst'_r]]]]].
 
     unfold st_is_instance_of_sst.
-    exists (set_stack_st st (get_tags_ctx (get_context_st st) cat v :: get_stack_st st)).
+    exists mem. exists strg. exists exts. exists (set_stack_st st (get_tags_exts (get_externals_st st) cat v :: get_stack_st st)).
     split; try apply eq_execution_states_refl.
 
     rewrite <- H_sst'.
     unfold eval_sstate.
 
     rewrite set_and_then_get_smap_sst.
-    rewrite instk_height_preserved_when_updating_smap_sst.
-    rewrite instk_height_preserved_when_updating_stack_sst.
     rewrite sstack_preserved_when_updating_smap_sst.
     rewrite set_and_then_get_stack_sst.
     rewrite smemory_preserved_when_updating_smap_sst.
@@ -1526,25 +1525,16 @@ Proof.
     rewrite sstorage_preserved_when_updating_smap_sst.
     rewrite sstorage_preserved_when_updating_stack_sst.
     
-    symmetry in H_inst_stk_len_r.
-    apply Nat.eqb_eq in H_inst_stk_len_r as H_inst_stk_len_r_eqb.
-    rewrite H_inst_stk_len_r_eqb.
 
-    assert (H_st_inst_sst' := H_st_inst_sst).
-    unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
-    destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].    
     pose proof (eq_execution_states_ext st st' H_st_inst_sst'_r) as H_st_eq_st'.
     
-    unfold eval_sstate in H_st_inst_sst'_l.
-    rewrite H_inst_stk_len_r_eqb in H_st_inst_sst'_l.
-    
+    unfold eval_sstate in H_st_inst_sst'_l.    
        
-    destruct (eval_sstack (get_stack_sst sst) (get_maxidx_smap (get_smap_sst sst)) (get_bindings_smap (get_smap_sst sst)) (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) as [stk''|] eqn:E_eval_sstack; try discriminate.
+    destruct (eval_sstack (get_stack_sst sst) (get_maxidx_smap (get_smap_sst sst)) (get_bindings_smap (get_smap_sst sst)) model mem strg exts ops) as [stk''|] eqn:E_eval_sstack; try discriminate.
 
-    destruct (eval_smemory (get_memory_sst sst) (get_maxidx_smap (get_smap_sst sst)) (get_bindings_smap (get_smap_sst sst)) (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) as [mem|] eqn:E_eval_smemory; try discriminate.
+    destruct (eval_smemory (get_memory_sst sst) (get_maxidx_smap (get_smap_sst sst)) (get_bindings_smap (get_smap_sst sst)) model mem strg exts ops) as [mem'|] eqn:E_eval_smemory; try discriminate.
     
-    destruct (eval_sstorage (get_storage_sst sst) (get_maxidx_smap (get_smap_sst sst)) (get_bindings_smap (get_smap_sst sst)) (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) as [strg|] eqn:E_eval_sstorage; try discriminate.
+    destruct (eval_sstorage (get_storage_sst sst) (get_maxidx_smap (get_smap_sst sst)) (get_bindings_smap (get_smap_sst sst)) model mem strg exts ops) as [strg'|] eqn:E_eval_sstorage; try discriminate.
 
     injection H_st_inst_sst'_l as H_st_inst_sst'_l.
 
@@ -1552,17 +1542,16 @@ Proof.
     destruct H_valid_sst as [H_valid_sst_smap [H_valid_sst_sstack [H_valid_sst_smemory H_valid_sst_sstorage]]].
     (* equivalence of eval_smemory *)
       
-    pose proof (eval_smemory_preserved_when_smap_extended (get_memory_sst sst) (get_instk_height_sst sst) (get_smap_sst sst) sm' (SymMETAPUSH cat v) mem (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops key' H_valid_sst_smemory E_add_to_smap E_eval_smemory) as H_eval_smem_preserved.
+    pose proof (eval_smemory_preserved_when_smap_extended (get_memory_sst sst) (get_smap_sst sst) sm' (SymMETAPUSH cat v) mem' model mem strg exts ops key' H_valid_sst_smemory E_add_to_smap E_eval_smemory) as H_eval_smem_preserved.
     rewrite H_eval_smem_preserved.
 
     (* equivalence of eval_sstorage *)
-    pose proof (eval_sstorage_preserved_when_smap_extended (get_storage_sst sst) (get_instk_height_sst sst) (get_smap_sst sst) sm' (SymMETAPUSH cat v) strg (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops key' H_valid_sst_sstorage E_add_to_smap E_eval_sstorage) as H_eval_sstrg_preserved.
+    pose proof (eval_sstorage_preserved_when_smap_extended (get_storage_sst sst) (get_smap_sst sst) sm' (SymMETAPUSH cat v) strg' model mem strg exts ops key' H_valid_sst_sstorage E_add_to_smap E_eval_sstorage) as H_eval_sstrg_preserved.
     rewrite H_eval_sstrg_preserved.
 
     (* the case of eval_sstack *)
     
-    apply Nat.eqb_eq in E_stack_len_st_eq_sst_r as E_stack_len_st_eq_sst_r_eqb.
-    apply Nat.eqb_eq in E_stack_len_st_eq_sst_l as E_stack_len_st_eq_sst_l_eqb.
+    apply Nat.eqb_eq in H_inst_stk_len as H_inst_stk_len_eqb.
     
     destruct (get_smap_sst sst) as [maxid sb] eqn:E_get_smap_sst.
     destruct sm' as [maxid' sb'].
@@ -1578,7 +1567,7 @@ Proof.
     rewrite H_maxid_eqb.
     simpl.
     
-    pose proof (eval_sstack_preserved_when_smap_extended (get_stack_sst sst) (get_instk_height_sst sst) (SymMap maxid sb) (SymMap maxid' sb') (SymMETAPUSH cat v) stk'' (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops key' H_valid_sst_sstack E_add_to_smap E_eval_sstack) as H_eval_sstack_preserved.
+    pose proof (eval_sstack_preserved_when_smap_extended (get_stack_sst sst) (SymMap maxid sb) (SymMap maxid' sb') (SymMETAPUSH cat v) stk'' model mem strg exts ops key' H_valid_sst_sstack E_add_to_smap E_eval_sstack) as H_eval_sstack_preserved.
     rewrite <- H_sb' in H_eval_sstack_preserved.
     simpl in H_eval_sstack_preserved.
     rewrite H_eval_sstack_preserved.
@@ -1589,8 +1578,8 @@ Proof.
 Qed.
 
 Lemma pop_succ:
-  forall init_st st sst ops l,
-    st_is_instance_of_sst init_st st sst ops ->
+  forall model st sst ops l,
+    st_is_instance_of_sst st model sst ops ->
     pop (get_stack_sst sst) = Some l ->
     exists v1 v2 l', (get_stack_sst sst)=v1::l /\ get_stack_st st = v2::l'.
 Proof.
@@ -1601,63 +1590,52 @@ Proof.
   rewrite H1.
   exists s.
   unfold st_is_instance_of_sst in H.
-  destruct H as [st' H].
+  destruct H as [mem [strg [exts [st' H]]]].
   destruct H.
   unfold eval_sstate in H.
-
-  destruct (get_instk_height_sst sst =? length (get_stack_st init_st)) eqn:E_len; try discriminate.
   
   destruct (get_smap_sst sst) as [maxid map0] eqn:E_map.
   rewrite E_stk_sst in H.
   simpl in H.
   
-  destruct (eval_sstack_val s (get_stack_st init_st) (get_memory_st init_st)
-              (get_storage_st init_st) (get_context_st init_st) maxid map0 ops) in H; try discriminate.
-  destruct (eval_sstack s0 maxid map0 (get_stack_st init_st) (get_memory_st init_st)
-            (get_storage_st init_st) (get_context_st init_st)  ops) in H; try discriminate.
-  destruct (eval_smemory (get_memory_sst sst) maxid map0 (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) in H; try discriminate.
-  destruct (eval_sstorage (get_storage_sst sst) maxid map0 (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) in H; try discriminate.
+  destruct (eval_sstack_val s model mem strg exts maxid map0 ops) in H; try discriminate.
+  destruct (eval_sstack s0 maxid map0 model mem strg exts ops) in H; try discriminate.
+  destruct (eval_smemory (get_memory_sst sst) maxid map0 model mem strg exts ops) in H; try discriminate.
+  destruct (eval_sstorage (get_storage_sst sst) maxid map0 model mem strg exts ops) in H; try discriminate.
   unfold make_st in H.
   injection H. intros.
   unfold eq_execution_states in H2.
   rewrite <- H3 in H2.
   simpl in H2.
   exists e. exists s1.
-  split.
-  + reflexivity.
-  + destruct H2.
-    unfold eq_stack in H2.
-    rewrite H2.
-    reflexivity.
+  split; try reflexivity.
+  destruct H2.
+  unfold eq_stack in H2.
+  rewrite H2.
+  reflexivity.
 Qed.
 
 Lemma eval_sstate_stack_tl:
-  forall init_st sst st v1 v2 l l' ops,
+  forall sst st v1 v2 l l' model mem strg exts ops,
   get_stack_sst sst = v1 :: l ->
   get_stack_st st = v2 :: l' ->
-  eval_sstate init_st sst ops = Some st ->
-  eval_sstate init_st (set_stack_sst sst l) ops = Some (set_stack_st st l').
+  eval_sstate sst model mem strg exts ops = Some st ->
+  eval_sstate (set_stack_sst sst l) model mem strg exts ops = Some (set_stack_st st l').
 Proof.
   intros.
   unfold eval_sstate in H1.
   unfold eval_sstack in H1.
   rewrite H in H1.
 
-  destruct (get_instk_height_sst sst =? length (get_stack_st init_st)) eqn:E_len; try discriminate.
-
   destruct ( get_smap_sst sst ) as [maxidx bs] eqn:E_smap.
   unfold get_maxidx_smap in H1.
   unfold get_bindings_smap in H1.
   
-  destruct (map_option
-           (fun sv : sstack_val =>
-            eval_sstack_val sv (get_stack_st init_st) (get_memory_st init_st)
-              (get_storage_st init_st) (get_context_st init_st) maxidx bs ops) 
-           (v1 :: l)) as [stk|] eqn:E_mapo; try discriminate.
+  destruct (map_option (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx bs ops) (v1 :: l)) as [stk|] eqn:E_mapo; try discriminate.
 
-  destruct (eval_smemory (get_memory_sst sst) maxidx bs (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) as [mem|] eqn:E_mem; try discriminate.
+  destruct (eval_smemory (get_memory_sst sst) maxidx bs model mem strg exts ops) as [mem'|] eqn:E_mem; try discriminate.
 
-  destruct (eval_sstorage (get_storage_sst sst) maxidx bs (get_stack_st init_st) (get_memory_st init_st) (get_storage_st init_st) (get_context_st init_st) ops) as [srtg|] eqn:E_strg; try discriminate.
+  destruct (eval_sstorage (get_storage_sst sst) maxidx bs model mem strg exts ops) as [srtg'|] eqn:E_strg; try discriminate.
 
   unfold make_st in H1.
   apply map_option_len in E_mapo as E_mapo_1.
@@ -1667,8 +1645,6 @@ Proof.
   
   unfold eval_sstate.
   unfold eval_sstack.
-  rewrite instk_height_preserved_when_updating_stack_sst.
-  rewrite E_len.
   rewrite smap_preserved_when_updating_stack_sst.
   rewrite E_smap.
   rewrite set_and_then_get_stack_sst.
@@ -1695,33 +1671,34 @@ Lemma pop_snd:
   snd_state_transformer pop_c pop_s.       
 Proof.
   unfold snd_state_transformer.
-  intros sst sst' ops H_valid_sst H_pop_s.
+  intros ctx sst sst' ops H_is_sat H_valid_sst H_pop_s.
   split.
-  - pose proof (pop_valid_sst sst sst' ops H_valid_sst H_pop_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros init_st st H_st_inst_sst. 
+  - pose proof (pop_valid_sst ctx sst sst' ops H_is_sat H_valid_sst H_pop_s) as H_valid_sst'. apply H_valid_sst'.
+  - intros st model H_is_model H_st_inst_sst. 
     unfold pop_s in H_pop_s.
     destruct (pop (get_stack_sst sst)) eqn:H_pop_sst; try discriminate.
     unfold pop_c.
     
-    pose proof (pop_succ init_st st sst ops l  H_st_inst_sst H_pop_sst) as H_pop_succ.
+    pose proof (pop_succ model st sst ops l  H_st_inst_sst H_pop_sst) as H_pop_succ.
     destruct H_pop_succ as [v1 [v2 [l' H_pop_succ]]].
     destruct H_pop_succ as [H_pop_succ_l H_pop_succ_r].
     rewrite H_pop_succ_r.
     simpl.
     exists (set_stack_st st l').
     split.
+
     + reflexivity.
     + injection  H_pop_s as  H_sst'.
       rewrite <- H_sst'.
       unfold st_is_instance_of_sst in H_st_inst_sst.
-      destruct H_st_inst_sst as [st' [H_st_inst_sst_l H_st_inst_sst_r]].
+      destruct H_st_inst_sst as [mem [strg [exts [st' [H_st_inst_sst_l H_st_inst_sst_r]]]]].
       pose proof (eq_execution_states_ext st st'  H_st_inst_sst_r) as H_eq_st_st'.
       rewrite <- H_eq_st_st' in H_st_inst_sst_l.
       
-      pose proof (eval_sstate_stack_tl init_st sst st v1 v2 l l' ops H_pop_succ_l H_pop_succ_r H_st_inst_sst_l).
+      pose proof (eval_sstate_stack_tl sst st v1 v2 l l' model mem strg exts ops H_pop_succ_l H_pop_succ_r H_st_inst_sst_l).
       
       unfold st_is_instance_of_sst.
-      exists (set_stack_st st l').
+      exists mem. exists strg. exists exts. exists (set_stack_st st l').
       split.
       ++ apply H.
       ++ apply eq_execution_states_refl.
@@ -3646,7 +3623,7 @@ Proof.
     exists st'.
     apply H0.
 Qed.
-*)
+
 
 End SymbolicExecutionSoundness.
 
