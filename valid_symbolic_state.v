@@ -215,28 +215,8 @@ Proof.
 Qed.
 
 
-(*
-(* TODO: This lemma becomes obsolete after removing instk_height *)
 
-Lemma valid_sstack_S_instk_height:
-  forall maxidx l,
-    valid_sstack maxidx l ->
-    valid_sstack maxidx l.
-Proof.
-  intros maxidx.
-  induction l as [|sv l' IHl'].
-  - intuition.
-  - simpl.
-    intros H_l.
-    destruct H_l as [H_l_0 H_l_1].
-    split.
-    + apply valid_sstack_value_S_instk_height. apply H_l_0.
-    + apply IHl'. apply H_l_1.
-Qed.
-*)
 
-(*
-(* TODO: This lemma is not needed in its current form, we don't have gen_empty_state anymore. Should be replaced by something else later *)
 Lemma valid_empty_sstate:
   forall k ops, valid_sstate (gen_empty_sstate k) ops.
 Proof.
@@ -244,11 +224,6 @@ Proof.
   unfold valid_sstate.
   split; split.
   
-  (*+ unfold valid_smap.
-    simpl.
-    auto.
-  + simpl.
-    auto.*)
   + simpl.
     induction k as [|k' IHsk'].    
     * simpl.
@@ -256,13 +231,11 @@ Proof.
     * rewrite seq_S.
       rewrite List.map_app. 
       apply valid_sstack_app.
-      ** apply valid_sstack_S_instk_height.
-         apply IHsk'.
+      ** apply IHsk'.
       ** simpl. intuition.
   + simpl.
     intuition.
 Qed.
-*)
 
 
 Lemma add_to_smap_valid_smap:
@@ -278,8 +251,6 @@ Proof.
   destruct m' as [maxidx' sb'] eqn:E_m'.
   
   unfold valid_smap in H_valid_m.
-  (*destruct H_valid_m as [H_valid_m_0 [H_valid_m_1 H_valid_m_2]].*)
-  (*destruct H_valid_m as [H_valid_m_0 [H_valid_m_1 H_valid_m_2]].*)
 
   assert(H_add' :=  H_add).
   simpl in H_add'.

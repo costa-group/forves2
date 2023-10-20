@@ -132,6 +132,11 @@ Inductive sstate :=
 Definition make_sst (sstk: sstack) (smem: smemory) (sstrg: sstorage) (sexts : sexternals) (sm: smap) : sstate :=
   SymExState sstk smem sstrg sexts sm.
 
+Definition gen_empty_sstate (instk_height: nat) : sstate :=
+  let ids := seq 0 instk_height in
+  let sstk := List.map InVar ids in
+  make_sst sstk empty_smemory empty_sstorage empty_sexternals empty_smap.
+
 Definition get_stack_sst (sst: sstate) : sstack :=
   match sst with
   | SymExState sstk _ _ _ _ => sstk
