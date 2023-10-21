@@ -48,7 +48,7 @@ Definition symbolic_state_cmp := constraints -> sstate -> sstate -> stack_op_ins
 
 (* Enrique: version with eval_sstate *)
 Definition symbolic_state_cmp_snd (f_cmp : symbolic_state_cmp) :=
-  forall sst1 sst2 ops ctx,
+  forall ctx sst1 sst2 ops,
     is_sat ctx ->
     valid_sstate sst1 ops ->
     valid_sstate sst2 ops ->
