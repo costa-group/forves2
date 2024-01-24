@@ -37,3 +37,7 @@ sstorage_cmp_impl_soundness.v
 
 ssha3_cmp_impl.v
 ssha3_cmp_impl_soundness.v
+
+optimizations_common.v
+optimizations_def.v
+#optimizations/add_zero.v
