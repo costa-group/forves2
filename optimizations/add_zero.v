@@ -2,8 +2,6 @@ Require Import bbv.Word.
 Require Import Nat. 
 Require Import Coq.NArith.NArith.
 
-Require Import Coq.Logic.FunctionalExtensionality.
-
 Require Import FORVES2.constants.
 Import Constants.
 

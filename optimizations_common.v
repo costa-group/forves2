@@ -1,3 +1,4 @@
+Require Import Arith.
 Require Import bbv.Word.
 Require Import Nat. 
 Require Import Coq.NArith.NArith.
@@ -391,7 +392,7 @@ induction m as [|m' IH].
 - intros n Hgt. 
   destruct n as [|n'].
   + intuition.
-  + simpl. apply Gt.gt_S_n in Hgt.
+  + simpl. apply Nat.succ_lt_mono in Hgt.
     intuition.
 Qed.
 
@@ -419,7 +420,7 @@ induction m as [|m' IH].
 - intros n Hleq.
   destruct n as [|n'] eqn: eq_n.
   + exists (S m'). intuition.
-  + apply Le.le_S_n in Hleq.
+  + apply Nat.succ_le_mono in Hleq.
     apply IH in Hleq as [k' eq_n'_k'].
     exists k'. intuition.
 Qed.
@@ -434,7 +435,7 @@ induction m as [|m' IH].
 - intros n Hgt.
   destruct n as [|n'] eqn: eq_n.
   + intuition.
-  + apply Gt.gt_S_n in Hgt.
+  + apply Nat.succ_lt_mono in Hgt.
     apply IH in Hgt as [k' eq_n'_k'].
     exists k'. intuition.
 Qed.
@@ -1036,9 +1037,9 @@ induction sb as [| h t IH].
       apply IH with (ops:=ops); try assumption.
       simpl. simpl in Hvalid_sstack.
       rewrite -> Hidx in Hvalid_sstack.
-      apply Lt.lt_n_Sm_le in Hvalid_sstack.
+      rewrite -> Nat.lt_succ_r in Hvalid_sstack.
       apply leq_diff_lt; try assumption.
-      apply EqNat.beq_nat_false.
+      apply Nat.eqb_neq.
       rewrite PeanoNat.Nat.eqb_sym. assumption.
 Qed.
 

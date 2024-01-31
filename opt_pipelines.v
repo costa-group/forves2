@@ -7,6 +7,36 @@ Import Optimizations_Def.
 Require Import FORVES2.optimizations.add_zero.
 Import Opt_add_zero.
 
+Require Import FORVES2.optimizations.eval.
+Import Opt_eval.
+
+Require Import FORVES2.optimizations.sub_x_x.
+Import Opt_sub_x_x.
+
+Require Import FORVES2.optimizations.not_not.
+Import Opt_not_not.
+
+Require Import FORVES2.optimizations.and_and.
+Import Opt_and_and.
+
+Require Import FORVES2.optimizations.and_origin.
+Import Opt_and_origin.
+
+Require Import FORVES2.optimizations.mul_shl.
+Import Opt_mul_shl.
+
+Require Import FORVES2.optimizations.div_shl.
+Import Opt_div_shl.
+
+Require Import FORVES2.optimizations.shr_zero_x.
+Import Opt_shr_zero_x.
+
+Require Import FORVES2.optimizations.shr_x_zero.
+Import Opt_shr_x_zero.
+
+Require Import FORVES2.optimizations.eq_zero.
+Import Opt_eq_zero.
+
 Module OptPipelines.
 
 Inductive available_optimization_step :=
@@ -78,9 +108,9 @@ Definition list_opt_steps := list available_optimization_step.
 
 Definition get_optimization_step (tag: available_optimization_step) : opt_entry :=
 match tag with 
-(*| OPT_eval => OpEntry optimize_eval_sbinding optimize_eval_sbinding_snd*)
+| OPT_eval => OpEntry optimize_eval_sbinding optimize_eval_sbinding_snd
 | OPT_add_zero => OpEntry optimize_add_zero_sbinding optimize_add_zero_sbinding_snd
-(*| OPT_not_not => OpEntry optimize_not_not_sbinding optimize_not_not_sbinding_snd
+| OPT_not_not => OpEntry optimize_not_not_sbinding optimize_not_not_sbinding_snd
 | OPT_and_and => OpEntry optimize_and_and_sbinding optimize_and_and_sbinding_snd
 | OPT_and_origin => OpEntry optimize_and_origin_sbinding optimize_and_origin_sbinding_snd
 | OPT_mul_shl => OpEntry optimize_mul_shl_sbinding optimize_mul_shl_sbinding_snd
@@ -89,7 +119,7 @@ match tag with
 | OPT_shr_x_zero => OpEntry optimize_shr_x_zero_sbinding optimize_shr_x_zero_sbinding_snd
 | OPT_eq_zero => OpEntry optimize_eq_zero_sbinding optimize_eq_zero_sbinding_snd
 | OPT_sub_x_x => OpEntry optimize_sub_x_x_sbinding optimize_sub_x_x_sbinding_snd
-| OPT_and_zero => OpEntry optimize_and_zero_sbinding optimize_and_zero_sbinding_snd
+(*| OPT_and_zero => OpEntry optimize_and_zero_sbinding optimize_and_zero_sbinding_snd
 | OPT_div_one => OpEntry optimize_div_one_sbinding optimize_div_one_sbinding_snd
 | OPT_lt_x_one => OpEntry optimize_lt_x_one_sbinding optimize_lt_x_one_sbinding_snd
 | OPT_gt_one_x => OpEntry optimize_gt_one_x_sbinding optimize_gt_one_x_sbinding_snd
@@ -140,7 +170,7 @@ match tag with
 | OPT_and_ffff => OpEntry optimize_and_ffff_sbinding optimize_and_ffff_sbinding_snd
 | OPT_and_coinbase => OpEntry optimize_and_coinbase_sbinding optimize_and_coinbase_sbinding_snd
 | OPT_balance_address => OpEntry optimize_balance_address_sbinding optimize_balance_address_sbinding_snd*)
-
+(* TODO: remove when all optimization are proved *)
 | _ => OpEntry optimize_add_zero_sbinding optimize_add_zero_sbinding_snd
 end.
 

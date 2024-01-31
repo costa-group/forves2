@@ -250,7 +250,7 @@ Proof.
          exists e.
          split; reflexivity.
       ++ simpl.
-         simpl in H_k_lt_len. apply lt_S_n in H_k_lt_len.
+         simpl in H_k_lt_len. apply Nat.succ_lt_mono in H_k_lt_len.
          pose proof (IHl1' l H_tl n   H_k_lt_len) as IH.
          apply IH.
 Qed.
@@ -476,7 +476,7 @@ Proof.
   destruct stk.
   + discriminate.
   + simpl.
-    apply gt_Sn_O.
+    apply Nat.lt_0_succ.
 Qed.
 
 (* if pop fails, then the stack was empty *)

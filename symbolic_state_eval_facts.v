@@ -44,11 +44,9 @@ Lemma n_Sm_neq_lt:
     n < S m -> n <> m -> n < m.
 Proof.
   intros.
-  apply lt_n_Sm_le in H.
-  apply le_lt_or_eq in H.
-  destruct H.
-  + apply H.
-  + contradiction.
+  apply Nat.lt_succ_r in H.
+  apply Nat.lt_eq_cases in H.
+  destruct H; try intuition.
 Qed.
 
 Lemma valid_sstack_value_FreshVar:
