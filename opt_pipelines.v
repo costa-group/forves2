@@ -42,9 +42,9 @@ Require Import FORVES2.optimizations.iszero_gt.
 Import Opt_iszero_gt.
 Require Import FORVES2.optimizations.eq_iszero.
 Import Opt_eq_iszero.
-(*Require Import FORVES2.optimizations.and_caller.
+Require Import FORVES2.optimizations.and_caller.
 Import Opt_and_caller.
-Require Import FORVES2.optimizations.iszero3.
+(*Require Import FORVES2.optimizations.iszero3.
 Import Opt_iszero3.
 Require Import FORVES2.optimizations.add_sub.
 Import Opt_add_sub.
@@ -220,8 +220,8 @@ match tag with
 | OPT_mul_one => OpEntry optimize_mul_one_sbinding optimize_mul_one_sbinding_snd
 | OPT_iszero_gt => OpEntry optimize_iszero_gt_sbinding optimize_iszero_gt_sbinding_snd
 | OPT_eq_iszero => OpEntry optimize_eq_iszero_sbinding optimize_eq_iszero_sbinding_snd
-(*| OPT_and_caller => OpEntry optimize_and_caller_sbinding optimize_and_caller_sbinding_snd
-| OPT_iszero3 => OpEntry optimize_iszero3_sbinding optimize_iszero3_sbinding_snd
+| OPT_and_caller => OpEntry optimize_and_caller_sbinding optimize_and_caller_sbinding_snd
+(*| OPT_iszero3 => OpEntry optimize_iszero3_sbinding optimize_iszero3_sbinding_snd
 | OPT_add_sub => OpEntry optimize_add_sub_sbinding optimize_add_sub_sbinding_snd
 | OPT_shl_zero_x => OpEntry optimize_shl_zero_x_sbinding optimize_shl_zero_x_sbinding_snd
 | OPT_sub_zero => OpEntry optimize_sub_zero_sbinding optimize_sub_zero_sbinding_snd
