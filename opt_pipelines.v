@@ -6,36 +6,129 @@ Import Optimizations_Def.
 
 Require Import FORVES2.optimizations.add_zero.
 Import Opt_add_zero.
-
 Require Import FORVES2.optimizations.eval.
 Import Opt_eval.
-
 Require Import FORVES2.optimizations.sub_x_x.
 Import Opt_sub_x_x.
-
 Require Import FORVES2.optimizations.not_not.
 Import Opt_not_not.
-
 Require Import FORVES2.optimizations.and_and.
 Import Opt_and_and.
-
 Require Import FORVES2.optimizations.and_origin.
 Import Opt_and_origin.
-
 Require Import FORVES2.optimizations.mul_shl.
 Import Opt_mul_shl.
-
 Require Import FORVES2.optimizations.div_shl.
 Import Opt_div_shl.
-
 Require Import FORVES2.optimizations.shr_zero_x.
 Import Opt_shr_zero_x.
-
 Require Import FORVES2.optimizations.shr_x_zero.
 Import Opt_shr_x_zero.
-
 Require Import FORVES2.optimizations.eq_zero.
 Import Opt_eq_zero.
+Require Import FORVES2.optimizations.and_zero.
+Import Opt_and_zero.
+Require Import FORVES2.optimizations.div_one.
+Import Opt_div_one.
+Require Import FORVES2.optimizations.lt_x_one.
+Import Opt_lt_x_one.
+Require Import FORVES2.optimizations.gt_one_x.
+Import Opt_gt_one_x.
+Require Import FORVES2.optimizations.and_address.
+Import Opt_and_address.
+Require Import FORVES2.optimizations.mul_one.
+Import Opt_mul_one.
+Require Import FORVES2.optimizations.iszero_gt.
+Import Opt_iszero_gt.
+Require Import FORVES2.optimizations.eq_iszero.
+Import Opt_eq_iszero.
+(*Require Import FORVES2.optimizations.and_caller.
+Import Opt_and_caller.
+Require Import FORVES2.optimizations.iszero3.
+Import Opt_iszero3.
+Require Import FORVES2.optimizations.add_sub.
+Import Opt_add_sub.
+Require Import FORVES2.optimizations.shl_zero_x.
+Import Opt_shl_zero_x.
+Require Import FORVES2.optimizations.sub_zero.
+Import Opt_sub_zero.
+Require Import FORVES2.optimizations.shl_x_zero.
+Import Opt_shl_x_zero.
+Require Import FORVES2.optimizations.mul_zero.
+Import Opt_mul_zero.
+Require Import FORVES2.optimizations.div_x_x.
+Import Opt_div_x_x.
+Require Import FORVES2.optimizations.div_zero.
+Import Opt_div_zero.
+Require Import FORVES2.optimizations.mod_one.
+Import Opt_mod_one.
+Require Import FORVES2.optimizations.mod_zero.
+Import Opt_mod_zero.
+Require Import FORVES2.optimizations.mod_x_x.
+Import Opt_mod_x_x.
+Require Import FORVES2.optimizations.exp_x_zero.
+Import Opt_exp_x_zero.
+Require Import FORVES2.optimizations.exp_x_one.
+Import Opt_exp_x_one.
+Require Import FORVES2.optimizations.exp_one_x.
+Import Opt_exp_one_x.
+Require Import FORVES2.optimizations.exp_zero_x.
+Import Opt_exp_zero_x.
+Require Import FORVES2.optimizations.exp_two_x.
+Import Opt_exp_two_x.
+Require Import FORVES2.optimizations.gt_zero_x.
+Import Opt_gt_zero_x.
+Require Import FORVES2.optimizations.gt_x_x.
+Import Opt_gt_x_x.
+Require Import FORVES2.optimizations.lt_x_zero.
+Import Opt_lt_x_zero.
+Require Import FORVES2.optimizations.lt_x_x.
+Import Opt_lt_x_x.
+Require Import FORVES2.optimizations.eq_x_x.
+Import Opt_eq_x_x.
+Require Import FORVES2.optimizations.iszero_sub.
+Import Opt_iszero_sub.
+Require Import FORVES2.optimizations.iszero_lt.
+Import Opt_iszero_lt.
+Require Import FORVES2.optimizations.iszero_xor.
+Import Opt_iszero_xor.
+Require Import FORVES2.optimizations.iszero2_gt.
+Import Opt_iszero2_gt.
+Require Import FORVES2.optimizations.iszero2_lt.
+Import Opt_iszero2_lt.
+Require Import FORVES2.optimizations.iszero2_eq.
+Import Opt_iszero2_eq.
+Require Import FORVES2.optimizations.xor_x_x.
+Import Opt_xor_x_x.
+Require Import FORVES2.optimizations.xor_zero.
+Import Opt_xor_zero.
+Require Import FORVES2.optimizations.xor_xor.
+Import Opt_xor_xor.
+Require Import FORVES2.optimizations.or_or.
+Import Opt_or_or.
+Require Import FORVES2.optimizations.or_and.
+Import Opt_or_and.
+Require Import FORVES2.optimizations.and_or.
+Import Opt_and_or.
+Require Import FORVES2.optimizations.and_not.
+Import Opt_and_not.
+Require Import FORVES2.optimizations.or_not.
+Import Opt_or_not.
+Require Import FORVES2.optimizations.or_x_x.
+Import Opt_or_x_x.
+Require Import FORVES2.optimizations.and_x_x.
+Import Opt_and_x_x.
+Require Import FORVES2.optimizations.or_zero.
+Import Opt_or_zero.
+Require Import FORVES2.optimizations.or_ffff.
+Import Opt_or_ffff.
+Require Import FORVES2.optimizations.and_ffff.
+Import Opt_and_ffff.
+Require Import FORVES2.optimizations.and_coinbase.
+Import Opt_and_coinbase.
+Require Import FORVES2.optimizations.balance_address.
+Import Opt_balance_address.*)
+
 
 Module OptPipelines.
 
@@ -119,7 +212,7 @@ match tag with
 | OPT_shr_x_zero => OpEntry optimize_shr_x_zero_sbinding optimize_shr_x_zero_sbinding_snd
 | OPT_eq_zero => OpEntry optimize_eq_zero_sbinding optimize_eq_zero_sbinding_snd
 | OPT_sub_x_x => OpEntry optimize_sub_x_x_sbinding optimize_sub_x_x_sbinding_snd
-(*| OPT_and_zero => OpEntry optimize_and_zero_sbinding optimize_and_zero_sbinding_snd
+| OPT_and_zero => OpEntry optimize_and_zero_sbinding optimize_and_zero_sbinding_snd
 | OPT_div_one => OpEntry optimize_div_one_sbinding optimize_div_one_sbinding_snd
 | OPT_lt_x_one => OpEntry optimize_lt_x_one_sbinding optimize_lt_x_one_sbinding_snd
 | OPT_gt_one_x => OpEntry optimize_gt_one_x_sbinding optimize_gt_one_x_sbinding_snd
@@ -127,7 +220,7 @@ match tag with
 | OPT_mul_one => OpEntry optimize_mul_one_sbinding optimize_mul_one_sbinding_snd
 | OPT_iszero_gt => OpEntry optimize_iszero_gt_sbinding optimize_iszero_gt_sbinding_snd
 | OPT_eq_iszero => OpEntry optimize_eq_iszero_sbinding optimize_eq_iszero_sbinding_snd
-| OPT_and_caller => OpEntry optimize_and_caller_sbinding optimize_and_caller_sbinding_snd
+(*| OPT_and_caller => OpEntry optimize_and_caller_sbinding optimize_and_caller_sbinding_snd
 | OPT_iszero3 => OpEntry optimize_iszero3_sbinding optimize_iszero3_sbinding_snd
 | OPT_add_sub => OpEntry optimize_add_sub_sbinding optimize_add_sub_sbinding_snd
 | OPT_shl_zero_x => OpEntry optimize_shl_zero_x_sbinding optimize_shl_zero_x_sbinding_snd
