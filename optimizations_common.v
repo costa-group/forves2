@@ -267,31 +267,29 @@ Proof.
 reflexivity.
 Qed.
 
-(*
+Lemma evm_stack_opm_ISZERO: 
+evm_stack_opm ISZERO = OpImp  1 evm_iszero None (Some iszero_exts_ind).
+Proof.
+intuition.
+Qed.
+
 Lemma evm_stack_opm_EQ: 
-evm_stack_opm EQ = OpImp 2 evm_eq (Some eq_comm) (Some eq_ctx_ind).
+evm_stack_opm EQ = OpImp 2 evm_eq (Some eq_comm) (Some eq_exts_ind).
 Proof.
 intuition.
 Qed.
 
 Lemma evm_stack_opm_GT: 
-evm_stack_opm GT = OpImp 2 evm_gt None (Some gt_ctx_ind).
-Proof.
-intuition.
-Qed.
-
-Lemma evm_stack_opm_ISZERO: 
-evm_stack_opm ISZERO = OpImp  1 evm_iszero None (Some iszero_ctx_ind).
+evm_stack_opm GT = OpImp 2 evm_gt None (Some gt_exts_ind).
 Proof.
 intuition.
 Qed.
 
 Lemma evm_stack_opm_LT: 
-evm_stack_opm LT = OpImp 2 evm_lt None (Some lt_ctx_ind).
+evm_stack_opm LT = OpImp 2 evm_lt None (Some lt_exts_ind).
 Proof.
 intuition.
 Qed.
-*)
 
 Lemma length_zero: forall {X: Type}, length ([]: list X) =? 0 = true.
 Proof.
