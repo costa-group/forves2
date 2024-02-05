@@ -9,6 +9,7 @@ commutativity and externals-independent.
 Require Import bbv.Word.
 
 Require Import Coq.NArith.NArith.
+Require Import Coq.ZArith.ZArith.
 
 Require Import List.
 Import ListNotations.
@@ -212,11 +213,25 @@ Qed.
 
 
 Definition evm_slt (exts : externals) (args : list EVMWord) : EVMWord :=
-  WZero.
+  match args with
+  | [a; b] => if (Z.ltb (wordToZ a) (wordToZ b)) then WOne else WZero
+  | _ => WZero
+  end.
+Lemma slt_exts_ind: exts_independent_op evm_slt.
+Proof.
+  exts_independent_tac evm_slt.
+Qed.
 
 
 Definition evm_sgt (exts : externals) (args : list EVMWord) : EVMWord :=
-  WZero.
+  match args with
+  | [a;b] => evm_slt exts [b; a]
+  | _ => WZero
+  end.
+Lemma sgt_exts_ind: exts_independent_op evm_gt.
+Proof.
+  exts_independent_tac evm_sgt.
+Qed.
 
 
 Definition evm_eq (exts : externals) (args : list EVMWord) : EVMWord :=
@@ -503,7 +518,7 @@ Definition evm_stack_opm : stack_op_instr_map :=
   SIGNEXTEND  |->i OpImp 2 evm_signextend None None; (*TODO*)
   LT |->i OpImp 2 evm_lt None (Some lt_exts_ind);
   GT  |->i OpImp 2 evm_gt None (Some gt_exts_ind);
-  SLT |->i OpImp 2 evm_slt None None; (*TODO*)
+  SLT |->i OpImp 2 evm_slt None (Some slt_exts_ind);
   SGT |->i  OpImp 2 evm_sgt None None; (*TODO*)
   EQ |->i OpImp 2 evm_eq (Some eq_comm) (Some eq_exts_ind);
   ISZERO |->i OpImp  1 evm_iszero None (Some iszero_exts_ind);
