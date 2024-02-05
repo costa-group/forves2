@@ -44,7 +44,7 @@ Require Import FORVES2.optimizations.eq_iszero.
 Import Opt_eq_iszero.
 Require Import FORVES2.optimizations.and_caller.
 Import Opt_and_caller.
-(*Require Import FORVES2.optimizations.iszero3.
+Require Import FORVES2.optimizations.iszero3.
 Import Opt_iszero3.
 Require Import FORVES2.optimizations.add_sub.
 Import Opt_add_sub.
@@ -127,7 +127,7 @@ Import Opt_and_ffff.
 Require Import FORVES2.optimizations.and_coinbase.
 Import Opt_and_coinbase.
 Require Import FORVES2.optimizations.balance_address.
-Import Opt_balance_address.*)
+Import Opt_balance_address.
 
 
 Module OptPipelines.
@@ -221,7 +221,7 @@ match tag with
 | OPT_iszero_gt => OpEntry optimize_iszero_gt_sbinding optimize_iszero_gt_sbinding_snd
 | OPT_eq_iszero => OpEntry optimize_eq_iszero_sbinding optimize_eq_iszero_sbinding_snd
 | OPT_and_caller => OpEntry optimize_and_caller_sbinding optimize_and_caller_sbinding_snd
-(*| OPT_iszero3 => OpEntry optimize_iszero3_sbinding optimize_iszero3_sbinding_snd
+| OPT_iszero3 => OpEntry optimize_iszero3_sbinding optimize_iszero3_sbinding_snd
 | OPT_add_sub => OpEntry optimize_add_sub_sbinding optimize_add_sub_sbinding_snd
 | OPT_shl_zero_x => OpEntry optimize_shl_zero_x_sbinding optimize_shl_zero_x_sbinding_snd
 | OPT_sub_zero => OpEntry optimize_sub_zero_sbinding optimize_sub_zero_sbinding_snd
@@ -262,9 +262,7 @@ match tag with
 | OPT_or_ffff => OpEntry optimize_or_ffff_sbinding optimize_or_ffff_sbinding_snd
 | OPT_and_ffff => OpEntry optimize_and_ffff_sbinding optimize_and_ffff_sbinding_snd
 | OPT_and_coinbase => OpEntry optimize_and_coinbase_sbinding optimize_and_coinbase_sbinding_snd
-| OPT_balance_address => OpEntry optimize_balance_address_sbinding optimize_balance_address_sbinding_snd*)
-(* TODO: remove when all optimization are proved *)
-| _ => OpEntry optimize_add_zero_sbinding optimize_add_zero_sbinding_snd
+| OPT_balance_address => OpEntry optimize_balance_address_sbinding optimize_balance_address_sbinding_snd
 end.
 
 Definition all_optimization_steps_gas : list_opt_steps := 

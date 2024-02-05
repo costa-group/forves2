@@ -1,6 +1,8 @@
 Require Import bbv.Word.
 Require Import Nat. 
 Require Import Coq.NArith.NArith.
+Require Import Coq.Bool.Bool.
+Require Import PeanoNat.
 
 Require Import FORVES2.constants.
 Import Constants.
@@ -67,10 +69,11 @@ Module Opt_and_not.
   AND(NOT(X), X) = 0
 *)
 Definition is_not (x: sstack_val) (sv: sstack_val) (fcmp: sstack_val_cmp_t) 
-  (maxid : nat) (sb: sbindings) (ops: stack_op_instr_map) :=
+  (maxid : nat) (sb: sbindings) (ops: stack_op_instr_map) 
+  (ctx: constraints) :=
 match follow_in_smap sv maxid sb with 
 | Some (FollowSmapVal (SymOp NOT [arg]) idx' sb') => 
-      fcmp x arg maxid sb idx' sb'  ops
+      fcmp ctx x arg maxid sb idx' sb'  ops
 | _ => false
 end.
 
@@ -85,9 +88,9 @@ fun (ctx: constraints) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp AND [arg1;arg2] =>
-  if is_not arg1 arg2 fcmp maxid  sb ops then
+  if is_not arg1 arg2 fcmp maxid sb ops ctx then
     (SymBasicVal (Val WZero), true)
-  else if is_not arg2 arg1 fcmp maxid  sb ops then
+  else if is_not arg2 arg1 fcmp maxid sb ops ctx then
     (SymBasicVal (Val WZero), true)
   else 
     (val, false)
@@ -149,7 +152,7 @@ destruct (is_not arg1 arg2 fcmp n  sb evm_stack_opm)
     try discriminate.
   destruct args2 as [|arg21 r21]; try discriminate.
   destruct r21; try discriminate.
-  destruct (fcmp arg1 arg21 n sb idx' sb'  evm_stack_opm)
+  destruct (fcmp ctx arg1 arg21 n sb idx' sb'  evm_stack_opm)
     eqn: eq_fcmp_arg1_arg21; try discriminate.
 
   (* arg1 ~ arg21 *)
@@ -170,7 +173,7 @@ destruct (is_not arg1 arg2 fcmp n  sb evm_stack_opm)
     try discriminate.
   destruct args2 as [|arg11 r11]; try discriminate.
   destruct r11; try discriminate.
-  destruct (fcmp arg2 arg11 n sb idx' sb'  evm_stack_opm)
+  destruct (fcmp ctx arg2 arg11 n sb idx' sb'  evm_stack_opm)
     eqn: eq_fcmp_arg2_arg11; try discriminate.
   
   (* arg2 ~ arg11 *)
@@ -218,7 +221,7 @@ split.
     destruct label2 eqn: eq_label2; try discriminate.
     destruct args2 as [|arg21 r21]; try discriminate.
     destruct r21; try discriminate.
-    destruct (fcmp arg1 arg21 idx sb idx' sb'  evm_stack_opm)
+    destruct (fcmp ctx arg1 arg21 idx sb idx' sb'  evm_stack_opm)
       eqn: eq_fcmp_arg1_arg21; try discriminate.
       
     (* arg1 ~ arg21 *)
@@ -264,10 +267,9 @@ split.
       unfold evm_and.
 
       (* arg1v and arg21v are the same *)
-      symmetry in Hlen.
-      pose proof (Hsafe_sstack_val_cmp arg1 arg21 idx sb idx' sb'  
-        evm_stack_opm Hvalid_arg1 Hvalid_arg21 Hvalid_sb Hvalid_sb'
-        eq_fcmp_arg1_arg21 model mem strg ext Hlen) as [vv [eval_arg1 
+      pose proof (Hsafe_sstack_val_cmp ctx arg1 arg21 idx sb idx' sb'  
+        evm_stack_opm Hissat Hvalid_arg1 Hvalid_arg21 Hvalid_sb Hvalid_sb'
+        eq_fcmp_arg1_arg21 model mem strg ext Hismodel) as [vv [eval_arg1 
         eval_arg21]].
       unfold eval_sstack_val in eval_arg1.
       rewrite <- eq_maxidx in eval_arg1.
@@ -275,7 +277,7 @@ split.
       unfold eval_sstack_val in eval_arg21.
       apply eval_sstack_val'_preserved_when_depth_extended in 
         eq_eval_arg21.
-      apply Gt.gt_n_S in idx_gt_idx' as Sidx_gt_Sidx'.
+      apply Nat.succ_lt_mono in idx_gt_idx' as Sidx_gt_Sidx'.
       pose proof (eval_sstack_val'_preserved_when_depth_extended_lt (S idx')
         (S idx) idx' sb' arg21 vv model mem strg ext evm_stack_opm Sidx_gt_Sidx'
         eval_arg21) as eval_arg21_alt.
@@ -300,7 +302,7 @@ split.
   destruct label2 eqn: eq_label2; try discriminate.
   destruct args2 as [|arg11 r11]; try discriminate.
   destruct r11; try discriminate.
-  destruct (fcmp arg2 arg11 idx sb idx' sb'  evm_stack_opm)
+  destruct (fcmp ctx arg2 arg11 idx sb idx' sb'  evm_stack_opm)
       eqn: eq_fcmp_arg2_arg11; try discriminate.
       
   (* arg2 ~ arg11 *)
@@ -346,10 +348,9 @@ split.
   unfold evm_and.
 
   (* arg2v and arg11v are the same *)
-  symmetry in Hlen.
-  pose proof (Hsafe_sstack_val_cmp arg2 arg11 idx sb idx' sb'  
-    evm_stack_opm Hvalid_arg2 Hvalid_arg11 Hvalid_sb Hvalid_sb'
-    eq_fcmp_arg2_arg11 model mem strg ext Hlen) as [vv [eval_arg2 
+  pose proof (Hsafe_sstack_val_cmp ctx arg2 arg11 idx sb idx' sb'  
+    evm_stack_opm Hissat Hvalid_arg2 Hvalid_arg11 Hvalid_sb Hvalid_sb'
+    eq_fcmp_arg2_arg11 model mem strg ext Hismodel) as [vv [eval_arg2 
     eval_arg11]].
   unfold eval_sstack_val in eval_arg2.
   rewrite <- eq_maxidx in eval_arg2.
@@ -357,7 +358,7 @@ split.
   unfold eval_sstack_val in eval_arg11.
   apply eval_sstack_val'_preserved_when_depth_extended in 
     eq_eval_arg11.
-  apply Gt.gt_n_S in idx_gt_idx' as Sidx_gt_Sidx'.
+  apply Nat.succ_lt_mono in idx_gt_idx' as Sidx_gt_Sidx'.
   pose proof (eval_sstack_val'_preserved_when_depth_extended_lt (S idx')
     (S idx) idx' sb' arg11 vv model mem strg ext evm_stack_opm Sidx_gt_Sidx'
     eval_arg11) as eval_arg11_alt.

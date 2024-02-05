@@ -1,6 +1,7 @@
 Require Import bbv.Word.
 Require Import Nat. 
 Require Import Coq.NArith.NArith.
+Require Import PeanoNat.
 
 Require Import FORVES2.constants.
 Import Constants.
@@ -146,7 +147,7 @@ apply Himpl3 in Hnot_basic3.
 pose proof (gt_add idx' idx'' Hnot_basic3) as [k3 eq_idx']. 
 pose proof (gt_add n idx' Hnot_basic2) as [k2 eq_n].
 rewrite -> eq_idx' in eq_n.
-rewrite -> Plus.plus_assoc_reverse in eq_n.
+rewrite <- Nat.add_assoc in eq_n.
 apply valid_smap_value_incr with (m:=k3+k2) in Hvalid_arg3.
 rewrite -> eq_n.
 assumption.

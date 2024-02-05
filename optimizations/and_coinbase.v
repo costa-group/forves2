@@ -63,10 +63,11 @@ Module Opt_and_coinbase.
 
 
 Definition is_coinbase_mask (sv1 sv2: sstack_val) (fcmp: sstack_val_cmp_t) 
-  (maxid : nat) (sb: sbindings) (ops: stack_op_instr_map) : bool :=
+  (maxid : nat) (sb: sbindings) (ops: stack_op_instr_map) 
+  (ctx: constraints) : bool :=
 match follow_in_smap sv1 maxid sb with 
 | Some (FollowSmapVal (SymOp COINBASE []) idx' sb') => 
-    fcmp sv2 (Val two_exp_160_minus_1) maxid sb maxid sb  ops
+    fcmp ctx sv2 (Val two_exp_160_minus_1) maxid sb maxid sb  ops
 | _ => false
 end.
 
@@ -83,8 +84,8 @@ fun (ctx: constraints) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp AND [arg1;arg2] => 
-  if is_coinbase_mask arg1 arg2 fcmp maxid  sb ops ||
-     is_coinbase_mask arg2 arg1 fcmp maxid  sb ops 
+  if is_coinbase_mask arg1 arg2 fcmp maxid sb ops ctx ||
+     is_coinbase_mask arg2 arg1 fcmp maxid sb ops ctx 
   then (SymOp COINBASE [], true)
   else (val, false)
 | _ => (val, false)
@@ -105,8 +106,8 @@ destruct label eqn: eq_label; try try inject_rw Hoptm_sbinding eq_val'.
 destruct args as [|arg1 r1]; try inject_rw Hoptm_sbinding eq_val'.
 destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
 destruct r2; try inject_rw Hoptm_sbinding eq_val'.
-destruct (is_coinbase_mask arg1 arg2 fcmp n  sb evm_stack_opm || 
-          is_coinbase_mask arg2 arg1 fcmp n  sb evm_stack_opm) 
+destruct (is_coinbase_mask arg1 arg2 fcmp n sb evm_stack_opm ctx || 
+          is_coinbase_mask arg2 arg1 fcmp n sb evm_stack_opm ctx) 
   eqn: is_coinbase; try inject_rw Hoptm_sbinding eq_val'.
 unfold orb in is_coinbase.
 
@@ -186,8 +187,8 @@ split.
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
   destruct r2; try inject_rw Hoptm_sbinding eq_val'.
-  destruct (is_coinbase_mask arg1 arg2 fcmp idx  sb evm_stack_opm
-         || is_coinbase_mask arg2 arg1 fcmp idx  sb evm_stack_opm)
+  destruct (is_coinbase_mask arg1 arg2 fcmp idx  sb evm_stack_opm ctx
+         || is_coinbase_mask arg2 arg1 fcmp idx  sb evm_stack_opm ctx )
     eqn: eq_is_coinbase; try inject_rw Hoptm_sbinding eq_val'.
   unfold orb in eq_is_coinbase.
   destruct (is_coinbase_mask arg1 arg2 fcmp idx  sb evm_stack_opm)
@@ -231,12 +232,11 @@ split.
     unfold valid_stack_op_instr in Hvalid_stack_op.
     simpl in Hvalid_stack_op.
     destruct Hvalid_stack_op as [_ [Hvalid_arg1 [Hvalid_arg2 _]]].
-    
-    symmetry in Hlen.
-    pose proof (Hsafe_sstack_val_cmp arg2 (Val two_exp_160_minus_1) idx sb
-      idx sb  evm_stack_opm Hvalid_arg2 
+
+    pose proof (Hsafe_sstack_val_cmp ctx arg2 (Val two_exp_160_minus_1) idx sb
+      idx sb  evm_stack_opm Hissat Hvalid_arg2 
       valid_sstack_two_exp_160_minus_1 Hvalid_sb Hvalid_sb is_coinbase_arg1_arg2
-      model mem strg ext Hlen) as eval_arg2_two_exp.
+      model mem strg ext Hismodel) as eval_arg2_two_exp.
     destruct eval_arg2_two_exp as [vv [eval_arg2_vv eval_two_exp_vv]].
     unfold eval_sstack_val in eval_arg2_vv.
     unfold eval_sstack_val in eval_two_exp_vv.
@@ -290,12 +290,11 @@ split.
     unfold valid_stack_op_instr in Hvalid_stack_op.
     simpl in Hvalid_stack_op.
     destruct Hvalid_stack_op as [_ [Hvalid_arg1 [Hvalid_arg2 _]]].
-    
-    symmetry in Hlen.
-    pose proof (Hsafe_sstack_val_cmp arg1 (Val two_exp_160_minus_1) idx sb
-      idx sb  evm_stack_opm Hvalid_arg1 
+
+    pose proof (Hsafe_sstack_val_cmp ctx arg1 (Val two_exp_160_minus_1) idx sb
+      idx sb  evm_stack_opm Hissat Hvalid_arg1 
       valid_sstack_two_exp_160_minus_1 Hvalid_sb Hvalid_sb eq_is_coinbase
-      model mem strg ext Hlen) as eval_arg1_two_exp.
+      model mem strg ext Hismodel) as eval_arg1_two_exp.
     destruct eval_arg1_two_exp as [vv [eval_arg1_vv eval_two_exp_vv]].
     unfold eval_sstack_val in eval_arg1_vv.
     unfold eval_sstack_val in eval_two_exp_vv.

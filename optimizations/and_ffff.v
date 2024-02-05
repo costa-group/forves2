@@ -71,9 +71,9 @@ fun (ctx: constraints) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp AND [arg1; arg2] => 
-  if fcmp arg1 (Val (wones EVMWordSize)) maxid sb maxid sb  ops then
+  if fcmp ctx arg1 (Val (wones EVMWordSize)) maxid sb maxid sb  ops then
     (SymBasicVal arg2, true)
-  else if fcmp arg2 (Val (wones EVMWordSize)) maxid sb maxid sb  ops then
+  else if fcmp ctx arg2 (Val (wones EVMWordSize)) maxid sb maxid sb  ops then
     (SymBasicVal arg1, true)
   else
     (val, false)
@@ -110,7 +110,7 @@ destruct r1 as [|arg2 r2] eqn: eq_r1; try
 destruct r2 as [|arg3 r3] eqn: eq_r2; try 
   (injection Hoptm_sbinding as eq_val' eq_flag;
   rewrite <- eq_val'; assumption).
-destruct (fcmp arg1 (Val (wones EVMWordSize)) n sb n sb  evm_stack_opm)
+destruct (fcmp ctx arg1 (Val (wones EVMWordSize)) n sb n sb  evm_stack_opm)
   eqn: eq_fcmp_arg1.
 * injection Hoptm_sbinding as eq_val' eq_flag.
   rewrite <- eq_val'.
@@ -119,7 +119,7 @@ destruct (fcmp arg1 (Val (wones EVMWordSize)) n sb n sb  evm_stack_opm)
   destruct Hvalid_smapv_val as [_ [Hvalid_arg1 [Hvalid_arg2 _]]].
   simpl.
   assumption.
-* destruct (fcmp arg2 (Val (wones EVMWordSize)) n sb n sb  evm_stack_opm) 
+* destruct (fcmp ctx arg2 (Val (wones EVMWordSize)) n sb n sb  evm_stack_opm) 
     eqn: eq_fcmp_arg2; try (injection Hoptm_sbinding as eq_val' eq_flag;
     rewrite <- eq_val'; assumption).
   injection Hoptm_sbinding as eq_val' eq_flag.
@@ -166,9 +166,6 @@ split.
     
 - (* evaluation is preserved *) 
   intros model mem strg ext v Hismodel Heval_orig.
-  assert (Hlen2 := Hlen).
-  rewrite -> Hlen in Hlen2.
-  rewrite <- Hlen in Hlen2 at 2.
   unfold optimize_and_ffff_sbinding in Hoptm_sbinding.
   pose proof (Hvalid_maxidx  maxidx idx val sb evm_stack_opm
       Hvalid) as eq_maxidx_idx.
@@ -182,7 +179,7 @@ split.
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3] eqn: eq_r2; 
     try inject_rw Hoptm_sbinding eq_val'.
-  destruct (fcmp arg1 (Val (wones EVMWordSize)) idx sb idx sb ) 
+  destruct (fcmp ctx arg1 (Val (wones EVMWordSize)) idx sb idx sb ) 
     eqn: fcmp_arg1_one.
   + (* arg1 ~ (wones EVMWordSize) *)
     injection Hoptm_sbinding as eq_val'. 
@@ -206,9 +203,9 @@ split.
 
     pose proof (valid_sstack_value_const  idx v) as 
       Hvalid_one.
-    pose proof (Hsafe_sstack_val_cmp arg1 (Val (wones EVMWordSize)) idx sb idx sb 
-       evm_stack_opm Hvalid_arg1 Hvalid_one Hvalid_bindings_sb
-      Hvalid_bindings_sb fcmp_arg1_one model mem strg ext Hlen2)
+    pose proof (Hsafe_sstack_val_cmp ctx arg1 (Val (wones EVMWordSize)) idx sb idx sb 
+       evm_stack_opm Hissat Hvalid_arg1 Hvalid_one Hvalid_bindings_sb
+      Hvalid_bindings_sb fcmp_arg1_one model mem strg ext Hismodel)
       as [vffff [Heval_arg1 Heval_vffff]].
     assert (Heval_arg1_copy := Heval_arg1).
     unfold eval_sstack_val in Heval_arg1_copy.
@@ -229,7 +226,7 @@ split.
     apply eval_sstack_val'_preserved_when_depth_extended in eval_arg2.
     apply eval'_maxidx_indep with (n:=idx).
     assumption.
-  + destruct (fcmp arg2 (Val (wones EVMWordSize)) idx sb idx sb  evm_stack_opm)
+  + destruct (fcmp ctx arg2 (Val (wones EVMWordSize)) idx sb idx sb  evm_stack_opm)
       eqn: fcmp_arg2_one; try inject_rw Hoptm_sbinding eq_val'.
     (* arg2 ~ (wones EVMWordSize) *)
     injection Hoptm_sbinding as eq_val'.
@@ -253,9 +250,9 @@ split.
     fold valid_bindings in Hvalid_bindings_sb.
     
     pose proof (valid_sstack_value_const  idx v) as Hvalid_one.
-    pose proof (Hsafe_sstack_val_cmp arg2 (Val (wones EVMWordSize)) idx sb idx sb 
-       evm_stack_opm Hvalid_arg2 Hvalid_one Hvalid_bindings_sb
-      Hvalid_bindings_sb fcmp_arg2_one model mem strg ext Hlen2)
+    pose proof (Hsafe_sstack_val_cmp ctx arg2 (Val (wones EVMWordSize)) idx sb idx sb 
+       evm_stack_opm Hissat Hvalid_arg2 Hvalid_one Hvalid_bindings_sb
+      Hvalid_bindings_sb fcmp_arg2_one model mem strg ext Hismodel)
       as [vffff [Heval_arg2 Heval_vffff]].
     assert (Heval_arg2_copy := Heval_arg2).
     unfold eval_sstack_val in Heval_arg2_copy.

@@ -73,7 +73,7 @@ fun (ctx: constraints) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp AND [arg1; arg2] => 
-  if fcmp arg1 arg2 maxid sb maxid sb  ops then
+  if fcmp ctx arg1 arg2 maxid sb maxid sb  ops then
     (SymBasicVal arg1, true)
   else 
     (val, false)
@@ -99,7 +99,7 @@ destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   destruct args as [|arg1 r1]; try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3]; try inject_rw Hoptm_sbinding eq_val'.
-  destruct (fcmp arg1 arg2 n sb n sb  evm_stack_opm)
+  destruct (fcmp ctx arg1 arg2 n sb n sb  evm_stack_opm)
     eqn: eq_fcmp_arg1_arg2; try inject_rw Hoptm_sbinding eq_val'.
   injection Hoptm_sbinding as eq_val' eq_flag.
   rewrite <- eq_val'.
@@ -126,9 +126,6 @@ split.
     
 - (* evaluation is preserved *) 
   intros model mem strg ext v Hismodel Heval_orig.
-  assert (Hlen2 := Hlen).
-  rewrite -> Hlen in Hlen2.
-  rewrite <- Hlen in Hlen2 at 2.
   unfold optimize_and_x_x_sbinding in Hoptm_sbinding.
   pose proof (Hvalid_maxidx  maxidx idx val sb evm_stack_opm
       Hvalid) as eq_maxidx_idx.
@@ -139,7 +136,7 @@ split.
   destruct args as [|arg1 r1]; try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3]; try inject_rw Hoptm_sbinding eq_val'.
-  destruct (fcmp arg1 arg2 idx sb idx sb ) 
+  destruct (fcmp ctx arg1 arg2 idx sb idx sb ) 
     eqn: fcmp_arg1_arg2; try inject_rw Hoptm_sbinding eq_val'.
   (* arg1 ~ arg2 *)
   injection Hoptm_sbinding as eq_val' _. 
@@ -161,9 +158,9 @@ split.
   simpl in Hvalid_smap_value.
   destruct (Hvalid_smap_value) as [_ [Hvalid_arg1 [Hvalid_arg2 _ ]]].
   fold valid_bindings in Hvalid_bindings_sb.
-  pose proof (Hsafe_sstack_val_cmp arg1 arg2 idx sb idx sb 
-     evm_stack_opm Hvalid_arg1 Hvalid_arg2 Hvalid_bindings_sb
-    Hvalid_bindings_sb fcmp_arg1_arg2 model mem strg ext Hlen2)
+  pose proof (Hsafe_sstack_val_cmp ctx arg1 arg2 idx sb idx sb 
+     evm_stack_opm Hissat Hvalid_arg1 Hvalid_arg2 Hvalid_bindings_sb
+    Hvalid_bindings_sb fcmp_arg1_arg2 model mem strg ext Hismodel)
     as [vv [Heval_arg1 Heval_arg2]].
   unfold eval_sstack_val in Heval_arg1.
   unfold eval_sstack_val in Heval_arg2.

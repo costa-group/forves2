@@ -2,6 +2,7 @@ Require Import bbv.Word.
 Require Import Nat. 
 Require Import Coq.NArith.NArith.
 Require Import Coq.Bool.Bool.
+Require Import PeanoNat.
 
 Require Import FORVES2.constants.
 Import Constants.
@@ -386,7 +387,7 @@ split.
       unfold eval_sstack_val in eval_arg21.
       apply eval_sstack_val'_preserved_when_depth_extended in 
         eq_eval_arg21.
-      apply Gt.gt_n_S in idx_gt_idx' as Sidx_gt_Sidx'.
+      apply Nat.succ_lt_mono in idx_gt_idx' as Sidx_gt_Sidx'.
       pose proof (eval_sstack_val'_preserved_when_depth_extended_lt (S idx')
         (S idx) idx' sb' arg21 vv model mem strg ext evm_stack_opm Sidx_gt_Sidx'
         eval_arg21) as eval_arg21_alt.
@@ -461,7 +462,7 @@ split.
       unfold eval_sstack_val in eval_arg22.
       apply eval_sstack_val'_preserved_when_depth_extended in 
         eq_eval_arg22.
-      apply Gt.gt_n_S in idx_gt_idx' as Sidx_gt_Sidx'.
+      apply Nat.succ_lt_mono in idx_gt_idx' as Sidx_gt_Sidx'.
       pose proof (eval_sstack_val'_preserved_when_depth_extended_lt (S idx')
         (S idx) idx' sb' arg22 vv model mem strg ext evm_stack_opm Sidx_gt_Sidx'
         eval_arg22) as eval_arg22_alt.
@@ -554,7 +555,7 @@ split.
       unfold eval_sstack_val in eval_arg11.
       apply eval_sstack_val'_preserved_when_depth_extended in 
         eq_eval_arg11.
-      apply Gt.gt_n_S in idx_gt_idx' as Sidx_gt_Sidx'.
+      apply Nat.succ_lt_mono in idx_gt_idx' as Sidx_gt_Sidx'.
       pose proof (eval_sstack_val'_preserved_when_depth_extended_lt (S idx')
         (S idx) idx' sb' arg11 vv model mem strg ext evm_stack_opm Sidx_gt_Sidx'
         eval_arg11) as eval_arg11_alt.
@@ -630,7 +631,7 @@ split.
       unfold eval_sstack_val in eval_arg12.
       apply eval_sstack_val'_preserved_when_depth_extended in 
         eq_eval_arg12.
-      apply Gt.gt_n_S in idx_gt_idx' as Sidx_gt_Sidx'.
+      apply Nat.succ_lt_mono in idx_gt_idx' as Sidx_gt_Sidx'.
       pose proof (eval_sstack_val'_preserved_when_depth_extended_lt (S idx')
         (S idx) idx' sb' arg12 vv model mem strg ext evm_stack_opm Sidx_gt_Sidx'
         eval_arg12) as eval_arg12_alt.
