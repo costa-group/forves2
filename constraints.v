@@ -149,15 +149,17 @@ Definition is_sat (cs : constraints) : Prop :=
 
 Definition imp_checker : Type := constraints -> constraint -> bool.
 
+(* Si un modelo cumple todas las constraints cs y cs -> c por imp_checker, 
+entonces en particular el modelo cumple c*)
 Definition imp_checker_snd (chkr : imp_checker) : Prop :=
   forall cs c,
     chkr cs c = true ->
     forall model, is_model cs model = true -> is_model_c c model = true.
 
-Definition imp_checker_1 (cs: constraints) (c: constraint) : bool :=
+Fixpoint imp_checker_1 (cs: constraints) (c: constraint) : bool :=
   match cs with
   | [] => false
-  | c'::cs' => if (eqc c' c) then true else false
+  | c'::cs' => if (eqc c' c) then true else imp_checker_1 cs' c
   end.
 
 Theorem imp_checker_1_snd : imp_checker_snd imp_checker_1.
@@ -168,12 +170,19 @@ Proof.
   - discriminate.
   - intros model.
     simpl in h.
-    destruct (eqc c' c) eqn:E.
-  -- apply eqc_snd in E.
-      simpl.
-
-  Admitted.
-
+    destruct (eqc c' c) eqn:c'_is_c.
+  -- apply eqc_snd in c'_is_c.
+    simpl.
+    destruct (is_model_c c' model) eqn:c'_sat_model.
+  --- intros cs'_sat_model.
+      rewrite c'_is_c in c'_sat_model.
+      exact c'_sat_model.
+  --- discriminate.
+  -- simpl.
+    destruct (is_model_c c' model) eqn:c'_sat_model.
+  --- apply (IHcs' h model).
+  --- discriminate.
+Qed.
 
 End Constraints.
 
