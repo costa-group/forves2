@@ -24,8 +24,6 @@ Definition eq_clit (c c': cliteral): bool :=
   | _, _ => false
   end.
 
-Search (?n =? ?m = true).
-
 Theorem eq_clit_refl: forall c: cliteral, eq_clit c c = true.
 Proof.
   intros c.
@@ -62,17 +60,15 @@ Proof.
 Qed.
 
 Inductive constraint : Type :=
-  | C_GT (l r : cliteral)
+  | C_LT (l r : cliteral)
   | C_EQ (l r : cliteral).
 
 Definition eqc (c c': constraint): bool :=
   match c, c' with
-  | C_GT l r , C_GT l' r' 
+  | C_LT l r , C_LT l' r' 
   | C_EQ l r , C_EQ l' r'  => eq_clit l l' && eq_clit r r'
   | _, _ => false
   end.
-
-Search (true <> false).
 
 Definition eqc_refl(c: constraint): eqc c c = true.
 Proof.
@@ -129,8 +125,18 @@ Definition constraints : Type := list constraint.
 
 Definition assignment : Type := nat -> EVMWord.
 
+Definition cliteral_to_nat (model: assignment) (c: cliteral): nat :=
+  match c with
+  | C_VAL n => n
+  | C_VAR i => wordToNat (model i)
+  end.
+
 Definition is_model_c (c : constraint) (model : assignment) : bool :=
-  true.
+  let get_value := cliteral_to_nat model in 
+  match c with
+  | C_EQ l r => get_value l =? get_value r
+  | C_LT l r => get_value l <? get_value r
+  end.
 
 Fixpoint is_model (cs : constraints) (model : assignment) : bool :=
   match cs with
@@ -160,7 +166,12 @@ Proof.
   intros cs c h.
   induction cs as [|c' cs' IHcs'].
   - discriminate.
-  - 
+  - intros model.
+    simpl in h.
+    destruct (eqc c' c) eqn:E.
+  -- apply eqc_snd in E.
+      simpl.
+
   Admitted.
 
 
