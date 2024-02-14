@@ -159,7 +159,7 @@ forall (model: assignment) (mem: memory) (strg: storage) (ext: externals)
 is_model ctx model = true -> 
 eval_sstack_val' maxidx arg1 model mem strg ext idx sb evm_stack_opm = Some arg1v ->
 eval_sstack_val' maxidx arg2 model mem strg ext idx sb evm_stack_opm = Some arg2v ->
-evm_lt ext [arg1v; arg2v] = WOne.
+(N.ltb (wordToN arg1v) (wordToN arg2v)) = true.
 Proof.
 Admitted.
 
@@ -222,6 +222,7 @@ split.
   pose proof (lt_constr_ok' arg1 arg2 c ctx idx sb eq_gen_lt eq_the_checker
     model mem strg ext maxidx arg1v arg2v Hismodel eq_eval_arg1 eq_eval_arg2)
     as Hevm_lt.
+  simpl in Heval_orig.
   rewrite -> Hevm_lt in Heval_orig.
   injection Heval_orig as Hv.
   
