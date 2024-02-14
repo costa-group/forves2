@@ -107,4 +107,6 @@ optimizations/balance_address.v
 optimizations/slt_x_x.v
 optimizations/sgt_x_x.v
 
+optimizations/lt_constraints.v
+
 opt_pipelines.v
