@@ -156,6 +156,16 @@ Record imp_checker' : Type :=
     is_model cs model = true -> is_model_c c model = true
   }.
 
+Class CheckerIsSound(checker : imp_checker) :=
+  { checker_sound : forall (cs: constraints)(c: constraint),
+    checker cs c = true -> forall (model : assignment),
+    is_model cs model = true -> is_model_c c model = true
+  }.
+
+Theorem something_about(checker: imp_checker) {sound : CheckerIsSound checker} : 
+  ...
+
+
 (* Si un modelo cumple todas las constraints cs y cs -> c por imp_checker, 
 entonces en particular el modelo cumple c*)
 Definition imp_checker_snd (chkr : imp_checker) : Prop :=
