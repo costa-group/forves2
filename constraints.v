@@ -149,21 +149,21 @@ Definition is_sat (cs : constraints) : Prop :=
 
 Definition imp_checker : Type := constraints -> constraint -> bool.
 
-Record imp_checker' : Type :=
+Structure imp_checker' : Type :=
   { checker : constraints -> constraint -> bool
   ; checker_snd : forall (cs: constraints)(c: constraint),
     checker cs c = true -> forall (model : assignment),
     is_model cs model = true -> is_model_c c model = true
   }.
 
-Class CheckerIsSound(checker : imp_checker) :=
+(* Class CheckerIsSound(checker : imp_checker) :=
   { checker_sound : forall (cs: constraints)(c: constraint),
     checker cs c = true -> forall (model : assignment),
     is_model cs model = true -> is_model_c c model = true
   }.
 
-Theorem something_about(checker: imp_checker) {sound : CheckerIsSound checker} : 
-  ...
+Theorem something_about{checker: imp_checker} {sound : CheckerIsSound checker} : 
+  ... *)
 
 
 (* Si un modelo cumple todas las constraints cs y cs -> c por imp_checker, 
@@ -200,6 +200,11 @@ Proof.
   --- apply (IHcs' h model).
   --- discriminate.
 Qed.
+
+Definition imp_checker_1' : imp_checker' :=
+  {| checker := imp_checker_1
+  ; checker_snd := imp_checker_1_snd
+  |}.
 
 End Constraints.
 
