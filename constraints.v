@@ -149,6 +149,13 @@ Definition is_sat (cs : constraints) : Prop :=
 
 Definition imp_checker : Type := constraints -> constraint -> bool.
 
+Record imp_checker' : Type :=
+  { checker : constraints -> constraint -> bool
+  ; checker_snd : forall (cs: constraints)(c: constraint),
+    checker cs c = true -> forall (model : assignment),
+    is_model cs model = true -> is_model_c c model = true
+  }.
+
 (* Si un modelo cumple todas las constraints cs y cs -> c por imp_checker, 
 entonces en particular el modelo cumple c*)
 Definition imp_checker_snd (chkr : imp_checker) : Prop :=
