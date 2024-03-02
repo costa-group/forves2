@@ -22,6 +22,7 @@ storage_ops_solvers_impl_soundness.v
 
 memory_ops_solvers.v
 memory_ops_solvers_impl.v
+memory_ops_solvers_impl_soundness_misc.v
 
 symbolic_execution.v
 symbolic_execution_soundness.v
