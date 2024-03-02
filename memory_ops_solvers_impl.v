@@ -37,7 +37,6 @@ Import MemoryOpsSolvers.
 Require Import FORVES2.symbolic_state_cmp.
 Import SymbolicStateCmp.
 
-
 Require Import FORVES2.constraints.
 Import Constraints.
 

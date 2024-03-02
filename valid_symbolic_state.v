@@ -745,7 +745,7 @@ Proof.
 Qed.
 
 (* a memory is still valid when extended with a valid update *)
-Lemma valid_smemeory_when_extended_with_valid_update:
+Lemma valid_smemory_when_extended_with_valid_update:
   forall maxidx u smem,
     valid_smemory_update maxidx u ->
     valid_smemory maxidx smem ->
