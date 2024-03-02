@@ -37,21 +37,23 @@ Import ValidSymbolicState.
 Require Import FORVES2.symbolic_state_cmp.
 Import SymbolicStateCmp.
 
+Require Import FORVES2.sha3_cmp_impl.
+Import SHA3CmpImpl.
+
 Require Import FORVES2.eval_common.
 Import EvalCommon.
 
-Require Import FORVES2.smemory_cmp_impl.
-Import SMemoryCmpImpl.
+Module SHA3CmpImplSoundness.
 
-Require Import FORVES2.constraints.
-Import Constraints.
+  Theorem trivial_sha3_cmp_snd:
+    safe_sha3_cmp_ext_wrt_sstack_value_cmp trivial_sha3_cmp.
+  Proof.
+    unfold safe_sha3_cmp_ext_wrt_sstack_value_cmp.
+    unfold safe_sha3_cmp_ext_d.
+    unfold safe_sha3_cmp.
+    unfold trivial_sha3_cmp.
+    intros.
+    discriminate.
+  Qed.
 
-Module SSHA3CmpImpl.
-
-
-Definition trivial_sha3_cmp (sstack_val_cmp: sstack_val_cmp_t) (ctx: constraints) (soffset1 ssize1: sstack_val) (smem1 :smemory) (soffset2 ssize2: sstack_val) (smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
-  false.
-
-
-
-End SSHA3CmpImpl.
+End SHA3CmpImplSoundness.

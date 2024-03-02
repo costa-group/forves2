@@ -37,8 +37,8 @@ Import ValidSymbolicState.
 Require Import FORVES2.symbolic_state_cmp.
 Import SymbolicStateCmp.
 
-Require Import FORVES2.smemory_cmp_impl.
-Import SMemoryCmpImpl.
+Require Import FORVES2.memory_cmp_impl.
+Import MemoryCmpImpl.
 
 Require Import FORVES2.eval_common.
 Import EvalCommon.
@@ -46,7 +46,7 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
-Module SMemoryCmpImplSoundness.
+Module MemoryCmpImplSoundness.
 
   Theorem trivial_memory_cmp_snd:
     safe_smemory_cmp_ext_wrt_sstack_value_cmp trivial_memory_cmp.
@@ -74,4 +74,4 @@ Module SMemoryCmpImplSoundness.
   Admitted.
 
 
-End SMemoryCmpImplSoundness.
+End MemoryCmpImplSoundness.

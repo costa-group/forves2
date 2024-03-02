@@ -43,7 +43,7 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
-Module SMemoryCmpImpl.
+Module MemoryCmpImpl.
 
 
   (* just handles the case of empty memory updates *)
@@ -151,4 +151,4 @@ Module SMemoryCmpImpl.
       false.
       
   
-End SMemoryCmpImpl.
+End MemoryCmpImpl.

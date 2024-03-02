@@ -43,7 +43,7 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
-Module SStorageCmpImpl.
+Module StorageCmpImpl.
 
 
 
@@ -123,4 +123,4 @@ Module SStorageCmpImpl.
     else
       false.
       
-End SStorageCmpImpl.
+End StorageCmpImpl.

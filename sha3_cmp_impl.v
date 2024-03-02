@@ -37,38 +37,21 @@ Import ValidSymbolicState.
 Require Import FORVES2.symbolic_state_cmp.
 Import SymbolicStateCmp.
 
-Require Import FORVES2.sstorage_cmp_impl.
-Import SStorageCmpImpl.
-
 Require Import FORVES2.eval_common.
 Import EvalCommon.
 
-Module StorageCmpImplSoundness.
+Require Import FORVES2.smemory_cmp_impl.
+Import SMemoryCmpImpl.
 
-  Theorem trivial_storage_cmp_snd:
-    safe_sstorage_cmp_ext_wrt_sstack_value_cmp trivial_storage_cmp.
-  Proof.
-    unfold safe_sstorage_cmp_ext_wrt_sstack_value_cmp.
-    unfold safe_sstack_val_cmp_ext_1_d.
-    unfold safe_sstorage_cmp_ext_d.
-    unfold safe_sstorage_cmp.
-    unfold trivial_storage_cmp.
-    intros.
-    destruct sstrg1; destruct sstrg2; try discriminate.
-    exists strg.
-    auto.
-  Qed.
-  
+Require Import FORVES2.constraints.
+Import Constraints.
 
-  Theorem basic_storage_cmp_snd:
-    safe_sstorage_cmp_ext_wrt_sstack_value_cmp basic_storage_cmp.
-  Proof.
-  Admitted.
-  
-  Theorem po_storage_cmp_snd:
-    safe_sstorage_cmp_ext_wrt_sstack_value_cmp po_storage_cmp.
-  Proof.
-  Admitted.
+Module SHA3CmpImpl.
 
 
-End StorageCmpImplSoundness.
+Definition trivial_sha3_cmp (sstack_val_cmp: sstack_val_cmp_t) (ctx: constraints) (soffset1 ssize1: sstack_val) (smem1 :smemory) (soffset2 ssize2: sstack_val) (smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  false.
+
+
+
+End SHA3CmpImpl.
