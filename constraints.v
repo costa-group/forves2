@@ -18,8 +18,8 @@ Inductive cliteral : Type :=
   | C_VAL (n : nat).
 
 Inductive constraint : Type :=
-  | C_GT (l r : cliteral)
-  | C_LE (l r : cliteral)
+  | C_LT (l r : cliteral)
+  | C_GE (l r : cliteral)
   | C_EQ (l r : cliteral).
 
 Definition constraints : Type := list constraint.
