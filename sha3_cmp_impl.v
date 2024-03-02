@@ -40,9 +40,6 @@ Import SymbolicStateCmp.
 Require Import FORVES2.eval_common.
 Import EvalCommon.
 
-Require Import FORVES2.smemory_cmp_impl.
-Import SMemoryCmpImpl.
-
 Require Import FORVES2.constraints.
 Import Constraints.
 

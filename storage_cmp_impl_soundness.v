@@ -47,6 +47,9 @@ Import StorageCmpImpl.
 Require Import FORVES2.eval_common.
 Import EvalCommon.
 
+Require Import FORVES2.concrete_interpreter.
+Import ConcreteInterpreter.
+
 Require Import FORVES2.constraints.
 Import Constraints.
 
@@ -270,7 +273,7 @@ Module StorageCmpImplSoundness.
     injection H_eval_sstrg as H_eval_sstrg.
     rewrite H_eval_sstrg.
  
-    unfold concrete_interpreter.ConcreteInterpreter.sstore.
+    unfold sstore.
     split; try reflexivity.
    
     unfold eval_sstack_val' in H_eval_skey1.
