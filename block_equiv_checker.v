@@ -753,9 +753,13 @@ Definition evm_eq_block_chkr
 
 
 
-Definition gen_empty_sstate (instk_height: nat) : sstate :=
+Definition gen_empty_sstate_from_stk_height (instk_height: nat) : sstate :=
   let ids := seq 0 instk_height in
   let sstk := List.map InVar ids in
+  make_sst sstk empty_smemory empty_sstorage empty_sexternals empty_smap.
+
+
+Definition gen_empty_sstate_from_stk (sstk: list sstack_val) : sstate :=
   make_sst sstk empty_smemory empty_sstorage empty_sexternals empty_smap.
 
 

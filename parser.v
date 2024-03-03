@@ -15,6 +15,17 @@ Import Program.
 Require Import FORVES2.block_equiv_checker.
 Import BlockEquivChecker.
 
+Require Import FORVES2.symbolic_state.
+Import SymbolicState.
+
+Require Import FORVES2.constants.
+Import Constants.
+
+Require Import FORVES2.constraints.
+Import Constraints.
+
+Require Import bbv.Word.
+
 
 Module Parser.
 
@@ -443,6 +454,47 @@ Definition parse_sha3_cmp (s: string) :=
   | _ => None
   end.
 
+
+Definition parse_num_or_invar (s : string) :=
+  match (parseHexNumber s) with
+  | None => match (list_of_string s) with
+            | "v"%char::cs => match (parseDecNumber' cs 0) with
+                              | None => None
+                              | Some n => Some (InVar n)
+                              end
+            | _ => None
+            end
+  | Some v => Some (Val (NToWord EVMWordSize v))
+  end.
+
+Fixpoint parse_init_stack' (l: list string) :=
+  match l with
+  | nil => Some []
+  | x::xs =>      
+      match parse_num_or_invar x with
+      | None => None
+      | Some xv => match (parse_init_stack' xs) with
+                   | None => None
+                   | Some xsv => Some (xv::xsv)
+                   end
+      end
+  end.
+
+Definition parse_init_stack (s: string) :=
+  match (tokenize s) with
+  | "stack:"%string::xs => parse_init_stack' xs
+  | _ => None
+  end.
+
+Definition parse_init_state (init_state: string) : option (constraints * sstate) :=
+  match (parseDecNumber init_state) with
+  | Some k_nat => Some ([], (gen_empty_sstate_from_stk_height k_nat))
+  | None => match (parse_init_stack init_state) with
+            | Some sstk => Some ([], (gen_empty_sstate_from_stk sstk))
+            | None => None
+            end
+  end.
+  
 Definition block_eq (memory_updater storage_updater mload_solver sload_solver sstack_value_cmp memory_cmp storage_cmp sha3_cmp opt_step_rep opt_pipeline_rep: string) (opts_to_apply : list string) :
   option (string -> string -> string -> option bool) :=
   match (parse_memory_updater memory_updater) with
@@ -480,17 +532,16 @@ Definition block_eq (memory_updater storage_updater mload_solver sload_solver ss
                                           | Some optimization_steps =>
                                               let chkr_lazy :=
                                                 evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep_nat opt_pipeline_rep_nat in
-                                              Some (fun (p_opt p k : string) => 
+                                              Some (fun (p_opt p init_state : string) => 
                                                       match (parse_block p_opt) with
                                                       | None => None
                                                       | Some b1 => 
                                                           match (parse_block p) with
                                                           | None => None
                                                           | Some b2 =>
-                                                              match (parseDecNumber k) with
+                                                              match parse_init_state init_state with
                                                               | None => None
-                                                              | Some k_nat =>
-                                                                  Some (chkr_lazy [] (gen_empty_sstate k_nat) b1 b2)
+                                                              | Some (ctx,sst) => Some (chkr_lazy ctx sst b1 b2)
                                                               end
                                                           end
                                                       end)
