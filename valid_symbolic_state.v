@@ -112,7 +112,7 @@ Definition valid_sstate (sst: sstate) (ops: stack_op_instr_map): Prop :=
 Definition chk_valid_sstack_value (maxidx: nat) (value : sstack_val) : bool :=
   match value with
   | Val _ => true
-  | InVar _ => false
+  | InVar _ => true
   | FreshVar idx => idx <? maxidx
   end.
 

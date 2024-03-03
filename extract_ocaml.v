@@ -23,7 +23,7 @@
 From Coq Require Import Strings.String.
 Require Import List.
 Import ListNotations.
-Require Import FORVES.parser.
+Require Import FORVES2.parser.
 Import Parser.
 From Coq Require Import extraction.ExtrOcamlString.
 Import ExtrOcamlString.
