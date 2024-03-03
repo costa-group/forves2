@@ -297,29 +297,6 @@ Proof.
 Qed.
 
 
-
-
-Lemma valid_empty_sstate:
-  forall k ops, valid_sstate (gen_empty_sstate k) ops.
-Proof.
-  intros k ops.
-  unfold valid_sstate.
-  split; split.
-  
-  + simpl.
-    induction k as [|k' IHsk'].    
-    * simpl.
-      apply I.
-    * rewrite seq_S.
-      rewrite List.map_app. 
-      apply valid_sstack_app.
-      ** apply IHsk'.
-      ** simpl. intuition.
-  + simpl.
-    intuition.
-Qed.
-
-
 Lemma add_to_smap_valid_smap:
   forall idx m m' smv ops,
     valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->

@@ -753,6 +753,18 @@ Definition evm_eq_block_chkr
 
 
 
+Definition gen_empty_sstate (instk_height: nat) : sstate :=
+  let ids := seq 0 instk_height in
+  let sstk := List.map InVar ids in
+  make_sst sstk empty_smemory empty_sstorage empty_sexternals empty_smap.
+
+
+
+
+
+(* Soundness *)
+
+
 Definition sem_eq_blocks (p1 p2: block) (ctx: constraints) (sst: sstate) : Prop :=
   forall (mem: memory) (strg: storage) (exts: externals) (in_st: state) (model: assignment),
     is_model ctx model = true ->

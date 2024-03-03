@@ -119,3 +119,6 @@ opt_pipelines.v
 
 block_equiv_checker.v
 block_equiv_checker_soundness.v
+
+parser.v
+extract_ocaml.v
