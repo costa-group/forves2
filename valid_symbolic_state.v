@@ -107,6 +107,88 @@ Definition valid_sstate (sst: sstate) (ops: stack_op_instr_map): Prop :=
     valid_sstorage maxidx sstrg.
 
 
+(* Valid state checker *)
+
+Definition chk_valid_sstack_value (maxidx: nat) (value : sstack_val) : bool :=
+  match value with
+  | Val _ => true
+  | InVar _ => false
+  | FreshVar idx => idx <? maxidx
+  end.
+
+(* All the FreshVar in the sstack are less than maxidx *)
+Fixpoint chk_valid_sstack (maxidx: nat) (sstk : sstack) : bool :=
+  match sstk with
+  | [] => true
+  | sv::sstk' => chk_valid_sstack_value maxidx sv && chk_valid_sstack maxidx sstk'
+  end.
+
+Definition chk_valid_smemory_update (maxidx: nat) (u : memory_update sstack_val) : bool :=
+  match u with
+  | U_MSTORE _ offset value | U_MSTORE8 _ offset value => chk_valid_sstack_value maxidx offset && chk_valid_sstack_value maxidx value
+  end.
+
+Fixpoint chk_valid_smemory (maxidx: nat) (smem : smemory) : bool :=
+  match smem with
+  | [] => true
+  | u::smem' => chk_valid_smemory_update maxidx u && chk_valid_smemory maxidx smem'
+  end.
+
+Definition chk_valid_sstorage_update (maxidx: nat) (u : storage_update sstack_val) : bool :=
+  match u with
+  | U_SSTORE _ offset value => chk_valid_sstack_value maxidx offset && chk_valid_sstack_value maxidx value
+  end.
+
+Fixpoint chk_valid_sstorage (maxidx: nat) (sstrg : sstorage) : bool :=
+  match sstrg with
+  | [] => true
+  | u::sstrg' => chk_valid_sstorage_update maxidx u && chk_valid_sstorage maxidx sstrg'
+  end.
+
+Definition chk_valid_stack_op_instr (maxidx: nat) (ops: stack_op_instr_map) (label: stack_op_instr) (args: list sstack_val): bool :=
+  match (ops label) with
+  | OpImp nargs _ _ _ => (length args =? nargs) &&  chk_valid_sstack maxidx args
+  end.
+
+Definition chk_valid_smap_value (maxidx: nat) (ops: stack_op_instr_map) (value: smap_value) : bool :=
+  match value with
+  | SymBasicVal v => chk_valid_sstack_value maxidx v
+  | SymMETAPUSH _ _ => true
+  | SymOp label args => chk_valid_stack_op_instr maxidx ops label args 
+  | SymMLOAD offset smem => chk_valid_sstack_value maxidx offset && chk_valid_smemory maxidx smem
+  | SymSLOAD key sstrg => chk_valid_sstack_value maxidx key && chk_valid_sstorage maxidx sstrg
+  | SymSHA3 offset size smem => chk_valid_sstack_value maxidx offset && chk_valid_sstack_value maxidx size && chk_valid_smemory maxidx smem
+  end.
+
+Fixpoint chk_valid_bindings (maxid: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
+  match sb with
+  | [] => maxid =? 0
+  | (idx,value)::sb' => (maxid =? (S idx)) && chk_valid_smap_value idx ops value && chk_valid_bindings idx sb' ops
+  end.
+
+Definition chk_valid_smap (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
+  chk_valid_bindings maxidx sb ops.
+
+
+Definition chk_valid_sstate (sst: sstate) (ops: stack_op_instr_map): bool :=
+  let sstk := get_stack_sst sst in
+  let smem := get_memory_sst sst in
+  let sstrg := get_storage_sst sst in
+  let m := get_smap_sst sst in
+  let maxidx := get_maxidx_smap m in
+  let sb := get_bindings_smap m in
+    chk_valid_smap maxidx sb ops && 
+    chk_valid_sstack maxidx sstk &&
+    chk_valid_smemory maxidx smem &&
+    chk_valid_sstorage maxidx sstrg.
+
+
+
+Lemma chk_valid_sstate_snd:
+  forall sst ops,
+    chk_valid_sstate sst ops = true -> valid_sstate sst ops.
+Proof.
+  Admitted.
 
 (*Lemma fresh_var_gt_map_maxidx_S:
   forall sb maxidx,

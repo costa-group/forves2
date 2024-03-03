@@ -46,5 +46,18 @@ Definition imp_checker_snd (chkr : imp_checker) : Prop :=
     forall model, is_model cs model = true -> is_model_c c model = true.
 
 
+(* 
+   just an operation that checks if the constraints are specifiable, 
+   for now it simply returns true. 
+*)
+Definition chk_is_sat (cs : constraints) : bool :=
+  true.
+
+
+Lemma chk_is_sat_snd:
+  forall cs,
+    chk_is_sat cs = true -> is_sat cs.
+Proof.
+  Admitted.
 End Constraints.
 
