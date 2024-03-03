@@ -46,7 +46,7 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
-Module SymbolicStateCmpSoundness.
+Module SymbolicStateCmpImplSoundness.
 
   Lemma sstack_cmp_snd:
     forall sstack_val_cmp ctx sstk1 sstk2 maxidx1 sb1 maxidx2 sb2 ops,
@@ -167,4 +167,4 @@ Module SymbolicStateCmpSoundness.
 Qed.
     
 
-End SymbolicStateCmpSoundness.
+End SymbolicStateCmpImplSoundness.

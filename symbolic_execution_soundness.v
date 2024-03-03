@@ -62,8 +62,8 @@ Module SymbolicExecutionSoundness.
   of st. *)
 
 
-Definition st_is_instance_of_sst (st: state) (model: assignment) (sst: sstate) (ops: stack_op_instr_map) : Prop :=
-  exists mem strg exts st',
+Definition st_is_instance_of_sst (mem: memory) (strg: storage) (exts: externals) (st: state) (model: assignment) (sst: sstate) (ops: stack_op_instr_map) : Prop :=
+  exists st',
     eval_sstate sst model mem strg exts ops = Some st' /\
     eq_execution_states st st'.
 
@@ -81,11 +81,11 @@ Definition snd_state_transformer ( tr : state -> stack_op_instr_map -> option st
     valid_sstate sst ops ->
     symtr ctx sst ops = Some sst' ->
     valid_sstate sst' ops /\
-      forall (st: state) (model: assignment),
+      forall (mem: memory) (strg: storage) (exts: externals) (st: state) (model: assignment),
         is_model ctx model = true ->
-        st_is_instance_of_sst st model sst ops ->
+        st_is_instance_of_sst mem strg exts st model sst ops ->
         exists (st': state),
-          tr st ops = Some st' /\ st_is_instance_of_sst st' model sst' ops.
+          tr st ops = Some st' /\ st_is_instance_of_sst mem strg exts st' model sst' ops.
 
 
 
@@ -898,13 +898,13 @@ Qed.
 (* when st is an instance of sst wrt to model, the length stacks in
 st and sst are the same *)
 Lemma st_is_instance_of_sst_stk_len:
-  forall (st: state) (model: assignment) (sst: sstate) (ops: stack_op_instr_map),
-         st_is_instance_of_sst st model sst ops ->
+  forall (mem: memory) (strg: storage) (exts: externals) (st: state) (model: assignment) (sst: sstate) (ops: stack_op_instr_map),
+         st_is_instance_of_sst mem strg exts st model sst ops ->
          length (get_stack_sst sst) = length (get_stack_st st).
 Proof.
-  intros st model sst ops H_inst.
+  intros mem strg exts st model sst ops H_inst.
   unfold st_is_instance_of_sst in H_inst.
-  destruct H_inst as [mem [strg [exts [st' H_inst]]]].
+  destruct H_inst as [st' H_inst].
   destruct H_inst as [H_inst_l H_inst_r].
   unfold eval_sstate in H_inst_l.
   
@@ -1444,8 +1444,8 @@ Proof.
   - pose proof (push_valid_sst ctx sst sst' w ops H_is_sat H_valid_sst H_push_s) as H_valid_sst'. apply H_valid_sst'.
 
   (* Soundness *)
-  - intros st model H_is_model H_st_inst_sst.
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as H_inst_stk_len.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as H_inst_stk_len.
 (*    destruct H_inst_stk_len as [H_inst_stk_len_l H_inst_stk_len_r]. *)
     unfold push_s in H_push_s.
     unfold push in H_push_s.
@@ -1460,10 +1460,10 @@ Proof.
     + injection H_push_s as H_sst'.
       rewrite <- H_sst'.
       unfold st_is_instance_of_sst in H_st_inst_sst.
-      destruct H_st_inst_sst as [mem [strg [exts [st' H_st_inst_sst]]]].
+      destruct H_st_inst_sst as [st' H_st_inst_sst].
       destruct H_st_inst_sst as [H_st_inst_sst_l H_st_inst_sst_r].
       unfold st_is_instance_of_sst.
-      exists mem. exists strg. exists exts. exists (set_stack_st st' (w::(get_stack_st st'))).
+      exists (set_stack_st st' (w::(get_stack_st st'))).
       split.
       ++ pose proof (eval_sstate_w model w sst st' mem strg exts ops H_st_inst_sst_l) as H_eval_sstate_w.
          apply H_eval_sstate_w.
@@ -1488,8 +1488,8 @@ Proof.
   - pose proof (metapush_valid_sst ctx sst sst' cat v ops H_is_sat H_valid_sst H_metapush_s) as H_valid_sst'. apply H_valid_sst'.
 
   (* Soundness *)
-  - intros st model H_is_model H_st_inst_sst.
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as H_inst_stk_len.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as H_inst_stk_len.
     unfold metapush_s in H_metapush_s.
     destruct (add_to_smap (get_smap_sst sst) (SymMETAPUSH cat v)) as [key' sm'] eqn:E_add_to_smap.
     unfold push in H_metapush_s.
@@ -1508,10 +1508,10 @@ Proof.
     assert (H_st_inst_sst' := H_st_inst_sst).
 
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' [H_st_inst_sst'_l H_st_inst_sst'_r]]]]].
+    destruct H_st_inst_sst' as [st' [H_st_inst_sst'_l H_st_inst_sst'_r]].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st st (get_tags_exts (get_externals_st st) cat v :: get_stack_st st)).
+    exists (set_stack_st st (get_tags_exts (get_externals_st st) cat v :: get_stack_st st)).
     split; try apply eq_execution_states_refl.
 
     rewrite <- H_sst'.
@@ -1525,7 +1525,6 @@ Proof.
     rewrite sstorage_preserved_when_updating_smap_sst.
     rewrite sstorage_preserved_when_updating_stack_sst.
     
-
     pose proof (eq_execution_states_ext st st' H_st_inst_sst'_r) as H_st_eq_st'.
     
     unfold eval_sstate in H_st_inst_sst'_l.    
@@ -1578,8 +1577,8 @@ Proof.
 Qed.
 
 Lemma pop_succ:
-  forall model st sst ops l,
-    st_is_instance_of_sst st model sst ops ->
+  forall mem strg exts model st sst ops l,
+    st_is_instance_of_sst mem strg exts st model sst ops ->
     pop (get_stack_sst sst) = Some l ->
     exists v1 v2 l', (get_stack_sst sst)=v1::l /\ get_stack_st st = v2::l'.
 Proof.
@@ -1590,7 +1589,7 @@ Proof.
   rewrite H1.
   exists s.
   unfold st_is_instance_of_sst in H.
-  destruct H as [mem [strg [exts [st' H]]]].
+  destruct H as [st' H].
   destruct H.
   unfold eval_sstate in H.
   
@@ -1674,12 +1673,12 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_pop_s.
   split.
   - pose proof (pop_valid_sst ctx sst sst' ops H_is_sat H_valid_sst H_pop_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst. 
+  - intros mem strg exts st model H_is_model H_st_inst_sst. 
     unfold pop_s in H_pop_s.
     destruct (pop (get_stack_sst sst)) eqn:H_pop_sst; try discriminate.
     unfold pop_c.
     
-    pose proof (pop_succ model st sst ops l  H_st_inst_sst H_pop_sst) as H_pop_succ.
+    pose proof (pop_succ mem strg exts model st sst ops l  H_st_inst_sst H_pop_sst) as H_pop_succ.
     destruct H_pop_succ as [v1 [v2 [l' H_pop_succ]]].
     destruct H_pop_succ as [H_pop_succ_l H_pop_succ_r].
     rewrite H_pop_succ_r.
@@ -1691,14 +1690,14 @@ Proof.
     + injection  H_pop_s as  H_sst'.
       rewrite <- H_sst'.
       unfold st_is_instance_of_sst in H_st_inst_sst.
-      destruct H_st_inst_sst as [mem [strg [exts [st' [H_st_inst_sst_l H_st_inst_sst_r]]]]].
+      destruct H_st_inst_sst as [st' [H_st_inst_sst_l H_st_inst_sst_r]].
       pose proof (eq_execution_states_ext st st'  H_st_inst_sst_r) as H_eq_st_st'.
       rewrite <- H_eq_st_st' in H_st_inst_sst_l.
       
       pose proof (eval_sstate_stack_tl sst st v1 v2 l l' model mem strg exts ops H_pop_succ_l H_pop_succ_r H_st_inst_sst_l).
       
       unfold st_is_instance_of_sst.
-      exists mem. exists strg. exists exts. exists (set_stack_st st l').
+      exists (set_stack_st st l').
       split.
       ++ apply H.
       ++ apply eq_execution_states_refl.
@@ -1821,8 +1820,8 @@ Proof.
   intros k ctx sst sst' ops H_is_sat H_valid_sst H_dup_s.
   split.
   - pose proof (dup_valid_sst ctx sst sst' ops k H_is_sat H_valid_sst H_dup_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as H_st_sst_stk_len.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as H_st_sst_stk_len.
     unfold dup_s in H_dup_s.
     unfold dup in H_dup_s.
     destruct ((k =? 0) || (16 <? k) || (StackSize <=? length (get_stack_sst sst))) eqn:E_dup_s_k; try discriminate.
@@ -1841,11 +1840,11 @@ Proof.
     unfold st_is_instance_of_sst.
 
     unfold st_is_instance_of_sst in H_st_inst_sst.
-    destruct H_st_inst_sst as [mem [strg [ exts[ st' H_st_inst_sst]]]].
+    destruct H_st_inst_sst as [st' H_st_inst_sst].
     destruct H_st_inst_sst as [H_st_inst_sst_l H_st_inst_sst_r].
 
     
-    exists mem. exists strg. exists exts. exists (set_stack_st st (v' :: get_stack_st st)).
+    exists (set_stack_st st (v' :: get_stack_st st)).
     split; try apply eq_execution_states_refl.
     
     unfold eval_sstate in H_st_inst_sst_l.
@@ -1921,13 +1920,13 @@ Qed.
 
   
 Lemma swap_1:
-  forall model st sst ops k l,
-    st_is_instance_of_sst st model sst ops ->
+  forall mem strg exts model st sst ops k l,
+    st_is_instance_of_sst mem strg exts st model sst ops ->
     swap k (get_stack_sst sst) = Some l ->
     exists l', swap k (get_stack_st st) = Some l'.   
 Proof.
   intros.
-  pose proof (st_is_instance_of_sst_stk_len st model sst ops H).
+  pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H).
   pose proof (swap_0 sstack_val EVMWord k (get_stack_sst sst) (get_stack_st st) l H1 H0).
   apply H2.
 Qed.
@@ -2016,11 +2015,11 @@ Proof.
   intros k ctx sst sst' ops H_is_sat H_valid_sst H_swap_s.
   split.
   - pose proof (swap_valid_sst ctx sst sst' ops k H_is_sat H_valid_sst H_swap_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold swap_s in H_swap_s.
     destruct (swap k (get_stack_sst sst)) eqn:E_swap; try discriminate.
     unfold swap_c.
-    pose proof (swap_1 model st sst ops k l H_st_inst_sst E_swap) as H_swap_1.
+    pose proof (swap_1 mem strg exts model st sst ops k l H_st_inst_sst E_swap) as H_swap_1.
     destruct H_swap_1 as [l' H_swap_1].
     rewrite H_swap_1.
     exists (set_stack_st st l').
@@ -2028,11 +2027,11 @@ Proof.
 
     assert (H_st_inst_sst_0:=H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst.
-    destruct H_st_inst_sst as [mem [strg [exts [st' H_st_inst_sst]]]].
+    destruct H_st_inst_sst as [st' H_st_inst_sst].
     destruct H_st_inst_sst as [H_st_inst_sst_1 H_st_inst_sst_2].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st st l').
+    exists (set_stack_st st l').
     split; try apply eq_execution_states_refl.
     
     unfold eval_sstate in   H_st_inst_sst_1.
@@ -2085,7 +2084,7 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_sload_s.
   split.
   - pose proof (sload_valid_sst ctx sst sst' ops sload_solver H_is_sat H_valid_sst H_valid_sload_solver H_sload_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold sload_s in H_sload_s.
     destruct (get_stack_sst sst) as [|skey sstk] eqn:E_sstk_sst; try discriminate.
 
@@ -2093,7 +2092,7 @@ Proof.
     
     destruct (add_to_smap (get_smap_sst sst) smv) as [key sm'] eqn:E_add_to_smap.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
     unfold sload_c.
     
     destruct (get_stack_st st) as [|ckey stk] eqn:E_stk_st; try (rewrite E_sstk_sst in E_stack_len_st_eq_sst; discriminate). (* case of [] *)
@@ -2103,11 +2102,11 @@ Proof.
 
     assert (H_st_inst_sst' := H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
     destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st st (sload (get_storage_st st) ckey :: stk)).
+    exists (set_stack_st st (sload (get_storage_st st) ckey :: stk)).
     split; try apply eq_execution_states_refl.
 
     unfold eval_sstate.
@@ -2258,13 +2257,13 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_sstore_s.
   split.
   - pose proof (sstore_valid_sst ctx sst sst' ops sstorage_updater H_is_sat H_sstorage_updater_snd H_valid_sst H_sstore_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold sstore_s in H_sstore_s.
     destruct (get_stack_sst sst) as [|skey sstk] eqn:E_sstk_sst; try discriminate.
     destruct sstk as [|svalue sstk'] eqn:E_sstk'_sst; try discriminate.
     injection H_sstore_s as H_sst'.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
 
     unfold sstore_c.
  
@@ -2278,11 +2277,11 @@ Proof.
 
     assert (H_st_inst_sst' := H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
     destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st (set_store_st st (sstore (get_storage_st st) ckey cvalue)) stk').
+    exists (set_stack_st (set_store_st st (sstore (get_storage_st st) ckey cvalue)) stk').
     split; try apply eq_execution_states_refl.
 
     pose proof (eq_execution_states_ext st st' H_st_inst_sst'_r) as H_st_eq_st'.
@@ -2412,7 +2411,7 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_mload_s.
   split.
   - pose proof (mload_valid_sst ctx sst sst' ops mload_solver H_is_sat H_valid_sst H_valid_mload_solver H_mload_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold mload_s in H_mload_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
 
@@ -2420,7 +2419,7 @@ Proof.
     
     destruct (add_to_smap (get_smap_sst sst) smv) as [key sm'] eqn:E_add_to_smap.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
     unfold mload_c.
     
     destruct (get_stack_st st) as [|coffset stk] eqn:E_stk_st; try (rewrite E_sstk_sst in E_stack_len_st_eq_sst; discriminate). (* case of [] *)
@@ -2430,11 +2429,11 @@ Proof.
 
     assert (H_st_inst_sst' := H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
     destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st st (mload (get_memory_st st) coffset :: stk)).
+    exists (set_stack_st st (mload (get_memory_st st) coffset :: stk)).
     split; try apply eq_execution_states_refl.
 
     unfold eval_sstate.
@@ -2589,13 +2588,13 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_mstore8_s.
   split.
   - pose proof (mstore8_valid_sst ctx sst sst' ops smemory_updater H_is_sat H_smemory_updater_snd H_valid_sst H_mstore8_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold mstore8_s in H_mstore8_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
     destruct sstk as [|svalue sstk'] eqn:E_sstk'_sst; try discriminate.
     injection H_mstore8_s as H_sst'.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
 
     unfold mstore8_c.
  
@@ -2609,11 +2608,11 @@ Proof.
 
     assert (H_st_inst_sst' := H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
     destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st (set_memory_st st (mstore (get_memory_st st) (split1_byte (cvalue : word (S (pred BytesInEVMWord) * 8))) coffset)) stk').
+    exists (set_stack_st (set_memory_st st (mstore (get_memory_st st) (split1_byte (cvalue : word (S (pred BytesInEVMWord) * 8))) coffset)) stk').
     split; try apply eq_execution_states_refl.
 
 
@@ -2748,13 +2747,13 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_mstore_s.
   split.
   - pose proof (mstore_valid_sst ctx sst sst' ops smemory_updater H_is_sat H_smemory_updater_snd H_valid_sst H_mstore_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold mstore_s in H_mstore_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
     destruct sstk as [|svalue sstk'] eqn:E_sstk'_sst; try discriminate.
     injection H_mstore_s as H_sst'.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
 
     unfold mstore_c.
  
@@ -2768,11 +2767,11 @@ Proof.
 
     assert (H_st_inst_sst' := H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
     destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st (set_memory_st st (mstore (get_memory_st st) cvalue coffset)) stk').
+    exists (set_stack_st (set_memory_st st (mstore (get_memory_st st) cvalue coffset)) stk').
     split; try apply eq_execution_states_refl.
 
 
@@ -2900,7 +2899,7 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_sha3_s.
   split.
   - pose proof (sha3_valid_sst ctx sst sst' ops H_is_sat H_valid_sst H_sha3_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold sha3_s in H_sha3_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
     destruct sstk as [|ssize sstk'] eqn:E_sstk'_sst; try discriminate.
@@ -2908,11 +2907,11 @@ Proof.
     destruct (add_to_smap (get_smap_sst sst) (SymSHA3 soffset ssize (get_memory_sst sst))) as [key sm'] eqn:E_add_to_smap.
     injection H_sha3_s as H_sst'.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
 
     assert (H_st_inst_sst' := H_st_inst_sst).
     unfold st_is_instance_of_sst in H_st_inst_sst'.
-    destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+    destruct H_st_inst_sst' as [st' H_st_inst_sst'].
     destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
     pose proof (eq_execution_states_ext st st' H_st_inst_sst'_r) as H_st_eq_st'.
@@ -2938,7 +2937,7 @@ Proof.
     split; try reflexivity.
 
     unfold st_is_instance_of_sst.
-    exists mem. exists strg. exists exts. exists (set_stack_st st (get_sha3_info_op (get_keccak256_exts (get_externals_st st)) (wordToNat size) (mload' (get_memory_st st) offset (wordToNat size)) :: stk'')).
+    exists (set_stack_st st (get_sha3_info_op (get_keccak256_exts (get_externals_st st)) (wordToNat size) (mload' (get_memory_st st) offset (wordToNat size)) :: stk'')).
     
     split; try apply eq_execution_states_refl.
     
@@ -3051,7 +3050,7 @@ Proof.
   intros ctx sst sst' ops H_is_sat H_valid_sst H_execop_s. 
   split.
   - pose proof (exec_stack_op_intsr_valid_sst ctx sst sst' label ops H_is_sat H_valid_sst H_execop_s) as H_valid_sst'. apply H_valid_sst'.
-  - intros st model H_is_model H_st_inst_sst.
+  - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold exec_stack_op_intsr_s in H_execop_s.
     destruct (ops label) eqn:E_label.
 
@@ -3068,7 +3067,7 @@ Proof.
     destruct (add_to_smap (get_smap_sst sst) (SymOp label l)) as [key sm'] eqn:E_add_to_smap.
     injection H_execop_s as H_execop_s.
 
-    pose proof (st_is_instance_of_sst_stk_len st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
+    pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as E_stack_len_st_eq_sst.
 
     assert(E_stack_len_st_eq_sst' := E_stack_len_st_eq_sst).
     rewrite <- Nat.eqb_eq in E_stack_len_st_eq_sst'.
@@ -3083,11 +3082,11 @@ Proof.
 
          assert (H_st_inst_sst' := H_st_inst_sst).
          unfold st_is_instance_of_sst in H_st_inst_sst'.
-         destruct H_st_inst_sst' as [mem [strg [exts [st' H_st_inst_sst']]]].
+         destruct H_st_inst_sst' as [st' H_st_inst_sst'].
          destruct H_st_inst_sst' as [H_st_inst_sst'_l H_st_inst_sst'_r].
 
          unfold st_is_instance_of_sst.
-         exists mem. exists strg. exists exts. exists (set_stack_st st (f (get_externals_st st) l1 :: l2)).
+         exists (set_stack_st st (f (get_externals_st st) l1 :: l2)).
          split; try apply eq_execution_states_refl.
          
          unfold eval_sstate.
@@ -3300,7 +3299,7 @@ Proof.
     injection H_sexec_nil as H_sexec_nil.
     rewrite <- H_sexec_nil.
     split; try assumption.
-    intros st model H_is_model H_st_inst_sst.
+    intros mem strg exts st model H_is_model H_st_inst_sst.
     exists st. (* we use st since p=[], i.e., we don't execute anything *)
     split; try reflexivity. (* split the conjuction into two goals *)
     apply H_st_inst_sst. (* the goal is the assumption H_st_inst_sst *)
@@ -3320,8 +3319,8 @@ Proof.
     split.
     
     + pose proof (IHp' ctx sst'' sst' ops H_is_sat H_eval_stt'' H_sexec_ip') as [IHp'_aux _]. apply IHp'_aux.
-    + intros st model H_is_model H_st_inst_sst.
-      pose proof (E_evm_exec_instr_s_0 st model H_is_model H_st_inst_sst) as E_evm_exec_instr_c.
+    + intros mem strg exts st model H_is_model H_st_inst_sst.
+      pose proof (E_evm_exec_instr_s_0 mem strg exts st model H_is_model H_st_inst_sst) as E_evm_exec_instr_c.
 
       (* choose a value for exists st' and split the resulting conjunction *)
       destruct E_evm_exec_instr_c as [st' E_evm_exec_instr_c_st']. 
@@ -3334,7 +3333,7 @@ Proof.
       destruct IHp'_sst''_sst' as [_ IHp'_sst''_sst'].
 
       (* Now we derive the concrete execution of p' and solut the resulting conjunction *)
-      pose proof (IHp'_sst''_sst' st' model H_is_model E_evm_exec_instr_c_st'_right) as H_evm_exec_block_c_p'.
+      pose proof (IHp'_sst''_sst' mem strg exts st' model H_is_model E_evm_exec_instr_c_st'_right) as H_evm_exec_block_c_p'.
       destruct H_evm_exec_block_c_p' as [st'' H_evm_exec_block_c_p'_st''].
       destruct H_evm_exec_block_c_p'_st'' as [H_evm_exec_block_c_p'_st''_left H_evm_exec_block_c_p'_st''_right].
 
@@ -3351,6 +3350,37 @@ Proof.
 Qed.
 
 
+
+Theorem symbolic_exec_snd:
+  forall (smemory_updater: smemory_updater_type) (sstorage_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (p : block) (ctx: constraints) (sst sst': sstate) (ops : stack_op_instr_map),
+    is_sat ctx ->
+    valid_sstate sst ops ->
+    smemory_updater_snd smemory_updater ->
+    sstorage_updater_snd sstorage_updater ->
+    mload_solver_snd mload_solver ->
+    sload_solver_snd sload_solver ->
+    evm_exec_block_s smemory_updater sstorage_updater mload_solver sload_solver p ctx sst ops = Some sst' ->
+    valid_sstate sst' ops /\                                       
+      forall (mem: memory) (strg: storage) (exts: externals) (st : state) (model: assignment),
+        is_model ctx model = true ->
+        st_is_instance_of_sst mem strg exts st model sst ops ->
+        exists (st': state),
+          evm_exec_block_c p st ops = Some st' /\
+            st_is_instance_of_sst mem strg exts  st' model sst' ops. (* st' is an instance of sst wrt the initial state st *)
+Proof.
+  intros smemory_updater sstorage_updater mload_solver sload_solver p ctx sst sst' ops.
+  intros H_is_sat H_valid_sst H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd H_evm_sym_exec.  
+  pose proof (evm_exec_block_snd smemory_updater sstorage_updater mload_solver sload_solver p H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd) as H_exec_blk_snd.
+  unfold snd_state_transformer in H_exec_blk_snd.
+  pose proof (H_exec_blk_snd ctx sst sst' ops H_is_sat H_valid_sst H_evm_sym_exec) as H_exec_blk_snd'.
+  destruct H_exec_blk_snd' as [H_exec_blk_snd'_0 H_exec_blk_snd'_1].
+  split.
+  + apply H_exec_blk_snd'_0.
+  + intros mem strg exts st model H_is_model H_st_is_instance_sst.
+    apply H_exec_blk_snd'_1.
+    apply H_is_model.
+    apply H_st_is_instance_sst.
+Qed.
 
 
 End SymbolicExecutionSoundness.
