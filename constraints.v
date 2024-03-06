@@ -12,7 +12,6 @@ Require Import List.
 Import ListNotations.
 
 Module Constraints.
-
 (* 
     Literals 
 {{{*)
@@ -84,6 +83,7 @@ Qed. (* }}} *)
 Inductive constraint : Type :=
   | C_LT (l r : cliteral)
   | C_EQ (l r : cliteral)
+  | C_LE (l r : cliteral)
   (* | C_EQ_offset(l r : cliteral) (n: nat) *)
 .
 
@@ -91,56 +91,36 @@ Inductive constraint : Type :=
 Definition eqc (c c': constraint): bool :=
   match c, c' with
   | C_LT l r , C_LT l' r' 
-  | C_EQ l r , C_EQ l' r'  => eq_clit l l' && eq_clit r r'
+  | C_EQ l r , C_EQ l' r' 
+  | C_LE l r , C_LE l' r' => eq_clit l l' && eq_clit r r'
   | _, _ => false
   end.
 
 Theorem eqc_refl(c: constraint): eqc c c = true.
 Proof. (* {{{ *)
-  destruct c.
-  - simpl.
-    apply andb_true_intro.
-    split.
-  -- apply eq_clit_refl.
-  -- apply eq_clit_refl.
-  - simpl.
-    apply andb_true_intro.
-    split.
-  -- apply eq_clit_refl.
-  -- apply eq_clit_refl.
+  destruct c; 
+  apply andb_true_intro;
+  split;
+  apply eq_clit_refl.
 Qed. (* }}} *)
 
 Theorem eqc_snd(c c' : constraint): eqc c c' = true <-> c = c'.
 Proof. (* {{{ *)
   split.
   - intro c_eq_c'.
-    destruct c.
-  -- destruct c' as [l' r'|l' r'].
-  --- simpl in c_eq_c'.
-      symmetry in c_eq_c'.
-      apply Bool.andb_true_eq in c_eq_c'.
-      destruct c_eq_c' as [l_eq_l' r_eq_r'].
-      symmetry in l_eq_l'.
-      symmetry in r_eq_r'.
-      apply eq_clit_snd in l_eq_l'.
-      apply eq_clit_snd in r_eq_r'.
-      rewrite l_eq_l'.
-      rewrite r_eq_r'.
-      reflexivity.
-  --- discriminate.
-  -- destruct c' as [l' r'|l' r'].
-  --- discriminate.
-  --- simpl in c_eq_c'.
-      symmetry in c_eq_c'.
-      apply Bool.andb_true_eq in c_eq_c'.
-      destruct c_eq_c' as [l_eq_l' r_eq_r'].
-      symmetry in l_eq_l'.
-      symmetry in r_eq_r'.
-      apply eq_clit_snd in l_eq_l'.
-      apply eq_clit_snd in r_eq_r'.
-      rewrite l_eq_l'.
-      rewrite r_eq_r'.
-      reflexivity.
+    destruct c;
+    destruct c' as [l' r'|l' r' |l' r']; try discriminate;
+    simpl in c_eq_c';
+    symmetry in c_eq_c';
+    apply Bool.andb_true_eq in c_eq_c';
+    destruct c_eq_c' as [l_eq_l' r_eq_r'];
+    symmetry in l_eq_l';
+    symmetry in r_eq_r';
+    apply eq_clit_snd in l_eq_l';
+    apply eq_clit_snd in r_eq_r';
+    rewrite l_eq_l';
+    rewrite r_eq_r';
+    reflexivity.
   - intros c_is_c'.
     rewrite c_is_c'.
     apply eqc_refl.
@@ -148,17 +128,11 @@ Qed. (* }}} *)
 
 Theorem eqc_comm: forall c c', eqc c c' = eqc c' c.
 Proof. (* {{{ *)
-  intros [l r | l r] [l' r' | l' r'].
-  - simpl. 
-    rewrite (eq_clit_comm l l').
-    rewrite (eq_clit_comm r r').
-    reflexivity.
-  - simpl. reflexivity.
-  - simpl. reflexivity.
-  - simpl. 
-    rewrite (eq_clit_comm l l').
-    rewrite (eq_clit_comm r r').
-    reflexivity.
+  intros [l r | l r | l r] [l' r' | l' r' | l' r'];
+  simpl;
+  try rewrite (eq_clit_comm l l');
+  try rewrite (eq_clit_comm r r');
+  reflexivity.
 Qed. (* }}} *)
 
 Notation conjunction := (list constraint).
@@ -186,6 +160,7 @@ Definition satisfies_single_constraint (model: assignment) (c: constraint) : boo
   match c with
   | C_EQ l r => get_value l =? get_value r
   | C_LT l r => get_value l <? get_value r
+  | C_LE l r => get_value l <=? get_value r
   end.
 
 Definition satisfies_conjunction (model: assignment) (conj: conjunction): bool :=
@@ -298,6 +273,7 @@ Proof. (* {{{ *)
   exact (mk_imp_checker_snd inclusion_conj_imp_checker inclusion_conj_imp_checker_snd).
 Qed. (* }}} *)
 
+(* }}} *)
 End Constraints.
 
 (* vim: set foldmethod=marker: *)
