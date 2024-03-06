@@ -201,42 +201,31 @@ Definition is_sat (cs : constraints) : Prop :=
   Implication checkers
 {{{ *)
 
-Definition imp_checker_fun':= constraints -> constraint -> bool.
-
-Definition imp_checker_snd' (checker: imp_checker_fun') :=
-  forall (cs: constraints) (c: constraint),
-      checker cs c = true -> forall (model: assignment),
-      is_model cs model = true -> satisfies_single_constraint model c = true.
-
 Record imp_checker: Type := 
-  { imp_checker_fun: imp_checker_fun'
-  ; imp_checker_snd: imp_checker_snd' imp_checker_fun
+  { imp_checker_fun: constraints -> constraint -> bool
+  ; imp_checker_snd: forall (cs: constraints) (c: constraint),
+      imp_checker_fun cs c = true -> forall (model: assignment),
+      is_model cs model = true -> satisfies_single_constraint model c = true
   }.
 
-Definition conj_imp_checker_fun': Type := conjunction -> constraint -> bool.
-Definition conj_imp_checker_snd'(checker: conj_imp_checker_fun'): Type := 
-  forall (cs: conjunction) (c: constraint),
-    checker cs c = true -> forall (model: assignment),
-    satisfies_conjunction model cs = true -> satisfies_single_constraint model c = true.
 
 Record conj_imp_checker: Type := 
-  { conj_imp_checker_fun: conj_imp_checker_fun'
-  ; conj_imp_checker_snd: conj_imp_checker_snd' conj_imp_checker_fun
+  { conj_imp_checker_fun: conjunction -> constraint -> bool
+  ; conj_imp_checker_snd: forall (cs: conjunction) (c: constraint),
+    conj_imp_checker_fun cs c = true -> forall (model: assignment),
+    satisfies_conjunction model cs = true -> satisfies_single_constraint model c = true
   }.
 
-Definition mk_imp_checker_fun (checker: conj_imp_checker_fun'): imp_checker_fun' :=
-  (** A full implication checker can be made from a conjunctive implication checker by
-      checking that all hypothesis conjunctions imply the thesis constraint. *)
-  fun cs c => match cs with
+Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
+  imp_checker_fun (cs : constraints) c := match cs with
               | [] => false
-              | _ => forallb (fun conj => checker conj c) cs
-              end.
-
-Theorem mk_imp_checker_snd(checker: conj_imp_checker) : 
-   imp_checker_snd' (mk_imp_checker_fun checker.(conj_imp_checker_fun)).
-Proof. (*{{{*)
+              | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
+              end
+  |}.
+Next Obligation. (* {{{ *)
   destruct checker as [checker checker_snd].
-  intros cs c full_checker__cs_imp_c model.
+  rename H into full_checker__cs_imp_c.
+  generalize dependent H0.
   induction cs as [|c' cs' IHcs'].
   - discriminate.
   - simpl.
@@ -245,10 +234,8 @@ Proof. (*{{{*)
     destruct cs' as [|c'' cs''] eqn:E.
     -- simpl.
        rewrite Bool.andb_true_r.
-
        exact (checker_snd c' c checker__c'_imp_c  model).
-    -- unfold mk_imp_checker_fun in  IHcs'.
-       pose proof (IHcs' checker__cs'_imp_c) as IHcs'.
+    -- pose proof (IHcs' checker__cs'_imp_c) as IHcs'.
        unfold conj_imp_checker_snd in checker_snd.
        pose proof (checker_snd c' c checker__c'_imp_c model) as H.
        intros model_sat_c'__and__model_sat_cs'.
@@ -256,54 +243,39 @@ Proof. (*{{{*)
        exact (H model_sat_c').
 Qed. (* }}} *)
 
-Definition mk_imp_checker (checker: conj_imp_checker): imp_checker :=
-  {| imp_checker_fun := mk_imp_checker_fun checker.(conj_imp_checker_fun)
-   ; imp_checker_snd := mk_imp_checker_snd checker
-  |}.
-
 (* }}} Implication checkers *)
 
 (*
   Inclusion implication checker
 {{{ *)
-Definition inclusion_conj_imp_checker_fun (cs: conjunction) (c: constraint) : bool :=
-  existsb (eqc c) cs.
-
-Theorem inclusion_conj_imp_checker_snd: conj_imp_checker_snd' inclusion_conj_imp_checker_fun.
-Proof. (* {{{ *)
+Program Definition inclusion_conj_imp_checker: conj_imp_checker := {| 
+  conj_imp_checker_fun := fun cs c => existsb (eqc c) cs
+|}.
+Next Obligation. (* {{{ *)
   unfold imp_checker_snd.
-  intros cs c h.
   induction cs as [|c' cs' IHcs'].
   - discriminate.
-  - intros model.
-    simpl in h.
+  - simpl in H.
     destruct (eqc c' c) eqn:c'_is_c.
     -- apply eqc_snd in c'_is_c.
        simpl.
-       destruct (satisfies_single_constraint model c') eqn:c'_sat_model.
-       --- intros cs'_sat_model.
-           rewrite c'_is_c in c'_sat_model.
-           exact c'_sat_model.
-       --- discriminate.
+       apply Bool.andb_true_iff in H0.
+       destruct H0 as [H0 _].
+       rewrite c'_is_c in H0.
+       exact H0.
     -- simpl.
-       destruct (satisfies_single_constraint model c') eqn:c'_sat_model.
-       --- simpl.
-           rewrite (eqc_comm c' c) in c'_is_c.
-           rewrite c'_is_c in h.
-           simpl in h.
-           exact (IHcs' h model).
-       --- discriminate.
+       rewrite (eqc_comm c' c) in c'_is_c.
+       simpl in H0.
+       apply Bool.andb_true_iff in H0.
+       destruct H0 as [_ H0].
+       rewrite c'_is_c in H.
+       simpl in H.
+       exact (IHcs' H H0).
 Qed. (* }}} *)
-
-Definition inclusion_conj_imp_checker := 
-  {| conj_imp_checker_fun := inclusion_conj_imp_checker_fun 
-   ; conj_imp_checker_snd := inclusion_conj_imp_checker_snd
-  |}.
 
 Definition inclusion_imp_checker := mk_imp_checker inclusion_conj_imp_checker.
 
 (* }}} *)
-
 
 End Constraints.
 
