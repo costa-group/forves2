@@ -14,6 +14,7 @@ Import ListNotations.
 
 Module Constraints.
 
+
 (* Record checkers: Type := { *)
 (*   checker: nat; *)
 (*   snd: nat *)
@@ -29,12 +30,9 @@ Module Constraints.
 (* INFO: STABLE API *)
 Inductive cliteral : Type :=
   | C_VAR (n : nat) (* x *)
-  | C_VAL (n : nat) (* c *)
-  | C_VAR_DELTA (n delta : nat) (* x + c *)
+  | C_VAL (n : N) (* c *)
+  | C_VAR_DELTA (n: nat)(delta : N) (* x + c *)
 .
-
-Print eq.
-Check (eq (C_VAR 10) (C_VAL 10)).
 
 Example sanity_check : forall (x: cliteral), x = x.
 Proof. intros c. reflexivity. Qed.
@@ -42,8 +40,8 @@ Proof. intros c. reflexivity. Qed.
 Definition eq_clit (c c': cliteral): bool :=
   match c, c' with
   | C_VAR n, C_VAR n' => n =? n'
-  | C_VAL n, C_VAL n' => n =? n'
-  | C_VAR_DELTA n d, C_VAR_DELTA n' d' => (n =? n') && (d =? d')
+  | C_VAL n, C_VAL n' => (n =? n')%N
+  | C_VAR_DELTA n d, C_VAR_DELTA n' d' => (n =? n') && (d =? d')%N
   | _, _ => false
   end.
 
@@ -53,6 +51,7 @@ Proof. (*{{{*)
   destruct c;
   try apply Bool.andb_true_iff;
   try split;
+  try apply N.eqb_refl;
   try apply PeanoNat.Nat.eqb_refl.
 Qed. (*}}}*)
 
@@ -69,7 +68,7 @@ Proof. (*{{{*)
       reflexivity.
   -- destruct c'; try discriminate.
   --- simpl in c_eq_c'.
-      apply PeanoNat.Nat.eqb_eq in c_eq_c'.
+      apply N.eqb_eq in c_eq_c'.
       rewrite c_eq_c'.
       reflexivity.
   -- destruct c'; try discriminate.
@@ -77,7 +76,7 @@ Proof. (*{{{*)
      try apply Bool.andb_true_iff in c_eq_c'.
      destruct c_eq_c' as [n_eq_n' d_eq_d'].
       apply PeanoNat.Nat.eqb_eq in n_eq_n'.
-      apply PeanoNat.Nat.eqb_eq in d_eq_d'.
+      apply N.eqb_eq in d_eq_d'.
      rewrite <- n_eq_n'. rewrite <- d_eq_d'. reflexivity.
   - intro c_is_c'.
     rewrite c_is_c'.
@@ -87,17 +86,17 @@ Qed. (*}}}*)
 Theorem eq_clit_comm: forall c c': cliteral, eq_clit c c' = eq_clit c' c. 
 Proof. (* {{{ *)
   intros [n | n | n d] [n' | n' | n' d'];
-      try apply PeanoNat.Nat.eqb_sym || reflexivity.
+      try (apply N.eqb_sym || apply PeanoNat.Nat.eqb_sym) || reflexivity.
   - simpl.
     rewrite (PeanoNat.Nat.eqb_sym n n').
-    rewrite (PeanoNat.Nat.eqb_sym d d').
+    rewrite (N.eqb_sym d d').
     reflexivity.
 Qed. (* }}} *)
 (* }}} Literals *)
 
 (* 
-    Constraints 
-{{{ *) 
+   Constraints 
+   {{{ *) 
 Inductive constraint : Type :=
   | C_LT (l r : cliteral)
   | C_EQ (l r : cliteral)
@@ -127,17 +126,17 @@ Proof. (* {{{ *)
   - intro c_eq_c'.
     destruct c;
     destruct c' as [l' r'|l' r' |l' r']; try discriminate;
-    simpl in c_eq_c';
-    symmetry in c_eq_c';
-    apply Bool.andb_true_eq in c_eq_c';
-    destruct c_eq_c' as [l_eq_l' r_eq_r'];
-    symmetry in l_eq_l';
-    symmetry in r_eq_r';
-    apply eq_clit_snd in l_eq_l';
-    apply eq_clit_snd in r_eq_r';
-    rewrite l_eq_l';
-    rewrite r_eq_r';
-    reflexivity.
+        simpl in c_eq_c';
+        symmetry in c_eq_c';
+        apply Bool.andb_true_eq in c_eq_c';
+        destruct c_eq_c' as [l_eq_l' r_eq_r'];
+        symmetry in l_eq_l';
+        symmetry in r_eq_r';
+        apply eq_clit_snd in l_eq_l';
+        apply eq_clit_snd in r_eq_r';
+        rewrite l_eq_l';
+        rewrite r_eq_r';
+        reflexivity.
   - intros c_is_c'.
     rewrite c_is_c'.
     apply eqc_refl.
@@ -146,10 +145,10 @@ Qed. (* }}} *)
 Theorem eqc_comm: forall c c', eqc c c' = eqc c' c.
 Proof. (* {{{ *)
   intros [l r | l r | l r] [l' r' | l' r' | l' r'];
-  simpl;
-  try rewrite (eq_clit_comm l l');
-  try rewrite (eq_clit_comm r r');
-  reflexivity.
+      simpl;
+      try rewrite (eq_clit_comm l l');
+      try rewrite (eq_clit_comm r r');
+      reflexivity.
 Qed. (* }}} *)
 
 Notation conjunction := (list constraint).
@@ -160,27 +159,27 @@ Definition constraints : Type := disjuntion.
 (*}}} Constraints *)
 
 (*
-  Satisfiability of constaints
-{{{*)
+   Satisfiability of constaints
+   {{{*)
 
 Definition assignment : Type := nat -> EVMWord.
 (** Maps variable indexes to concrete values *)
 
-Definition cliteral_to_nat (model: assignment) (c: cliteral): nat :=
+Definition cliteral_to_nat (model: assignment) (c: cliteral): N :=
   (** The value of the literal [c] under the assigment [model]. *)
   match c with
   | C_VAL n => n
-  | C_VAR i => wordToNat (model i)
-  | C_VAR_DELTA i delta => wordToNat (model i) + delta
+  | C_VAR i => wordToN (model i)
+  | C_VAR_DELTA i delta => wordToN (model i) + delta
   end.
 
 (* INFO: STABLE API *)
 Definition satisfies_single_constraint (model: assignment) (c: constraint) : bool :=
   let get_value := cliteral_to_nat model in 
   match c with
-  | C_EQ l r => get_value l =? get_value r
-  | C_LT l r => get_value l <? get_value r
-  | C_LE l r => get_value l <=? get_value r
+  | C_EQ l r => (get_value l =? get_value r)%N
+  | C_LT l r => (get_value l <? get_value r)%N
+  | C_LE l r => (get_value l <=? get_value r)%N
   end.
 
 Definition satisfies_conjunction (model: assignment) (conj: conjunction): bool :=
@@ -197,30 +196,30 @@ Definition is_sat (cs : constraints) : Prop :=
 (* }}} *)
 
 (*
-  Implication checkers
-{{{ *)
+   Implication checkers
+   {{{ *)
 
 Record imp_checker: Type := 
   { imp_checker_fun: constraints -> constraint -> bool
-  ; imp_checker_snd: forall (cs: constraints) (c: constraint),
-      imp_checker_fun cs c = true -> forall (model: assignment),
-      is_model cs model = true -> satisfies_single_constraint model c = true
+    ; imp_checker_snd: forall (cs: constraints) (c: constraint),
+    imp_checker_fun cs c = true -> forall (model: assignment),
+    is_model cs model = true -> satisfies_single_constraint model c = true
   }.
 
 
 Record conj_imp_checker: Type := 
   { conj_imp_checker_fun: conjunction -> constraint -> bool
-  ; conj_imp_checker_snd: forall (cs: conjunction) (c: constraint),
+    ; conj_imp_checker_snd: forall (cs: conjunction) (c: constraint),
     conj_imp_checker_fun cs c = true -> forall (model: assignment),
     satisfies_conjunction model cs = true -> satisfies_single_constraint model c = true
   }.
 
 Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
   imp_checker_fun (cs : constraints) c := match cs with
-              | [] => false
-              | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
-              end
-  |}.
+                                          | [] => false
+                                          | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
+                                          end
+|}.
 Next Obligation. (* {{{ *)
   destruct checker as [checker checker_snd].
   rename H into full_checker__cs_imp_c.
@@ -245,8 +244,8 @@ Qed. (* }}} *)
 (* }}} Implication checkers *)
 
 (*
-  Inclusion implication checker
-{{{ *)
+   Inclusion implication checker
+   {{{ *)
 Program Definition inclusion_conj_imp_checker: conj_imp_checker := {| 
   conj_imp_checker_fun := fun cs c => existsb (eqc c) cs
 |}.
