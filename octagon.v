@@ -20,9 +20,19 @@ Definition pmUnit := { z : Z | z = 1 \/ z = - 1 }.
 
 Lemma pmUnit_hprop : forall (z : Z) (p q :  z = 1 \/ z = -1 ), p = q.
 Proof. (* {{{ *)
-  intros l p q.
+  intros z p q. 
+  destruct p, q; try lia.
+  all: f_equal. all: eapply Logic.Eqdep_dec.UIP_dec.
+  (* Decidable equality on Z should be somewhere in the standard library but I could not immediately find it *)
+  all: repeat decide equality.
   (* https://coq.inria.fr/doc/V8.17.1/stdlib/Coq.Logic.Eqdep_dec.html#UIP_dec *)
-Admitted. (* }}} *)
+Qed. (* }}} *)
+
+Definition opt_to_list{A: Type}(a: option A): list A :=
+  match a with
+  | Some a' => [a']
+  | None => []
+  end.
 
 Module Term. (*{{{ *)
 Declare Scope term_scope.
@@ -88,6 +98,53 @@ Inductive Constraint :=
  | AddConstr (l r: term)(d: Z)
  | BndConstr (t: term)(d: Z).
 
+Module ConstraintEq.
+Declare Scope constr_scope.
+Delimit Scope constr_scope with constr.
+Open Scope constr_scope.
+
+Definition eqb(c c': Constraint): bool :=
+  match c, c' with
+  | AddConstr l r d, AddConstr l' r' d' => ((l =? l') && (r =? r') && (d =? d')%Z)%term
+  | BndConstr t d, BndConstr t' d' => ((t =? t') && (d =? d')%Z)%term
+  | _, _ => false
+  end.
+Infix "=?" := eqb (at level 70) : constr_scope.
+
+Lemma eqb_refl(c: Constraint): c =? c = true.
+Proof. (* {{{ *)
+  destruct c; simpl.
+  - rewrite (Term.eqb_refl l).
+    rewrite (Term.eqb_refl r).
+    rewrite (Z.eqb_refl d).
+    reflexivity.
+  - rewrite (Term.eqb_refl t).
+    rewrite (Z.eqb_refl d).
+    reflexivity.
+Qed. (* }}} *)
+
+Lemma eqb_eq(c c': Constraint) : (c = c') <-> (c =? c' = true).
+Proof. (* {{{ *)
+  split.
+  - intros h. subst. apply eqb_refl.
+  - intros c_c'.
+    destruct c; destruct c' as [l' r' d' | t' d']; try discriminate; simpl in c_c'.
+    -- apply Bool.andb_true_iff in c_c' as [ht d_d'].
+       apply Bool.andb_true_iff in ht as [l_l' r_r'].
+       apply Term.eqb_eq in l_l'.
+       apply Term.eqb_eq in r_r'.
+       apply Z.eqb_eq in d_d'.
+       subst; reflexivity.
+    -- apply Bool.andb_true_iff in c_c' as [t_t' d_d'].
+       apply Term.eqb_eq in t_t'.
+       apply Z.eqb_eq in d_d'.
+       subst; reflexivity.
+Qed. (* }}} *)
+
+Definition eqb_spec(c c': Constraint) : Bool.reflect (c = c') (c =? c') :=
+  Bool.iff_reflect _ _ (eqb_eq _ _).
+
+End ConstraintEq.
 Definition combine(c c': Constraint): option Constraint :=
   match c, c' with
   | AddConstr l r d, AddConstr l' r' d' =>
@@ -105,12 +162,6 @@ Definition combine(c c': Constraint): option Constraint :=
       else if r' =? (op t) then Some (BndConstr l' (d + d'))
       else None
   | BndConstr t d, BndConstr t' d' => Some (AddConstr t t' (d + d'))
-  end.
-
-Definition opt_to_list{A: Type}(a: option A): list A :=
-  match a with
-  | Some a' => [a']
-  | None => []
   end.
 
 Definition trivial_impl(c c': Constraint): bool :=
@@ -187,7 +238,10 @@ Definition implies(c c': Constraint) := forall (m : model),
 Infix "-->" := implies (at level 90, right associativity).
 
 Definition imply(C: list Constraint)( c': Constraint) := forall (m : model),
-  satisfies_constraints m C = true -> satisfies_single_constraint m c' = true.
+  match C with
+  | [] => False
+  |  _ => satisfies_constraints m C = true -> satisfies_single_constraint m c' = true
+  end.
 Infix "==>" := imply (at level 95, right associativity).
 
 Lemma add_constr_comm(l r: term)(d: Z) :
@@ -287,6 +341,62 @@ Proof. (* {{{ *)
   apply (Zplus_le_compat _ _ _ _ h h').
 Qed. (* }}} *)
 
+Lemma nil_caract{A: Type}(ls: list A): (forall x, ~ In x ls) -> ls = [].
+Proof.
+  intros no_mem_ls.
+  destruct ls.
+  - reflexivity.
+  - specialize (no_mem_ls a0).
+    exfalso.
+    apply no_mem_ls.
+    Search (In ?x  (?x :: ?l)).
+    apply in_eq.
+Qed.
+
+Lemma superset_preserves_implication(C C': list Constraint)(c: Constraint) :
+  (forall x, In x C -> In x C') ->
+  (C ==> c) -> (C' ==> c).
+Proof. (* {{{ *)
+  intros C_subset_C' C_imp_c m.
+  specialize (C_imp_c m).
+  destruct C' as [|c' C's] eqn:h.
+  - simpl in C_subset_C'.
+    pose proof (nil_caract C C_subset_C') as h'.
+    subst. apply C_imp_c.
+  - rewrite <- h; rewrite <- h in C_subset_C'.
+    destruct C eqn:h'; try (exfalso; apply C_imp_c).
+    rewrite <- h' in C_imp_c; rewrite <- h' in C_subset_C'.
+    intros C'_sat. apply C_imp_c.
+    unfold satisfies_constraints.
+    Search forallb.
+
+    apply forallb_forall.
+    intros x x_in_C.
+    pose proof (C_subset_C' x x_in_C) as x_in_C'.
+
+    unfold satisfies_constraints in C'_sat.
+    assert (in_C'_sat: forall x0 : Constraint, In x0 C' -> satisfies_single_constraint m x0 = true).
+    {
+      Check forallb_forall.
+      apply forallb_forall.
+      apply C'_sat.
+    }
+    apply in_C'_sat.
+    exact x_in_C'.
+Qed. (* }}} *)
+
+Lemma order_does_not_matter(C C': list Constraint)(c: Constraint) :
+  (forall x, In x C <-> In x C') ->
+  (C ==> c) <-> (C' ==> c).
+Proof. (* {{{ *)
+  intros same_elems.
+  split.
+  - apply superset_preserves_implication.
+    intros x. apply same_elems.
+  - apply superset_preserves_implication.
+    intros x. apply same_elems.
+Qed. (* }}} *)
+
 Theorem combine_impl(c c' c'': Constraint) :
   combine c c' = Some c'' -> [c;c'] ==> c''.
 Proof.
@@ -332,16 +442,11 @@ Proof.
   ---- lia.
   ---- apply (combine_addition_constraints _ _ _ _ _ _ h h').
   ---  (* TODO: Too much work for this demonstration *)
+
 Admitted.
 
 Theorem impls_trans(C: list Constraint)(c c': Constraint) :
   (C ==> c) -> (c :: C ==> c') -> (C ==> c').
-Proof.
-Admitted.
-
-Theorem order_does_not_matter(C C': list Constraint)(c: Constraint) :
-  forall x, In x C <->  In x C' ->
-  (C ==> c) <-> (C' ==> c).
 Proof.
 Admitted.
 
