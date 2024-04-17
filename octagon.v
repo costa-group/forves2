@@ -39,7 +39,7 @@ Declare Scope term_scope.
 Delimit Scope term_scope with term.
 Open Scope term_scope.
 
-Record term := {a: pmUnit;x: nat}.
+Record term := {a: pmUnit; x: nat}.
 Program Definition eqb(t t': term) := 
   (t.(a) =? t'.(a))%Z && (t.(x) =? t'.(x))%nat.
 
@@ -145,6 +145,7 @@ Definition eqb_spec(c c': Constraint) : Bool.reflect (c = c') (c =? c') :=
   Bool.iff_reflect _ _ (eqb_eq _ _).
 
 End ConstraintEq.
+
 Definition combine(c c': Constraint): option Constraint :=
   match c, c' with
   | AddConstr l r d, AddConstr l' r' d' =>
@@ -187,10 +188,13 @@ Qed. (* }}} *)
 
 (* Compute (fold_left (fun x y => x + y) [1;2;3] 0). *)
 
+Definition joined(c': Constraint)(cs: list Constraint) :=
+  c' :: filter (fun c => negb (trivial_impl c' c)) cs.
+
 Definition join(C C': list Constraint): list Constraint :=
   fold_left (fun cs c' => 
     if forallb (fun c => negb (trivial_impl c c')) cs
-    then c' :: filter (fun c => negb (trivial_impl c' c)) cs
+    then joined c' cs
     else cs
   ) C' C.
 
@@ -221,8 +225,11 @@ Proof. (* {{{ *)
   destruct c'; [ destruct (l =? r) | idtac ]; discriminate.
 Qed. (* }}} *)
 
+Definition new_constraints(C: list Constraint): list Constraint :=
+  flat_map (fun c => flat_map (fun c' => opt_to_list(combine c c')) C) C.
+
 Definition iterate(C: list Constraint) : list Constraint :=
-  let C' := flat_map (fun c => flat_map (fun c' => opt_to_list(combine c c')) C) C in
+  let C' := new_constraints C in
   let C'' := flatten C' in
   join C C''.
 
@@ -255,12 +262,206 @@ Definition implies(c c': Constraint) := forall (m : model),
   is_sat c = true -> is_sat c' = true.
 Infix "-->" := implies (at level 90, right associativity).
 
-Definition imply(C: list Constraint)( c': Constraint) := forall (m : model),
-  match C with
-  | [] => False
-  |  _ => satisfies_constraints m C = true -> satisfies_single_constraint m c' = true
-  end.
+Definition imply(C: list Constraint)(c': Constraint) := 
+  (* match C with *)
+  (* | [] => False *)
+  (* |  _ =>*) forall (m : model),
+  satisfies_constraints m C = true -> satisfies_single_constraint m c' = true
+  (*end*).
 Infix "==>" := imply (at level 95, right associativity).
+
+Definition implication(C: list Constraint)(C': list Constraint) :=
+  (forall m, satisfies_constraints m C = true -> satisfies_constraints m C' = true).
+Infix "==>>" := implication (at level 96, right associativity).
+
+Theorem implication_caract(C C': list Constraint) :
+  (C ==>> C') <-> forall c', In c' C' -> (C ==> c').
+Proof. (* {{{ *)
+  split.
+  - intros C_sat_imp_C'_sat x x_in_C' m C_sat.
+    pose proof (C_sat_imp_C'_sat m C_sat) as C'_sat.
+    unfold satisfies_constraints in C'_sat.
+    rewrite forallb_forall in C'_sat.
+    exact (C'_sat x x_in_C').
+  - intros C_imp_C' m C_sat.
+    unfold implication in C_imp_C'.
+    unfold satisfies_constraints.
+    apply forallb_forall.
+    intros x x_in_C'.
+    apply (C_imp_C' x x_in_C' m).
+    assumption.
+Qed. (* }}} *)
+
+Lemma nil_caract{A: Type}(ls: list A): (forall x, ~ In x ls) -> ls = [].
+Proof. (* {{{ *)
+  intros no_mem_ls.
+  destruct ls.
+  - reflexivity.
+  - specialize (no_mem_ls a0).
+    exfalso.
+    apply no_mem_ls.
+    Search (In ?x  (?x :: ?l)).
+    apply in_eq.
+Qed. (* }}} *)
+
+Lemma app_and_cons{A : Type}(x:A)(xs: list A): [x] ++ xs = x :: xs.
+Proof. (* {{{ *)
+  auto.
+Qed. (* }}} *)
+
+Module ImplFacts. (* {{{ *)
+Lemma impl_trans(c c' c'': Constraint) : 
+  (c --> c') -> (c' --> c'') -> (c --> c'').
+Proof. (* {{{ *)
+  intros c_imp_c' c'_imp_c'' m.
+  intros ? c_proof.
+  exact (c'_imp_c'' m (c_imp_c' m c_proof)).
+Qed. (* }}} *)
+
+(* Lemma nil_not_impl(c: Constraint): ~ ([] ==> c). *)
+(* Proof. (1* {{{ *1) *)
+(*   auto. *)
+(* Qed. (1* }}} *1) *)
+
+(* Lemma nil_implies_nil: [] ==>> []. *)
+(* Proof. (1* {{{ *1) *)
+(*   intros x abs; auto. *)
+(* Qed. (1* }}} *1) *)
+
+(* Lemma nil_implied_only_by_nil(C: list Constraint): *)
+(*   C ==>> [] -> C = []. *)
+(* Proof. (1* {{{ *1) *)
+(*   intros C_imp_nil. *)
+
+(* Qed. (1* }}} *1) *)
+
+Theorem impls_more(C: list Constraint)(c c': Constraint) :
+  (C ==> c) -> (c' :: C ==> c').
+Proof. (* {{{ *)
+  intros C_imp_c m.
+  unfold satisfies_constraints.
+  apply Bool.andb_true_iff.
+Qed. (* }}} *)
+
+Lemma superset_preserves_implication(C C': list Constraint)(c: Constraint) :
+  (forall x, In x C -> In x C') ->
+  (C ==> c) -> (C' ==> c).
+Proof. (* {{{ *)
+  intros C_subset_C' C_imp_c.
+  destruct C' as [|c' C's] eqn:h.
+  - simpl in C_subset_C'.
+    pose proof (nil_caract C C_subset_C') as h'.
+    subst. apply C_imp_c.
+  - intros m.
+    rewrite <- h; rewrite <- h in C_subset_C'.
+    unfold imply in C_imp_c.
+    (* rewrite <- h' in C_imp_c; rewrite <- h' in C_subset_C'. *)
+    specialize (C_imp_c m).
+    intros C'_sat. apply C_imp_c.
+    unfold satisfies_constraints.
+    Search forallb.
+
+    apply forallb_forall.
+    intros x x_in_C.
+    pose proof (C_subset_C' x x_in_C) as x_in_C'.
+
+    unfold satisfies_constraints in C'_sat.
+    assert (in_C'_sat: forall x0 : Constraint, In x0 C' -> satisfies_single_constraint m x0 = true).
+    {
+      Check forallb_forall.
+      apply forallb_forall.
+      apply C'_sat.
+    }
+    apply in_C'_sat.
+    exact x_in_C'.
+Qed. (* }}} *)
+
+Lemma order_does_not_matter(C C': list Constraint)(c: Constraint) :
+  (forall x, In x C <-> In x C') ->
+  (C ==> c) <-> (C' ==> c).
+Proof. (* {{{ *)
+  intros same_elems.
+  split.
+  - apply superset_preserves_implication.
+    intros x. apply same_elems.
+  - apply superset_preserves_implication.
+    intros x. apply same_elems.
+Qed. (* }}} *)
+
+Theorem impls_trans(C: list Constraint)(c c': Constraint) :
+  (C ==> c) -> (c :: C ==> c') -> (C ==> c').
+Proof. (* {{{ *)
+  intros C_imp_c c_C_imp_c'.
+  (* destruct C eqn:E; try *) 
+  (*   (apply nil_not_impl in C_imp_c; destruct C_imp_c). *)
+  intros m.
+  specialize (C_imp_c m).
+  specialize (c_C_imp_c' m).
+  (* rewrite <- E in *. *)
+  unfold satisfies_constraints.
+  intros h.
+  apply c_C_imp_c'.
+  unfold satisfies_constraints.
+  simpl.
+  apply Bool.andb_true_iff.
+  split; auto.
+Qed. (* }}} *)
+
+Lemma app_imp_l(C: list Constraint)(c c': Constraint):
+  (C ==> c') -> (c ::C ==> c').
+Proof. (* {{{ *)
+  intros C_imp_c' m.
+  (* destruct C as [|x xs]; try (exfalso; assumption). *)
+  specialize (C_imp_c' m).
+  intros h.
+  apply Bool.andb_true_iff in h as [h h'].
+  apply C_imp_c'.
+  unfold satisfies_constraints.
+  assumption.
+Qed. (* }}} *)
+
+Lemma app_implication_r(C C': list Constraint)(c': Constraint):
+  (C ==>> c' :: C') -> (C ==>> C').
+Proof. (* {{{ *)
+  intros C_imp_c' m C_sat.
+  pose proof (C_imp_c' m C_sat) as c'_C'_sat.
+  simpl in c'_C'_sat;
+    apply Bool.andb_true_iff in c'_C'_sat as [c'_sat C'_sat].
+  assumption.
+Qed. (* }}} *)
+
+Theorem implication_trans(C C' C'': list Constraint):
+  (C ==>> C') -> (C' ==>> C'') -> (C ==>> C'').
+Proof. (* {{{ *)
+  unfold implication.
+  intros C_C' C'_C''.
+  assert (h: (C ++ C' ==>> C'')). {
+    intros m C_C'_sat; specialize (C_C' m); specialize (C'_C'' m).
+    apply C'_C''.
+    Check forallb_app.
+    unfold satisfies_constraints in *.
+    rewrite forallb_app in C_C'_sat.
+    apply Bool.andb_true_iff in C_C'_sat as [C_sat C'_sat].
+    assumption.
+  }
+  intros m; specialize (C_C' m); specialize (C'_C'' m).
+  specialize (h m).
+  unfold satisfies_constraints in h; rewrite forallb_app in h.
+  intros C_sat.
+  apply h.
+  apply Bool.andb_true_iff.
+  split; try assumption.
+  exact (C_C' C_sat).
+Qed. (* }}} *)
+
+Theorem implication_refl(C: list Constraint):
+  (C ==>> C).
+Proof. (* {{{ *)
+  intros m C_sat; assumption.
+Qed. (* }}} *)
+
+End ImplFacts. (* }}} *)
+Import ImplFacts.
 
 Lemma add_constr_comm(l r: term)(d: Z) :
   AddConstr l r d --> AddConstr r l d.
@@ -315,22 +516,6 @@ Proof. (* {{{ *)
     apply (Z.le_trans _ _ _ h d_le_d').
 Qed. (* }}} *)
 
-Lemma impl_trans(c c' c'': Constraint) : 
-  (c --> c') -> (c' --> c'') -> (c --> c'').
-Proof. (* {{{ *)
-  intros c_imp_c' c'_imp_c'' m.
-  intros ? c_proof.
-  exact (c'_imp_c'' m (c_imp_c' m c_proof)).
-Qed. (* }}} *)
-
-Theorem impls_more(C: list Constraint)(c c': Constraint) :
-  (C ==> c) -> (c' :: C ==> c').
-Proof. (* {{{ *)
-  intros C_imp_c m.
-  unfold satisfies_constraints.
-  apply Bool.andb_true_iff.
-Qed. (* }}} *)
-
 Lemma combine_addition_constraints(x y z t: Z)(d d': Z) :
   x + y <= d
   -> z + t <= d'
@@ -366,62 +551,6 @@ Lemma combine_mixed_constraints(x y z: Z)(d d': Z) :
 Proof. (* {{{ *)
   intros h h'. 
   apply (Zplus_le_compat _ _ _ _ h h').
-Qed. (* }}} *)
-
-Lemma nil_caract{A: Type}(ls: list A): (forall x, ~ In x ls) -> ls = [].
-Proof. (* {{{ *)
-  intros no_mem_ls.
-  destruct ls.
-  - reflexivity.
-  - specialize (no_mem_ls a0).
-    exfalso.
-    apply no_mem_ls.
-    Search (In ?x  (?x :: ?l)).
-    apply in_eq.
-Qed. (* }}} *)
-
-Lemma superset_preserves_implication(C C': list Constraint)(c: Constraint) :
-  (forall x, In x C -> In x C') ->
-  (C ==> c) -> (C' ==> c).
-Proof. (* {{{ *)
-  intros C_subset_C' C_imp_c m.
-  specialize (C_imp_c m).
-  destruct C' as [|c' C's] eqn:h.
-  - simpl in C_subset_C'.
-    pose proof (nil_caract C C_subset_C') as h'.
-    subst. apply C_imp_c.
-  - rewrite <- h; rewrite <- h in C_subset_C'.
-    destruct C eqn:h'; try (exfalso; apply C_imp_c).
-    rewrite <- h' in C_imp_c; rewrite <- h' in C_subset_C'.
-    intros C'_sat. apply C_imp_c.
-    unfold satisfies_constraints.
-    Search forallb.
-
-    apply forallb_forall.
-    intros x x_in_C.
-    pose proof (C_subset_C' x x_in_C) as x_in_C'.
-
-    unfold satisfies_constraints in C'_sat.
-    assert (in_C'_sat: forall x0 : Constraint, In x0 C' -> satisfies_single_constraint m x0 = true).
-    {
-      Check forallb_forall.
-      apply forallb_forall.
-      apply C'_sat.
-    }
-    apply in_C'_sat.
-    exact x_in_C'.
-Qed. (* }}} *)
-
-Lemma order_does_not_matter(C C': list Constraint)(c: Constraint) :
-  (forall x, In x C <-> In x C') ->
-  (C ==> c) <-> (C' ==> c).
-Proof. (* {{{ *)
-  intros same_elems.
-  split.
-  - apply superset_preserves_implication.
-    intros x. apply same_elems.
-  - apply superset_preserves_implication.
-    intros x. apply same_elems.
 Qed. (* }}} *)
 
 Lemma add_constr_are_commutable(l r: term)(d: Z) : 
@@ -665,23 +794,6 @@ Proof. (* {{{ *)
 Qed.
 (* }}} *)
 
-Theorem impls_trans(C: list Constraint)(c c': Constraint) :
-  (C ==> c) -> (c :: C ==> c') -> (C ==> c').
-Proof. (* {{{ *)
-  intros C_imp_c c_C_imp_c' m.
-  specialize (C_imp_c m).
-  specialize (c_C_imp_c' m).
-  destruct C eqn:E; try congruence.
-  rewrite <- E in *.
-  unfold satisfies_constraints.
-  intros h.
-  apply c_C_imp_c'.
-  unfold satisfies_constraints.
-  simpl.
-  apply Bool.andb_true_iff.
-  split; auto.
-Qed. (* }}} *)
-
 Print Z.
 Print positive.
 Search (nat -> Z).
@@ -702,7 +814,8 @@ Proof. (* {{{ *)
 Qed. (* }}} *)
 
 Theorem normalize_constraint_impl(c: Constraint):
-  forall m, satisfies_single_constraint m c = true <-> satisfies_single_constraint m (normalize_constraint c) = true.
+  forall m, satisfies_single_constraint m c = true 
+  <-> satisfies_single_constraint m (normalize_constraint c) = true.
 Proof with auto. (* {{{ *)
   intros m.
   unfold satisfies_single_constraint.
@@ -733,63 +846,131 @@ Proof with auto. (* {{{ *)
   - simpl; apply iff_refl.
 Qed. (* }}} *)
 
-Lemma app_imp(C: list Constraint)(c c': Constraint):
-  (C ==> c') -> (c ::C ==> c').
-Proof. (* {{{ *)
-  intros C_imp_c' m.
-  specialize (C_imp_c' m).
-  destruct C as [|x xs]; try (exfalso; assumption).
-  intros h.
-  apply Bool.andb_true_iff in h as [h h'].
-  apply C_imp_c'.
-  unfold satisfies_constraints.
-  assumption.
-Qed. (* }}} *)
-
 Theorem flatten_impl(C: list Constraint)(c: Constraint) :
   (C ==> c) -> (flatten C ==> c).
 Proof. (* {{{ *)
   intros C_imp_c m.
   specialize (C_imp_c m).
-  destruct C eqn:E; try (exfalso; assumption).
-  rewrite <- E in *.
-  destruct (flatten C) eqn:E'.
-  - rewrite E in E'. discriminate.
-  - rewrite <- E' in *.
-    intros h.
-    apply C_imp_c.
-    unfold flatten in h.
-    unfold satisfies_constraints in *.
-    apply forallb_forall.
-    rewrite forallb_forall in h.
-    intros x x_in_C.
-    Check in_map.
-    apply (in_map normalize_constraint) in x_in_C.
-    pose proof (h _ x_in_C) as h'.
-    apply normalize_constraint_impl; assumption.
+  intros h.
+  apply C_imp_c.
+  unfold flatten in h.
+  unfold satisfies_constraints in *.
+  apply forallb_forall.
+  rewrite forallb_forall in h.
+  intros x x_in_C.
+  Check in_map.
+  apply (in_map normalize_constraint) in x_in_C.
+  pose proof (h _ x_in_C) as h'.
+  apply normalize_constraint_impl; assumption.
 Qed. (* }}} *)
 
-(* NOTE: I should probably define the concept of "loses no information"
-         or "can be derived from" and reword the properties I want in
-         terms of these. So, if C =*=> C' means that with C I can derive
-         all of C', then we have to show that C =*=> (iterate C), which
-         is just showing the same thing for join, flatten and the nexted
-         flatmap with combine.
-         C =*=> C' can probably be forall c, In c C', (C ==> c)
-*)
-(* TODO: Rename flatten *)
+Theorem flatten_implication(C T: list Constraint):
+  (C ==>> T) -> (C ==>> flatten T).
+Proof. (* {{{ *)
+  intros C_imp_T m C_sat.
+  pose proof (C_imp_T m C_sat) as T_sat.
+  unfold satisfies_constraints in *.
+  rewrite forallb_forall in *.
+  unfold flatten.
+  intros y y_in_flatten_T.
+  apply in_map_iff in y_in_flatten_T as [x [x_y x_in_T]].
+  subst.
+  pose proof (T_sat x x_in_T) as x_sat.
+  apply normalize_constraint_impl in x_sat.
+  assumption.
+Qed. (* }}} *)
 
-Theorem iterate_impl(C: list Constraint):
-  forall c, In c (iterate C) -> (C ==> c).
-Proof.
-  intros c.
-  (* unfold iterate. *)
-
+Lemma joined_implication_l(C T: list Constraint)(c: Constraint):
+  (C ==>> T) -> (joined c C ==>> T).
+Proof. (* {{{ *)
+  intros C_imp_T m cC_sat.
+  apply (C_imp_T m).
+  unfold joined in cC_sat.
+  simpl in cC_sat; apply Bool.andb_true_iff in cC_sat as [c_sat filtered_sat].
+  unfold satisfies_constraints in *.
+  rewrite forallb_forall in *.
+  intros x x_in_C.
+  destruct (negb (trivial_impl c x)) eqn:E.
+  - apply filtered_sat.
+    apply filter_In.
+    split; try assumption.
+  - Search (negb ?b = false).
+    apply Bool.negb_false_iff in E.
+    apply trivial_impl_is_implication in E.
+    specialize (E m) as c_sat_imp_x_sat.
+    exact (c_sat_imp_x_sat c_sat).
 Qed.
+(* }}} *)
+
+(* Lemma join_In(C T: list Constraint): *)
+(*   forall x, In x (join C T) -> *) 
+(*   forall c, In c (join C T) -> x = c \/ ~ (c --> x) \/ ~ (x --> c). *)
+
+Theorem join_implication(C T: list Constraint):
+  (C ==>> T) -> (C ==>> join C T).
+Proof. (* {{{ *)
+  intros C_T m C_sat.
+  pose proof (C_T m C_sat) as T_sat.
+  unfold join.
+  (* Check fold_left. *)
+  generalize dependent C.
+  induction T as [|t ts].
+  - intros __ _ C_sat. exact C_sat.
+  - intros C C_T C_sat.
+    (* Search fold_left. *)
+    (* Check fold_left_app. *)
+    simpl in *.
+    apply Bool.andb_true_iff in T_sat as [t_sat ts_sat].
+    specialize (IHts ts_sat).
+    destruct (forallb (fun c : Constraint => negb (trivial_impl c t)) C) eqn:E.
+  -- simpl.
+     apply IHts.
+  --- apply joined_implication_l. apply app_implication_r with t. assumption.
+  --- 
+      unfold satisfies_constraints.
+      unfold joined.
+      apply forallb_forall.
+      intros x [x_t | x_in_filtered].
+  ---- subst; assumption.
+  ---- apply filter_In in x_in_filtered as [x_in_C x_not_triv].
+       unfold satisfies_constraints in C_sat.
+       rewrite forallb_forall in C_sat.
+       apply C_sat.
+       assumption.
+ -- apply IHts; try assumption.
+    apply app_implication_r with t; assumption.
+Qed. (* }}} *)
+
+Theorem new_constraints_implication(C T: list Constraint):
+  (C ==>> T) -> (C ==>> new_constraints T).
+Proof.
+  (* {{{ *)
+  intros C_T m C_sat.
+  pose proof (C_T m C_sat) as T_sat.
+  unfold new_constraints.
+  unfold satisfies_constraints.
+  apply forallb_forall.
+  intros x h.
+  apply in_flat_map in h as [x1 [x1_T h]].
+  apply in_flat_map in h as [x2 [x2_T x_is_combine]].
+  destruct (combine x1 x2) eqn:E; try (simpl; exfalso; assumption).
+  destruct x_is_combine as [h | []]; subst.
+  apply (combine_impl x1 x2 x E).
+  apply Bool.andb_true_iff.
+  unfold satisfies_constraints in T_sat.
+  rewrite forallb_forall in T_sat.
+  split; try rewrite Bool.andb_true_r; auto.
+Qed. (* }}} *)
+
+
+Theorem iterate_implication(C T: list Constraint):
+  (C ==>> iterate C).
+Proof. (* {{{ *)
+  apply join_implication.
+  apply flatten_implication.
+  apply new_constraints_implication.
+  apply implication_refl.
+Qed. (* }}} *)
 
 End Octagon.
-
-
-
-
 
