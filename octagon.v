@@ -999,6 +999,10 @@ Local Definition cs :=
 ].
 
 Compute Octagon.church_numeral 1 Octagon.iterate cs.
+Compute length (Octagon.church_numeral 1 Octagon.iterate cs).
+Compute length (Octagon.church_numeral 2 Octagon.iterate cs).
+Compute length (Octagon.church_numeral 3 Octagon.iterate cs).
+Compute length (Octagon.church_numeral 4 Octagon.iterate cs).
 
 Compute Octagon.combine (Octagon.mkadd_pp 1 2 10) (Octagon.mkadd_pn 3 2 10).
 
