@@ -972,5 +972,33 @@ Proof. (* {{{ *)
   apply implication_refl.
 Qed. (* }}} *)
 
+Fixpoint church_numeral{A: Type}(n: nat)(f: A -> A)(x: A):=
+  match n with
+  | O => x
+  | S m => f (church_numeral m f x)
+  end.
+
+Program Definition mkadd_pp(x: nat)(y: nat)(d: Z) :=
+  AddConstr (Build_term 1 x) (Build_term 1 y) d.
+Program Definition mkadd_pn(x: nat)(y: nat)(d: Z) :=
+  AddConstr (Build_term 1 x) (Build_term (-1) y) d.
+Program Definition mkadd_nn(x: nat)(y: nat)(d: Z) :=
+  AddConstr (Build_term (-1) x) (Build_term (-1) y) d.
+Program Definition mkbnd_p(x: nat)(d: Z) :=
+  BndConstr (Build_term 1 x) d.
+Program Definition mkbnd_n(x: nat)(d: Z) :=
+  BndConstr (Build_term (-1) x) d.
 End Octagon.
+
+Local Definition cs := 
+  [ Octagon.mkadd_pp 1 2 3
+  ; Octagon.mkadd_pn 2 1 2
+  ; Octagon.mkadd_pp 3 4 1
+  ; Octagon.mkbnd_n    4 10
+  ; Octagon.mkadd_nn 3 5 3
+].
+
+Compute Octagon.church_numeral 1 Octagon.iterate cs.
+
+Compute Octagon.combine (Octagon.mkadd_pp 1 2 10) (Octagon.mkadd_pn 3 2 10).
 
