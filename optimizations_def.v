@@ -121,6 +121,8 @@ Definition opt_smap_value_type :=
 Definition opt_smapv_valid_snd (opt: opt_smap_value_type) :=
 forall (ctx: constraints) (maxidx: nat) (fcmp: sstack_val_cmp_t) (sb: sbindings) 
   (val val': smap_value) (flag: bool),
+safe_sstack_val_cmp fcmp ->
+is_sat ctx ->
 valid_smap_value maxidx evm_stack_opm val ->
 valid_bindings maxidx sb evm_stack_opm ->
 opt val fcmp sb maxidx ctx evm_stack_opm = (val', flag) ->
@@ -814,18 +816,20 @@ Lemma valid_bindings_snd_opt: forall maxidx n ctx val sb opt fcmp
   val' flag,
 valid_bindings maxidx ((n, val) :: sb) evm_stack_opm ->
 opt_smapv_valid_snd opt ->
+safe_sstack_val_cmp fcmp ->
+is_sat ctx ->
 opt val fcmp sb n ctx evm_stack_opm = (val', flag) ->
 valid_bindings maxidx ((n, val') :: sb) evm_stack_opm.
 Proof.
 intros maxidx n ctx val sb opt fcmp val' flag.
-intros Hvalid Hopt_smapv_snd Hopt.
+intros Hvalid Hopt_smapv_snd Hfcmp His_sat Hopt.
 unfold opt_smapv_valid_snd in Hopt_smapv_snd.
 unfold valid_bindings in Hvalid.
 unfold valid_bindings.
 destruct Hvalid as [Hmaxidx [Hvalid_smapv_val Hvalid_sb]].
 fold valid_bindings in Hvalid_sb.
 pose proof (Hopt_smapv_snd ctx n fcmp sb val val' flag
-  Hvalid_smapv_val Hvalid_sb Hopt) as Hvalid_smapv_val'.
+  Hfcmp His_sat Hvalid_smapv_val Hvalid_sb Hopt) as Hvalid_smapv_val'.
 split; try split; try assumption.
 Qed.
 

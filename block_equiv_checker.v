@@ -144,6 +144,12 @@ Require Import FORVES2.optimizations.slt_x_x.
 Import Opt_slt_x_x.
 Require Import FORVES2.optimizations.sgt_x_x.
 Import Opt_sgt_x_x.
+Require Import FORVES2.optimizations.mem_solver.
+Import Opt_mem_solver.
+Require Import FORVES2.optimizations.strg_solver.
+Import Opt_strg_solver.
+Require Import FORVES2.optimizations.jumpi_eval.
+Import Opt_jumpi_eval.
 
 Require Import FORVES2.symbolic_execution.
 Import SymbolicExecution.
@@ -415,6 +421,10 @@ Inductive available_optimization_step :=
 | OPT_balance_address
 | OPT_slt_x_x
 | OPT_sgt_x_x
+
+| OPT_mem_solver
+| OPT_strg_solver
+| OPT_jumpi_eval
 .
 
 
@@ -486,6 +496,10 @@ match tag with
 | OPT_balance_address => OpEntry optimize_balance_address_sbinding optimize_balance_address_sbinding_snd
 | OPT_slt_x_x => OpEntry optimize_slt_x_x_sbinding optimize_slt_x_x_sbinding_snd
 | OPT_sgt_x_x => OpEntry optimize_sgt_x_x_sbinding optimize_sgt_x_x_sbinding_snd
+
+| OPT_mem_solver => OpEntry optimize_mem_solver_sbinding optimize_mem_solver_sbinding_snd
+| OPT_strg_solver => OpEntry optimize_strg_solver_sbinding optimize_strg_solver_sbinding_snd
+| OPT_jumpi_eval => OpEntry optimize_jumpi_eval_sbinding optimize_jumpi_eval_sbinding_snd
 end.
 
 Definition all_optimization_steps := 
@@ -555,6 +569,10 @@ Definition all_optimization_steps :=
    OPT_balance_address;
    OPT_slt_x_x;
    OPT_sgt_x_x
+
+   ;OPT_jumpi_eval
+   ;OPT_mem_solver
+   ;OPT_strg_solver
 ].
 
 Definition all_optimization_steps' := 
@@ -623,7 +641,11 @@ Definition all_optimization_steps' :=
    OPT_and_coinbase;
    OPT_balance_address;
    OPT_slt_x_x;
-   OPT_sgt_x_x   
+   OPT_sgt_x_x
+
+   ;OPT_jumpi_eval
+   ;OPT_mem_solver
+   ;OPT_strg_solver   
 ].
 
   

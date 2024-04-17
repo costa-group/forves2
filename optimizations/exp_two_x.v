@@ -101,18 +101,18 @@ opt_smapv_valid_snd optimize_exp_two_x_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
 intros ctx n fcmp sb val val' flag.
-intros Hvalid_smapv_val Hvalid_sb Hoptm_eq_zero_sbinding.
-unfold optimize_exp_two_x_sbinding in Hoptm_eq_zero_sbinding.
+intros _ _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+unfold optimize_exp_two_x_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
-  offset size smem] eqn: eq_val; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
-destruct label eqn: eq_label; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+  offset size smem] eqn: eq_val; try inject_rw Hoptm_sbinding eq_val'.
+destruct label eqn: eq_label; try inject_rw Hoptm_sbinding eq_val'.
 (* EXP *)
-destruct args as [|arg1 r1]; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
-destruct r1 as [|arg2 r2]; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
-destruct r2; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+destruct args as [|arg1 r1]; try inject_rw Hoptm_sbinding eq_val'.
+destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
+destruct r2; try inject_rw Hoptm_sbinding eq_val'.
 destruct (fcmp ctx arg1 (Val WTwo) n sb n sb  evm_stack_opm)
-    eqn: eq_fcmp_arg1; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
-injection Hoptm_eq_zero_sbinding as eq_val' eq_flag.
+    eqn: eq_fcmp_arg1; try inject_rw Hoptm_sbinding eq_val'.
+injection Hoptm_sbinding as eq_val' eq_flag.
 rewrite <- eq_val'.
 simpl in Hvalid_smapv_val. unfold valid_stack_op_instr in Hvalid_smapv_val.
 simpl in Hvalid_smapv_val.
@@ -127,7 +127,7 @@ opt_sbinding_snd optimize_exp_two_x_sbinding.
 Proof.
 unfold opt_sbinding_snd.
 intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid Hissat Hoptm_eq_zero_sbinding.
+  Hvalid Hissat Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_exp_two_x_sbinding)
@@ -136,22 +136,22 @@ split.
     
 - (* evaluation is preserved *) 
   intros model mem strg ext v Hismodel Heval_orig.
-  unfold optimize_exp_two_x_sbinding in Hoptm_eq_zero_sbinding.
+  unfold optimize_exp_two_x_sbinding in Hoptm_sbinding.
   pose proof (Hvalid_maxidx  maxidx idx val sb evm_stack_opm
       Hvalid) as eq_maxidx_idx.
   destruct val as [vv|vv|label args|offset smem|key sstrg|offset seze smem]
-    eqn: eq_val; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+    eqn: eq_val; try inject_rw Hoptm_sbinding eq_val'.
   (* SymOp label args *)
-  destruct label; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+  destruct label; try inject_rw Hoptm_sbinding eq_val'.
   destruct args as [|arg1 r1] eqn: eq_args; 
-    try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+    try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2] eqn: eq_r1; 
-    try inject_rw Hoptm_eq_zero_sbinding eq_val'.
-  destruct r2; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+    try inject_rw Hoptm_sbinding eq_val'.
+  destruct r2; try inject_rw Hoptm_sbinding eq_val'.
   destruct (fcmp ctx arg1 (Val WTwo) idx sb idx sb ) 
-    eqn: fcmp_arg1_two; try inject_rw Hoptm_eq_zero_sbinding eq_val'.
+    eqn: fcmp_arg1_two; try inject_rw Hoptm_sbinding eq_val'.
   (* arg1 ~ WTwo *)
-  injection Hoptm_eq_zero_sbinding as eq_val' _. 
+  injection Hoptm_sbinding as eq_val' _. 
   rewrite <- eq_val'.
   unfold eval_sstack_val in Heval_orig. simpl in Heval_orig.
   rewrite -> PeanoNat.Nat.eqb_refl in Heval_orig.
