@@ -141,12 +141,13 @@ Proof.
   unfold evm_eq_block_chkr' in H_evm_eq_block_chkr'.
 
 
-  destruct (chk_valid_sstate sst evm_stack_opm && chk_is_sat ctx)%bool eqn:E_valid_and_sat; try discriminate.
+  destruct (chk_valid_sstate sst evm_stack_opm && sat_checker_fun chk_is_sat ctx)%bool eqn:E_valid_and_sat; try discriminate.
   apply andb_prop in E_valid_and_sat.
   destruct E_valid_and_sat as [H_valid_sst_b H_is_sat_b].
   
   pose proof (chk_valid_sstate_snd sst evm_stack_opm H_valid_sst_b) as H_valid_sst.
-  pose proof (chk_is_sat_snd ctx H_is_sat_b) as H_is_sat.
+  
+  pose proof ((sat_checker_snd chk_is_sat) ctx H_is_sat_b) as H_is_sat.
 
   remember (sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext) as sstack_value_cmp_1.
   remember (memory_updater sstack_value_cmp_1) as memory_updater'.

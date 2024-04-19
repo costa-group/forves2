@@ -675,7 +675,7 @@ Definition evm_eq_block_chkr'
   (init_sst : sstate) 
   (opt_p p: block)
   : bool :=
-  if (chk_valid_sstate init_sst evm_stack_opm) && (chk_is_sat ctx) then
+  if (chk_valid_sstate init_sst evm_stack_opm) && ((sat_checker_fun chk_is_sat) ctx) then
     let sstack_value_cmp_1 := sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext in
     let memory_updater' := memory_updater sstack_value_cmp_1 in
     let storage_updater' := storage_updater sstack_value_cmp_1 in
