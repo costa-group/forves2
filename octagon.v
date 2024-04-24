@@ -963,7 +963,7 @@ Proof.
 Qed. (* }}} *)
 
 
-Theorem iterate_implication(C T: list Constraint):
+Theorem iterate_implication(C: list Constraint):
   (C ==>> iterate C).
 Proof. (* {{{ *)
   apply join_implication.
@@ -988,14 +988,167 @@ Program Definition mkbnd_p(x: nat)(d: Z) :=
   BndConstr (Build_term 1 x) d.
 Program Definition mkbnd_n(x: nat)(d: Z) :=
   BndConstr (Build_term (-1) x) d.
+
+Module ImplChecker.
+
+Definition satisfies_constraint_disjuntion (m: model) (C: list (list Constraint)): bool :=
+  existsb (satisfies_constraints m) C.
+
+
+Record imp_checker: Type := 
+  { imp_checker_fun: list (list Constraint) -> Constraint -> bool
+  ; imp_checker_snd: forall (cs: list (list Constraint)) (c: Constraint),
+     imp_checker_fun cs c = true -> forall model,
+     satisfies_constraint_disjuntion model cs = true -> satisfies_single_constraint model c = true
+     (* forall C, In C cx -> (C ==> c) *)
+  }.
+
+Record conj_imp_checker: Type := 
+  { conj_imp_checker_fun: list Constraint -> Constraint -> bool
+    ; conj_imp_checker_snd: forall (cs: list Constraint) (c: Constraint),
+    conj_imp_checker_fun cs c = true -> (cs ==> c)
+  }.
+
+Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
+  imp_checker_fun cs c := 
+    match cs with
+    | [] => false
+    | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
+        (* We have that hypothesis A or hypothesis B are true, and have to prove that
+           thesis C is true. We can only ensure that if A implies C and B implies C
+        *)
+    end
+|}.
+Next Obligation. (* {{{ *)
+  destruct checker as [checker checker_snd].
+  rename H into full_checker__cs_imp_c.
+  generalize dependent H0.
+  induction cs as [|c' cs' IHcs']; try discriminate.
+  simpl in full_checker__cs_imp_c.
+  apply Bool.andb_true_iff in full_checker__cs_imp_c as [checker__c'_imp_c checker__cs'_imp_c].
+  destruct cs' as [|c'' cs''] eqn:E; auto.
+  - simpl.
+    rewrite Bool.orb_false_r.
+    apply checker_snd.
+    assumption.
+  - intros h; apply Bool.orb_true_iff in h as [c'_sat | E_sat].
+  -- apply (checker_snd c' _ checker__c'_imp_c _).
+     assumption.
+  -- pose proof (IHcs' checker__cs'_imp_c) as IHcs'. 
+     apply IHcs'.
+     assumption.
+Qed. (* }}} *)
+
+Lemma implication_imp_implies(c c': Constraint)(cs: list Constraint):
+  In c' cs -> (c' --> c) -> (cs ==> c).
+Proof. (* {{{ *)
+  intros c'_in_cs c'_c m cs_sat.
+  specialize (c'_c m).
+  apply c'_c.
+  unfold satisfies_constraints in cs_sat.
+  rewrite forallb_forall in cs_sat.
+  apply cs_sat.
+  assumption.
+Qed. (* }}} *)
+
+Lemma implies_imply(c c': Constraint): (c --> c') <-> ([c] ==> c').
+Proof. (* {{{ *)
+  split; intros c_c'.
+  - intros m c_sat.
+    specialize (c_c' m).
+    simpl in c_sat.
+    apply c_c'.
+    rewrite Bool.andb_true_r in c_sat.
+    assumption.
+  - intros m is_sat c_sat.
+    specialize (c_c' m).
+    unfold is_sat.
+    apply c_c'.
+    simpl.
+    rewrite Bool.andb_true_r.
+    assumption.
+Qed. (* }}} *)
+
+Lemma imply_implication(cs: list Constraint)(c: Constraint): (cs ==> c) <-> (cs ==>> [c]).
+Proof. (* {{{ *)
+  split; intros cs_c.
+  - intros m cs_sat.
+    specialize (cs_c m).
+    simpl.
+    rewrite Bool.andb_true_r.
+    apply cs_c.
+    assumption.
+  - intros m cs_sat.
+    specialize (cs_c m).
+    simpl in cs_c.
+    rewrite Bool.andb_true_r in cs_c.
+    apply cs_c.
+    assumption.
+Qed. (* }}} *)
+
+Lemma h(n: nat)(cs: list Constraint): cs ==>> church_numeral n iterate cs.
+Proof. (* {{{ *)
+  induction n as [|n' IHn']; try apply implication_refl.
+  simpl.
+  apply implication_trans with (church_numeral n' iterate cs); try assumption.
+  apply iterate_implication.
+Qed. (* }}} *)
+
+Lemma imply_refl(cs: list Constraint)(c: Constraint)(c_in_cs: In c cs): cs ==> c.
+Proof. (* {{{ *)
+  intros m cs_sat.
+  unfold satisfies_constraints in cs_sat.
+  rewrite forallb_forall in cs_sat.
+  apply cs_sat.
+  assumption.
+Qed. (* }}} *)
+
+Open Scope constr_scope.
+Program Definition conj_trans_closure_checker(n: nat) : conj_imp_checker := {|
+  conj_imp_checker_fun cs c := 
+    let trans_closure := church_numeral n iterate cs 
+    in existsb (fun c' => trivial_impl c' c) trans_closure
+|}.
+Next Obligation. (* {{{ *)
+(*
+   Sea c' en trans_closure tal que c' --> c.
+   Entonces tenemos:           cs ==>> iterate cs 
+                       iterate cs ==> c'
+                                c' --> c
+   Por transitividad, cs ==> c
+*)
+  apply existsb_exists in H as [c' [c'_in_trans c'_imp_c]].
+  apply trivial_impl_is_implication in c'_imp_c.
+  apply implies_imply in c'_imp_c.
+  apply imply_implication in c'_imp_c.
+  apply imply_implication.
+
+  assert(tcs_imp_c': church_numeral n iterate cs ==>> [c']). {
+    apply imply_implication.
+    apply imply_refl.
+    assumption.
+  }
+  pose proof h n cs as cs_imp_tcs.
+  pose proof implication_trans _ _ _ tcs_imp_c' c'_imp_c as tcs_imp_c.
+  pose proof implication_trans _ _ _ cs_imp_tcs tcs_imp_c as cs_imp_c.
+  assumption.
+Qed. (* }}} *)
+
+Program Definition trans_closure_checker(n: nat) : imp_checker := mk_imp_checker (conj_trans_closure_checker n).
+
+End ImplChecker.
+
+
 End Octagon.
 
+Module OctagonExamples.
 Local Definition cs := 
-  [ Octagon.mkadd_pp 1 2 3
-  ; Octagon.mkadd_pn 2 1 2
-  ; Octagon.mkadd_pp 3 4 1
-  ; Octagon.mkbnd_n    4 10
-  ; Octagon.mkadd_nn 3 5 3
+  [ Octagon.mkadd_pp 1 2  3 (* b + c <= 3 *)
+  ; Octagon.mkadd_pn 2 1  2 (* c + -b <= 2 *)
+  ; Octagon.mkadd_pp 3 4  1 (* d + e <= 1 *)
+  ; Octagon.mkbnd_n    4 10 (* -e <= 10 *)
+  ; Octagon.mkadd_nn 3 5  3 (* -d + -f <= 3 *)
+
 ].
 
 Compute Octagon.church_numeral 1 Octagon.iterate cs.
@@ -1004,5 +1157,36 @@ Compute length (Octagon.church_numeral 2 Octagon.iterate cs).
 Compute length (Octagon.church_numeral 3 Octagon.iterate cs).
 Compute length (Octagon.church_numeral 4 Octagon.iterate cs).
 
-Compute Octagon.combine (Octagon.mkadd_pp 1 2 10) (Octagon.mkadd_pn 3 2 10).
+Import Octagon.ImplChecker.
+Definition checker := conj_imp_checker_fun (conj_trans_closure_checker (2 * length cs)) cs.
 
+Compute checker (Octagon.mkadd_pn 3 5 26).
+Compute checker (Octagon.mkadd_pn 3 5 25).
+Compute negb (checker (Octagon.mkadd_pn 3 5 24)).
+
+Compute checker (Octagon.mkadd_nn 5 4 24).
+(* Compute checker (Octagon.mkadd_np 5 2 16). *)
+(* Compute checker (Octagon.mkadd_np 5 3 25). *)
+Compute checker (Octagon.mkadd_nn 4 5 24).
+Compute checker (Octagon.mkadd_pn 3 5 25).
+Compute checker (Octagon.mkadd_pn 2 5 16).
+(* (1* Compute checker (Octagon.mkadd_np 4 2 12). *1) *)
+(* Compute checker (Octagon.mkadd_np 4 3 21). *)
+Compute checker (Octagon.mkadd_pn 2 4 12).
+Compute checker (Octagon.mkadd_pp 2 3 13).
+Compute checker (Octagon.mkadd_pn 3 4 21).
+Compute checker (Octagon.mkadd_pp 3 2 13).
+Compute checker (Octagon.mkbnd_n 5 14).
+(* Compute checker (Octagon.mkadd_np 5 4 4). *)
+Compute checker (Octagon.mkadd_pn 4 5 4).
+Compute checker (Octagon.mkbnd_p 3 11).
+Compute checker (Octagon.mkbnd_p 2 2).
+Compute checker (Octagon.mkadd_pp 1 2 3).
+Compute checker (Octagon.mkadd_pn 2 1 2).
+Compute checker (Octagon.mkadd_pp 3 4 1).
+Compute checker (Octagon.mkbnd_n 4 10).
+Compute checker (Octagon.mkadd_nn 3 5 3).
+
+
+Compute Octagon.combine (Octagon.mkadd_pp 1 2 10) (Octagon.mkadd_pn 3 2 10).
+End OctagonExamples.
