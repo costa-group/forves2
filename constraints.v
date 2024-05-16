@@ -186,7 +186,7 @@ Definition satisfies_conjunction (model: assignment) (conj: conjunction): bool :
   forallb (satisfies_single_constraint model) conj.
 
 Definition satisfies_constraints (model: assignment) (cs: constraints): bool :=
-  forallb (satisfies_conjunction model) cs.
+  existsb (satisfies_conjunction model) cs.
 
 Definition is_model (cs : constraints) (model : assignment) : bool := satisfies_constraints model cs.
 (** A model of some constraints is a model which satisfies the constraints *)
@@ -215,30 +215,24 @@ Record conj_imp_checker: Type :=
   }.
 
 Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
-  imp_checker_fun (cs : constraints) c := match cs with
-                                          | [] => false
-                                          | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
-                                          end
+  imp_checker_fun (cs : constraints) c := 
+    match cs with
+    | [] => false
+    | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
+    end
 |}.
 Next Obligation. (* {{{ *)
   destruct checker as [checker checker_snd].
   rename H into full_checker__cs_imp_c.
-  generalize dependent H0.
-  induction cs as [|c' cs' IHcs'].
-  - discriminate.
-  - simpl.
-    simpl in full_checker__cs_imp_c.
-    apply Bool.andb_true_iff in full_checker__cs_imp_c as [checker__c'_imp_c checker__cs'_imp_c].
-    destruct cs' as [|c'' cs''] eqn:E.
-    -- simpl.
-       rewrite Bool.andb_true_r.
-       exact (checker_snd c' c checker__c'_imp_c  model).
-    -- pose proof (IHcs' checker__cs'_imp_c) as IHcs'.
-       unfold conj_imp_checker_snd in checker_snd.
-       pose proof (checker_snd c' c checker__c'_imp_c model) as H.
-       intros model_sat_c'__and__model_sat_cs'.
-       apply Bool.andb_true_iff in model_sat_c'__and__model_sat_cs' as [model_sat_c' model_sat_cs'].
-       exact (H model_sat_c').
+  induction cs as [|c' cs']; try discriminate.
+  simpl in *.
+  apply Bool.andb_true_iff in full_checker__cs_imp_c 
+    as [checker__c'_imp_c checker__cs'_imp_c].
+  intros h; apply Bool.orb_true_iff in h as [c'_sat | cs'_sat].
+  - exact (checker_snd _ _ checker__c'_imp_c model c'_sat).
+  - unfold is_model in cs'_sat.
+    destruct cs' as [|c'' cs'']; try discriminate.
+    exact (IHcs' checker__cs'_imp_c cs'_sat).
 Qed. (* }}} *)
 
 (* }}} Implication checkers *)
@@ -251,24 +245,23 @@ Program Definition inclusion_conj_imp_checker: conj_imp_checker := {|
 |}.
 Next Obligation. (* {{{ *)
   unfold imp_checker_snd.
-  induction cs as [|c' cs' IHcs'].
-  - discriminate.
-  - simpl in H.
-    destruct (eqc c' c) eqn:c'_is_c.
-    -- apply eqc_snd in c'_is_c.
-       simpl.
-       apply Bool.andb_true_iff in H0.
-       destruct H0 as [H0 _].
-       rewrite c'_is_c in H0.
-       exact H0.
-    -- simpl.
-       rewrite (eqc_comm c' c) in c'_is_c.
-       simpl in H0.
-       apply Bool.andb_true_iff in H0.
-       destruct H0 as [_ H0].
-       rewrite c'_is_c in H.
-       simpl in H.
-       exact (IHcs' H H0).
+  induction cs as [|c' cs' IHcs']; try discriminate.
+  simpl in H.
+  destruct (eqc c' c) eqn:c'_is_c.
+  - apply eqc_snd in c'_is_c.
+    simpl in *.
+    apply Bool.andb_true_iff in cs_sat.
+    destruct cs_sat as [c'_sat _].
+    rewrite c'_is_c in c'_sat.
+    exact c'_sat.
+  - simpl.
+    rewrite (eqc_comm c' c) in c'_is_c.
+    simpl in cs_sat.
+    apply Bool.andb_true_iff in cs_sat.
+    destruct cs_sat as [_ cs'_sat].
+    rewrite c'_is_c in H.
+    simpl in H.
+    exact (IHcs' H cs'_sat).
 Qed. (* }}} *)
 
 Definition inclusion_imp_checker := mk_imp_checker inclusion_conj_imp_checker.
