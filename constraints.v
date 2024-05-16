@@ -193,6 +193,12 @@ Definition is_model (cs : constraints) (model : assignment) : bool := satisfies_
 
 Definition is_sat (cs : constraints) : Prop :=
   exists (model : assignment), is_model cs model = true.
+
+Definition imply(cs: constraints)(c: constraint) := forall (m: assignment),
+  satisfies_constraints m cs = true -> satisfies_single_constraint m c = true.
+
+Definition conj_imply(cs: conjunction)(c: constraint) := forall (m: assignment),
+  satisfies_conjunction m cs = true -> satisfies_single_constraint m c = true.
 (* }}} *)
 
 (*
@@ -202,16 +208,14 @@ Definition is_sat (cs : constraints) : Prop :=
 Record imp_checker: Type := 
   { imp_checker_fun: constraints -> constraint -> bool
     ; imp_checker_snd: forall (cs: constraints) (c: constraint),
-    imp_checker_fun cs c = true -> forall (model: assignment),
-    is_model cs model = true -> satisfies_single_constraint model c = true
+    imp_checker_fun cs c = true -> imply cs c
   }.
 
 
 Record conj_imp_checker: Type := 
   { conj_imp_checker_fun: conjunction -> constraint -> bool
     ; conj_imp_checker_snd: forall (cs: conjunction) (c: constraint),
-    conj_imp_checker_fun cs c = true -> forall (model: assignment),
-    satisfies_conjunction model cs = true -> satisfies_single_constraint model c = true
+    conj_imp_checker_fun cs c = true -> conj_imply cs c
   }.
 
 Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
@@ -222,6 +226,7 @@ Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
     end
 |}.
 Next Obligation. (* {{{ *)
+  unfold imply; intros model.
   destruct checker as [checker checker_snd].
   rename H into full_checker__cs_imp_c.
   induction cs as [|c' cs']; try discriminate.
@@ -244,6 +249,7 @@ Program Definition inclusion_conj_imp_checker: conj_imp_checker := {|
   conj_imp_checker_fun := fun cs c => existsb (eqc c) cs
 |}.
 Next Obligation. (* {{{ *)
+  unfold conj_imply; intros model cs_sat.
   unfold imp_checker_snd.
   induction cs as [|c' cs' IHcs']; try discriminate.
   simpl in H.

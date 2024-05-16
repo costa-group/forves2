@@ -202,12 +202,6 @@ Definition normalize_constraint(c: Constraint): Constraint :=
    match c with
    | AddConstr l r d => 
        if      l =? r      then BndConstr l (d / 2)
-       (* else if l =? - r then (1* Delete these constraints *1) *)
-       (* NOTE: While it would be useful to delete these constraints, since if it's satisifiable
-          then we can assume them to be of the sort 0 <= k for k natural, we don't include
-          a proof that the constraints are satisifiable, so for now it just complicates the
-          proof. It suffices that we normalize AddConstr t t d to BndConstr t (d/2) for now,
-          since this guarantees that flatten C = [] <-> C = [] *)
        else c
    | c => c
    end.
@@ -263,15 +257,12 @@ Definition implies(c c': Constraint) := forall (m : model),
 Infix "-->" := implies (at level 90, right associativity).
 
 Definition imply(C: list Constraint)(c': Constraint) := 
-  (* match C with *)
-  (* | [] => False *)
-  (* |  _ =>*) forall (m : model),
-  satisfies_constraints m C = true -> satisfies_single_constraint m c' = true
-  (*end*).
+  forall (m : model),
+  satisfies_constraints m C = true -> satisfies_single_constraint m c' = true.
 Infix "==>" := imply (at level 95, right associativity).
 
 Definition implication(C: list Constraint)(C': list Constraint) :=
-  (forall m, satisfies_constraints m C = true -> satisfies_constraints m C' = true).
+  forall m, satisfies_constraints m C = true -> satisfies_constraints m C' = true.
 Infix "==>>" := implication (at level 96, right associativity).
 
 Theorem implication_caract(C C': list Constraint) :
