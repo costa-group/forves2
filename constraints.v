@@ -14,16 +14,6 @@ Import ListNotations.
 
 Module Constraints.
 
-
-(* Record checkers: Type := { *)
-(*   checker: nat; *)
-(*   snd: nat *)
-(* }. *)
-
-(* Definition asdf: checkers := {| a:= 10 ;  b:= 10|}. *)
-
-(* Definition es_10 := a asdf. *)
-
 (* 
     Literals 
 {{{*)
@@ -34,9 +24,6 @@ Inductive cliteral : Type :=
   | C_VAR_DELTA (n: nat)(delta : N) (* x + c *)
 .
 
-Example sanity_check : forall (x: cliteral), x = x.
-Proof. intros c. reflexivity. Qed.
-
 Definition eq_clit (c c': cliteral): bool :=
   match c, c' with
   | C_VAR n, C_VAR n' => n =? n'
@@ -46,17 +33,17 @@ Definition eq_clit (c c': cliteral): bool :=
   end.
 
 Theorem eq_clit_refl: forall c: cliteral, eq_clit c c = true. 
-Proof. (*{{{*)
+Proof. 
   intros c.
   destruct c;
   try apply Bool.andb_true_iff;
   try split;
   try apply N.eqb_refl;
   try apply PeanoNat.Nat.eqb_refl.
-Qed. (*}}}*)
+Qed. 
 
 Theorem eq_clit_snd: forall c c': cliteral,((eq_clit c c' = true) <-> c = c').
-Proof. (*{{{*)
+Proof. 
   intros c c'.
   split.
   - intro c_eq_c'.
@@ -81,22 +68,22 @@ Proof. (*{{{*)
   - intro c_is_c'.
     rewrite c_is_c'.
     apply eq_clit_refl.
-Qed. (*}}}*)
+Qed. 
 
 Theorem eq_clit_comm: forall c c': cliteral, eq_clit c c' = eq_clit c' c. 
-Proof. (* {{{ *)
+Proof.
   intros [n | n | n d] [n' | n' | n' d'];
       try (apply N.eqb_sym || apply PeanoNat.Nat.eqb_sym) || reflexivity.
   - simpl.
     rewrite (PeanoNat.Nat.eqb_sym n n').
     rewrite (N.eqb_sym d d').
     reflexivity.
-Qed. (* }}} *)
-(* }}} Literals *)
+Qed.
+(*}}} End Literals *)
 
 (* 
    Constraints 
-   {{{ *) 
+{{{*) 
 Inductive constraint : Type :=
   | C_LT (l r : cliteral)
   | C_EQ (l r : cliteral)
@@ -113,15 +100,15 @@ Definition eqc (c c': constraint): bool :=
   end.
 
 Theorem eqc_refl(c: constraint): eqc c c = true.
-Proof. (* {{{ *)
+Proof. 
   destruct c; 
   apply andb_true_intro;
   split;
   apply eq_clit_refl.
-Qed. (* }}} *)
+Qed. 
 
 Theorem eqc_snd(c c' : constraint): eqc c c' = true <-> c = c'.
-Proof. (* {{{ *)
+Proof. 
   split.
   - intro c_eq_c'.
     destruct c;
@@ -140,27 +127,27 @@ Proof. (* {{{ *)
   - intros c_is_c'.
     rewrite c_is_c'.
     apply eqc_refl.
-Qed. (* }}} *)
+Qed. 
 
 Theorem eqc_comm: forall c c', eqc c c' = eqc c' c.
-Proof. (* {{{ *)
+Proof. 
   intros [l r | l r | l r] [l' r' | l' r' | l' r'];
       simpl;
       try rewrite (eq_clit_comm l l');
       try rewrite (eq_clit_comm r r');
       reflexivity.
-Qed. (* }}} *)
+Qed. 
 
 Notation conjunction := (list constraint).
 Notation disjuntion := (list conjunction).
 Definition constraints : Type := disjuntion.
 (** A [constraints] is a disjunctive normal form representation of hypothesis. *)
 
-(*}}} Constraints *)
+(*}}} end Constraints *)
 
 (*
-   Satisfiability of constaints
-   {{{*)
+   Satisfiability of constraints
+{{{*)
 
 Definition assignment : Type := nat -> EVMWord.
 (** Maps variable indexes to concrete values *)
@@ -199,23 +186,23 @@ Definition imply(cs: constraints)(c: constraint) := forall (m: assignment),
 
 Definition conj_imply(cs: conjunction)(c: constraint) := forall (m: assignment),
   satisfies_conjunction m cs = true -> satisfies_single_constraint m c = true.
-(* }}} *)
+(*}}} End of Satisfiability of constraints*)
 
 (*
    Implication checkers
-   {{{ *)
+{{{ *)
 
 Record imp_checker: Type := 
   { imp_checker_fun: constraints -> constraint -> bool
-    ; imp_checker_snd: forall (cs: constraints) (c: constraint),
-    imp_checker_fun cs c = true -> imply cs c
+  ; imp_checker_snd: forall (cs: constraints) (c: constraint),
+      imp_checker_fun cs c = true -> imply cs c
   }.
 
 
 Record conj_imp_checker: Type := 
   { conj_imp_checker_fun: conjunction -> constraint -> bool
-    ; conj_imp_checker_snd: forall (cs: conjunction) (c: constraint),
-    conj_imp_checker_fun cs c = true -> conj_imply cs c
+  ; conj_imp_checker_snd: forall (cs: conjunction) (c: constraint),
+      conj_imp_checker_fun cs c = true -> conj_imply cs c
   }.
 
 Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
@@ -225,7 +212,7 @@ Program Definition mk_imp_checker (checker: conj_imp_checker): imp_checker := {|
     | _ => forallb (fun conj => conj_imp_checker_fun checker conj c) cs
     end
 |}.
-Next Obligation. (* {{{ *)
+Next Obligation. 
   unfold imply; intros model.
   destruct checker as [checker checker_snd].
   rename H into full_checker__cs_imp_c.
@@ -238,17 +225,16 @@ Next Obligation. (* {{{ *)
   - unfold is_model in cs'_sat.
     destruct cs' as [|c'' cs'']; try discriminate.
     exact (IHcs' checker__cs'_imp_c cs'_sat).
-Qed. (* }}} *)
-
+Qed. 
 (* }}} Implication checkers *)
 
 (*
    Inclusion implication checker
-   {{{ *)
+{{{ *)
 Program Definition inclusion_conj_imp_checker: conj_imp_checker := {| 
   conj_imp_checker_fun := fun cs c => existsb (eqc c) cs
 |}.
-Next Obligation. (* {{{ *)
+Next Obligation. 
   unfold conj_imply; intros model cs_sat.
   unfold imp_checker_snd.
   induction cs as [|c' cs' IHcs']; try discriminate.
@@ -268,15 +254,15 @@ Next Obligation. (* {{{ *)
     rewrite c'_is_c in H.
     simpl in H.
     exact (IHcs' H cs'_sat).
-Qed. (* }}} *)
+Qed. 
 
 Definition inclusion_imp_checker := mk_imp_checker inclusion_conj_imp_checker.
+(*}}} End Inclusion implication checker *)
 
-(* }}} *)
 
 (* 
-   just an operation that checks if the constraints are specifiable, 
-   for now it simply returns true. 
+   just an operation that checks if the constraints are specifiable.
+   For now it simply returns true. 
 *)
 
 Record sat_checker : Type := 
