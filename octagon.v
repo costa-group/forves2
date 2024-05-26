@@ -943,12 +943,27 @@ Proof.
     assumption.
 Qed. 
 
-Lemma h(n: nat)(cs: list Constraint): cs ==>> church_numeral n iterate cs.
+(* Lemma h''{A: Type}{P : A -> Prop}(f: A -> A): *)
+(*   (forall x, P x -> P (f x)) -> *) 
+(*   forall n x, P x -> P (church_numeral n f x). *)
+(* Proof. *) 
+(*   intros cs_imp_f_cs. *)
+(*   intros n x h_Px. *)
+(*   induction n as [|n' IHn']; try exact h_Px. *)
+(*   simpl. *)
+(*   apply cs_imp_f_cs. *)
+(*   assumption. *)
+(* Qed. *) 
+
+Lemma church_numeral_implication
+  (n: nat)(f: list Constraint -> list Constraint)(cs: list Constraint): 
+    (forall C, C ==>> f C)
+    -> cs ==>> church_numeral n f cs.
 Proof. 
+  intros cs_imp_f_cs.
   induction n as [|n' IHn']; try apply implication_refl.
-  simpl.
-  apply implication_trans with (church_numeral n' iterate cs); try assumption.
-  apply iterate_implication.
+  apply implication_trans with (church_numeral n' f cs); try assumption.
+  apply cs_imp_f_cs.
 Qed. 
 
 Lemma imply_refl(cs: list Constraint)(c: Constraint)(c_in_cs: In c cs): cs ==> c.
@@ -986,7 +1001,7 @@ Next Obligation.
     apply imply_refl.
     assumption.
   }
-  pose proof h n cs as cs_imp_tcs.
+  pose proof church_numeral_implication n iterate cs iterate_implication as cs_imp_tcs.
   pose proof implication_trans _ _ _ tcs_imp_c' c'_imp_c as tcs_imp_c.
   pose proof implication_trans _ _ _ cs_imp_tcs tcs_imp_c as cs_imp_c.
   assumption.
