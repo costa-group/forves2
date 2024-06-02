@@ -429,6 +429,7 @@ Definition parse_sstack_value_cmp (s: string) :=
   match s with
   | "trivial"%string => Some SStackValCmp_Trivial
   | "basic"%string => Some SStackValCmp_Basic
+  | "basic_w_eq_chk"%string => Some SStackValCmp_Basic_w_eq_chk
   | _ => None
   end.
 
