@@ -183,12 +183,242 @@ Definition chk_valid_sstate (sst: sstate) (ops: stack_op_instr_map): bool :=
     chk_valid_sstorage maxidx sstrg.
 
 
+Lemma chk_valid_sstack_value_snd:
+  forall maxidx sv,
+    chk_valid_sstack_value maxidx sv = true -> valid_sstack_value maxidx sv.
+Proof.
+  intros maxidx sv H_chk.
+  unfold chk_valid_sstack_value in H_chk.
+  unfold valid_sstack_value.
+
+  destruct sv; try apply I.
+  rewrite <- Nat.ltb_lt.
+  apply H_chk.
+Qed.
+
+Lemma chk_valid_smemory_update_snd:
+  forall maxidx u,
+    chk_valid_smemory_update maxidx u = true -> valid_smemory_update maxidx u.
+Proof.
+  intros maxidx u H_chk.
+  destruct u as [soffset svalue | soffset svalue].
+  + simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_soffset H_chk_svalue].
+    apply chk_valid_sstack_value_snd in H_chk_soffset.
+    apply chk_valid_sstack_value_snd in H_chk_svalue.
+
+    unfold valid_smemory_update.
+    split; auto.
+  + simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_soffset H_chk_svalue].
+    apply chk_valid_sstack_value_snd in H_chk_soffset.
+    apply chk_valid_sstack_value_snd in H_chk_svalue.
+
+    unfold valid_smemory_update.
+    split; auto.
+Qed.
+
+Lemma chk_valid_sstorage_update_snd:
+  forall maxidx u,
+    chk_valid_sstorage_update maxidx u = true -> valid_sstorage_update maxidx u.
+Proof.
+  intros maxidx u H_chk.
+  destruct u as [skey svalue].
+  simpl in H_chk.
+  apply andb_prop in H_chk.
+  destruct H_chk as [H_chk_skey H_chk_svalue].
+  apply chk_valid_sstack_value_snd in H_chk_skey.
+  apply chk_valid_sstack_value_snd in H_chk_svalue.
+
+  unfold valid_sstorage_update.
+  split; auto.
+Qed.
+
+Lemma chk_valid_smemory_snd:
+  forall maxidx smem,
+    chk_valid_smemory maxidx smem = true -> valid_smemory maxidx smem.
+Proof.
+  intros maxidx.
+  induction smem as [|u smem' IHsmem'].
+  + intros H_chk.
+    simpl.
+    apply I.
+  + intros H_chk.
+    simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_u H_chk_smem'].
+    apply IHsmem' in H_chk_smem'.
+    apply chk_valid_smemory_update_snd in H_chk_u.
+    unfold valid_smemory.
+    fold valid_smemory.
+    split; auto.
+Qed.
+    
+Lemma chk_valid_sstorage_snd:
+  forall maxidx sstrg,
+    chk_valid_sstorage maxidx sstrg = true -> valid_sstorage maxidx sstrg.
+Proof.
+  intros maxidx.
+  induction sstrg as [|u sstrg' IHsstrg'].
+  + intros H_chk.
+    simpl.
+    apply I.
+  + intros H_chk.
+    simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_u H_chk_sstrg'].
+    apply IHsstrg' in H_chk_sstrg'.
+    apply chk_valid_sstorage_update_snd in H_chk_u.
+    unfold valid_sstorage.
+    fold valid_sstorage.
+    split; auto.
+Qed.
+
+Lemma chk_valid_sstack_snd:
+  forall maxidx sstk,
+    chk_valid_sstack maxidx sstk = true -> valid_sstack maxidx sstk.
+Proof.
+  intros maxidx.
+  induction sstk as [|sv sstk' IHsstk'].
+  + intros H_chk.
+    simpl.
+    apply I.
+  + intros H_chk.
+    simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_sv H_chk_sstk'].
+    apply IHsstk' in H_chk_sstk'.
+    apply chk_valid_sstack_value_snd in H_chk_sv.
+    unfold valid_sstack.
+    fold valid_sstack.
+    split; auto.
+Qed.
+
+
+Lemma chk_valid_stack_op_instr_snd:
+  forall maxidx ops label args,
+    chk_valid_stack_op_instr maxidx ops label args = true -> valid_stack_op_instr maxidx ops label args.
+Proof.
+  intros maxidx ops label args H_chk.
+  unfold chk_valid_stack_op_instr in H_chk.
+  unfold valid_stack_op_instr.
+  destruct (ops label).
+  apply andb_prop in H_chk.
+  destruct H_chk as [H_chk_len H_chk_args].
+  rewrite Nat.eqb_eq in H_chk_len.
+  apply chk_valid_sstack_snd in H_chk_args.
+  split; auto.
+Qed.
+  
+
+Lemma chk_valid_smap_value_snd:
+  forall maxidx ops value,
+     chk_valid_smap_value maxidx ops value = true -> valid_smap_value maxidx ops value.
+Proof.
+  intros maxidx ops value H_chk.
+  destruct value.
+  + simpl in H_chk.
+    simpl.
+    apply chk_valid_sstack_value_snd in H_chk.
+    apply H_chk.
+  + simpl.
+    apply I.
+  + simpl in H_chk.
+    apply chk_valid_stack_op_instr_snd in H_chk.
+    simpl.
+    apply H_chk.
+  + simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_offset H_chk_smem].
+    apply chk_valid_sstack_value_snd in H_chk_offset.
+    apply chk_valid_smemory_snd in H_chk_smem.
+    simpl.
+    split; auto.
+  + simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_key H_chk_sstrg].
+    apply chk_valid_sstack_value_snd in H_chk_key.
+    apply chk_valid_sstorage_snd in H_chk_sstrg.
+    simpl.
+    split; auto.
+  + simpl in H_chk.
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk H_chk_smem].
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_offset H_chk_size].
+    apply chk_valid_sstack_value_snd in H_chk_offset.
+    apply chk_valid_sstack_value_snd in H_chk_size.
+    apply chk_valid_smemory_snd in H_chk_smem.
+    simpl.
+    split; auto.
+Qed.
+       
+Lemma chk_valid_bindings_snd:
+  forall maxidx sb ops,
+    chk_valid_bindings maxidx sb ops = true -> valid_bindings maxidx sb ops.
+Proof.
+  intros maxidx sb ops.
+  revert maxidx.
+  revert sb.
+  
+  induction sb as [|b sb' IHsb'].
+  + intros maxidx H_chk.
+    simpl.
+    destruct maxidx as [| maxidx'].
+    ++ reflexivity.
+    ++ simpl in H_chk.
+       discriminate.
+  + intros maxidx H_chk.
+    simpl in H_chk.
+    destruct b as [idx value].
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk H_chk_sb'].
+
+    apply andb_prop in H_chk.
+    destruct H_chk as [H_chk_maxidx H_chk_value].
+
+    apply chk_valid_smap_value_snd in H_chk_value.
+    apply IHsb' in H_chk_sb'.
+    rewrite Nat.eqb_eq in H_chk_maxidx.
+    simpl.
+    split; auto.
+Qed.
+
+Lemma chk_valid_smap_snd:
+  forall maxidx sb ops,
+    chk_valid_smap maxidx sb ops = true -> valid_smap maxidx sb ops.
+Proof.
+  apply chk_valid_bindings_snd.
+Qed.
+
 
 Lemma chk_valid_sstate_snd:
   forall sst ops,
     chk_valid_sstate sst ops = true -> valid_sstate sst ops.
 Proof.
-  Admitted.
+  intros sst ops H_chk_valid_sst.
+  unfold chk_valid_sstate in H_chk_valid_sst.
+
+  apply andb_prop in H_chk_valid_sst.
+  destruct H_chk_valid_sst as [H_chk_valid_sst H_chk_valid_sstrorage].
+  apply chk_valid_sstorage_snd in H_chk_valid_sstrorage.
+    
+  apply andb_prop in H_chk_valid_sst.
+  destruct H_chk_valid_sst as [H_chk_valid_sst H_chk_valid_smemory].
+  apply chk_valid_smemory_snd in H_chk_valid_smemory.
+  
+  apply andb_prop in H_chk_valid_sst.
+  destruct H_chk_valid_sst as [H_chk_valid_smap H_chk_valid_sstack].
+  apply chk_valid_sstack_snd in H_chk_valid_sstack.
+
+  apply chk_valid_smap_snd in H_chk_valid_smap.
+
+  unfold valid_sstate.
+
+  split; try auto.
+Qed.
 
 (*Lemma fresh_var_gt_map_maxidx_S:
   forall sb maxidx,
