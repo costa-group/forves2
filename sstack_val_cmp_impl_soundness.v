@@ -39,11 +39,17 @@ Import ValidSymbolicState.
 Require Import FORVES2.symbolic_state_cmp.
 Import SymbolicStateCmp.
 
+Require Import FORVES2.symbolic_execution_soundness.
+Import SymbolicExecutionSoundness.
+
 Require Import FORVES2.sstack_val_cmp_impl.
 Import SStackValCmpImpl.
 
 Require Import FORVES2.eval_common.
 Import EvalCommon.
+
+Require Import FORVES2.symbolic_state_dec.
+Import SymbolicStateDec.
 
 Require Import FORVES2.constraints.
 Import Constraints.
@@ -65,16 +71,61 @@ Module SStackValCmpImplSoundness.
     safe_sstack_value_cmp_wrt_others trivial_compare_sstack_val.
   Proof.
     unfold safe_sstack_value_cmp_wrt_others.
-    intros.
+    intros d smemory_cmp sstorage_cmp sha3_cmp.
     unfold safe_sstack_val_cmp_ext_2_d.
     unfold safe_sstack_val_cmp_ext_1_d.
-    intros.
+    intros H_safe_smemory_cmp H_safe_sstorage_cmp H_safe_sha3_cmp.
+    intros d' H_d'_le_Sd'.
     unfold safe_sstack_val_cmp.
-    unfold trivial_compare_sstack_val.
-    intros.
-    discriminate.
+    intros ctx sv1 sv2 maxidx1 bs1 maxidx2 bs2 ops.
+    intros H_is_sat H_valid_sv1 H_valid_sv2 H_valid_bs1 H_valid_bs2 H_cmp.
+    intros model mem strg exts H_is_model.
+    unfold trivial_compare_sstack_val in H_cmp.
+    destruct d' as [|d''] eqn:E_d; try discriminate.
+
+    unfold eval_sstack_val.
+
+    destruct sv1 as [w1 | n1 | n1]; destruct sv2 as [w2 | n2 | n2] eqn:E_sv2; try discriminate.
+
+    + apply weqb_sound in H_cmp.
+
+      pose proof (eval_sstack_val'_Val w1 model mem strg exts maxidx1 bs1 ops) as H_eval_w1.
+      pose proof (eval_sstack_val'_Val w2 model mem strg exts maxidx2 bs2 ops) as H_eval_w2.
+      rewrite H_eval_w1.
+      rewrite H_eval_w2.
+      rewrite H_cmp.
+      exists w2.
+      split; reflexivity.
+
+    + pose proof (eval_sstack_val'_InVar n1 model mem strg exts maxidx1 bs1 ops) as H_eval_instkv_n1.
+      pose proof (eval_sstack_val'_InVar n2 model mem strg exts maxidx2 bs2 ops) as H_eval_instkv_n2.
+      rewrite H_eval_instkv_n1.
+      rewrite H_eval_instkv_n2.
+
+      
+      apply Nat.eqb_eq in H_cmp.
+            
+      rewrite H_cmp.
+      exists (model n2).
+      split; try reflexivity.
+      
+    + destruct (n1 =? n2) eqn:E_n1_eq_n2; try discriminate.
+      destruct (maxidx1 =? maxidx2) eqn:E_maxidx1_eq_maxidx2; try discriminate.
+      destruct (sbindings_eq_dec bs1 bs2) eqn:E_bs1_eq_bs2; try discriminate.
+      apply Nat.eqb_eq in E_n1_eq_n2.
+      apply Nat.eqb_eq in E_maxidx1_eq_maxidx2.
+
+      rewrite E_n1_eq_n2.
+      rewrite E_maxidx1_eq_maxidx2.
+      rewrite e.
+                  
+      pose proof (eval_sstack_val'_succ (S maxidx2) (FreshVar n2) model mem strg exts maxidx2 bs2 ops H_valid_sv2 H_valid_bs2 (gt_Sn_n maxidx2)) as H_eval_sv2.
+      destruct H_eval_sv2 as [v2 H_eval_sv2].
+
+      rewrite H_eval_sv2.
+      exists v2.
+      split; try reflexivity.
   Qed.
-    
 
   (* compare_sstack_val *)
   Lemma basic_compare_sstack_val_d0_snd:

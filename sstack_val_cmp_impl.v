@@ -40,13 +40,32 @@ Import SymbolicStateCmp.
 Require Import FORVES2.eval_common.
 Import EvalCommon.
 
+Require Import FORVES2.symbolic_state_dec.
+Import SymbolicStateDec.
+
 Require Import FORVES2.constraints.
 Import Constraints.
 
 Module SStackValCmpImpl.
 
   Definition trivial_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: constraints) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
-    false.
+    match d with
+    | 0 => false
+    | S d' =>
+        match sv1,sv2 with
+        | Val w1, Val w2 => weqb w1 w2
+        | InVar n1, InVar n2 => (n1 =? n2)
+        | FreshVar n1, FreshVar n2 =>
+            if (n1 =? n2)
+            then if (maxidx1 =? maxidx2)
+                 then if (sbindings_eq_dec sb1 sb2)
+                      then true
+                      else false
+                 else false
+            else false
+        | _, _ => false
+        end
+    end.
 
 Fixpoint basic_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: constraints) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   match d with
