@@ -452,6 +452,7 @@ Definition parse_storage_cmp (s: string) :=
 Definition parse_sha3_cmp (s: string) :=
   match s with
   | "trivial"%string => Some SHA3Cmp_Trivial
+  | "basic"%string => Some SHA3Cmp_Basic
   | _ => None
   end.
 

@@ -333,11 +333,13 @@ Module BlockEquivChecker.
   | SHA3Cmp (f: sha3_cmp_ext_t) (H_snd: safe_sha3_cmp_ext_wrt_sstack_value_cmp f).
 
   Inductive available_sha3_cmp :=
-  | SHA3Cmp_Trivial.
+  | SHA3Cmp_Trivial
+  | SHA3Cmp_Basic.
 
   Definition get_sha3_cmp (tag: available_sha3_cmp) : sha3_cmp_v :=
     match tag with
     | SHA3Cmp_Trivial => SHA3Cmp trivial_sha3_cmp trivial_sha3_cmp_snd
+    | SHA3Cmp_Basic => SHA3Cmp basic_sha3_cmp basic_sha3_cmp_snd
   end.
 
 
