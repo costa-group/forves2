@@ -12,6 +12,7 @@ concrete_interpreter.v
 
 constraints.v
 symbolic_state.v
+symbolic_state_dec.v
 valid_symbolic_state.v
 misc.v
 eval_common.v
