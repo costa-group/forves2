@@ -1079,3 +1079,226 @@ Check (1 + 1)%nat.
 
 
 End OctagonExamples.
+
+Module ForvesIntegration.
+From FORVES2 Require Import constraints.
+Require Import bbv.Word.
+
+Definition translate_model(m :Constraints.assignment):
+  Octagon.model :=
+  fun (n: nat) => Z.of_N (wordToN( m n)).
+
+Import Constraints.
+
+Definition extract_values(l r: Constraints.cliteral):
+  option nat * option nat * Z
+  := match l, r with
+     | C_VAR n, C_VAR n' => 
+         (Some n, Some n',  0%Z)
+     | C_VAR n, C_VAL d' => 
+         (Some n,    None,  Z.of_N d')
+     | C_VAR n, C_VAR_DELTA n' d' => 
+         (Some n, Some n',  Z.of_N d')
+     | C_VAL d, C_VAR n' => 
+         (  None, Some n',            - Z.of_N d)
+     | C_VAL d, C_VAL d' => 
+         (  None,    None,  Z_of_N d' - Z.of_N d)
+     | C_VAL d, C_VAR_DELTA n' d' => 
+         (  None, Some n',  Z_of_N d' - Z.of_N d)
+     | C_VAR_DELTA n d, C_VAR n' => 
+         (Some n, Some n',            - Z.of_N d)
+     | C_VAR_DELTA n d, C_VAL d' => 
+         (Some n,    None,  Z_of_N d' - Z.of_N d)
+     | C_VAR_DELTA n d, C_VAR_DELTA n' d' => 
+         (Some n, Some n',  Z_of_N d' - Z.of_N d)
+     end.
+
+Definition translate_le(values: option nat * option nat * Z):
+  Octagon.Constraint :=
+  match values with
+  | (None  ,    None, d) => Octagon.mkadd_pn 1 1 d
+  | (Some n,    None, d) => Octagon.mkbnd_p n  d
+  | (None  , Some n', d) => Octagon.mkbnd_n n' d
+  | (Some n, Some n', d) => Octagon.mkadd_pn n n' d
+  end.
+
+Definition translate_constraint(c: Constraints.constraint):
+  list Octagon.Constraint :=
+  match c with
+  | C_LE l r => [translate_le (extract_values l r)]
+  | C_LT l r => let '(n, n', d) := extract_values l r in
+                [translate_le (n, n', d-1)]
+                (* l < r <-> l <= r-1 *)
+  | C_EQ l r => let '(n, n', d) := extract_values l r in
+                [translate_le (n, n', d); translate_le(n', n, -d)]
+                (* l = r <-> l <= r /\ r <= l *)
+  end.
+
+Lemma translate_constraint_lt_to_le(l r: Constraints.cliteral):
+  (* l < r  -> l + 1 <= r*)
+  translate_constraint (C_LT l r) = 
+     match l with
+     | C_VAR n => translate_constraint (C_LE (C_VAR_DELTA n 1) r)
+     | C_VAL d => translate_constraint (C_LE (C_VAL (d+1)) r)
+     | C_VAR_DELTA n d => translate_constraint (C_LE (C_VAR_DELTA n (d+1)) r)
+     end.
+Proof.
+  destruct l.
+  - destruct r; simpl; f_equal.
+  - destruct r; simpl; f_equal; f_equal; lia.
+  - destruct r; simpl; f_equal; f_equal; lia.
+Qed.
+
+Lemma translate_constraint_eq_to_le(l r: Constraints.cliteral):
+  (* l < r  -> l + 1 <= r*)
+  translate_constraint (C_EQ l r) = 
+  translate_constraint (C_LE l r) ++  translate_constraint (C_LE r l).
+Proof.
+  destruct l eqn:E; destruct r eqn:E'; simpl; f_equal; f_equal; f_equal; lia.
+Qed.
+
+Lemma lt_to_le_for_Z(a b: Z): a < b -> a <= b - 1.
+Proof. lia. Qed.
+
+Lemma eq_to_le_for_Z(a b: Z): a = b -> a <= b /\ b <= a.
+Proof. lia. Qed.
+
+Lemma le_from_N_to_Z(x y: N):(x <= y)%N <-> (Z.of_N x <= Z.of_N y).
+Proof. lia. Qed.
+
+Lemma lt_from_N_to_Z(x y: N):(x < y)%N -> (Z.of_N x < Z.of_N y).
+Proof. lia. Qed.
+
+Lemma eq_from_N_to_Z(x y: N):(x = y)%N <-> (Z.of_N x = Z.of_N y).
+Proof. lia. Qed.
+
+Lemma le_pass_term_right(x y: Z): x <= y <-> x - y <= 0.
+Proof. lia. Qed.
+
+Lemma le_pass_term_right'(x y z: Z): x + y <= z <-> x <= z - y.
+Proof. lia. Qed.
+
+Lemma term_value_on_tranlate_model(m: Constraints.assignment)(t: Octagon.Term.term):
+  Octagon.term_value (translate_model m) t =  
+  let '(Octagon.Term.Build_term a x) := t in
+  Z.of_N (wordToN (m x)) *(
+    if proj1_sig a >? 0 
+    then  1
+    else -1
+   ).
+Proof.
+  destruct t; destruct a as [a pa]; simpl.
+  destruct pa as [a_1 | a_m1].
+  - subst; unfold Octagon.term_value; unfold translate_model; simpl.
+    rewrite Z.mul_1_r.
+    destruct (wordToN (m x)); auto.
+  - subst; unfold Octagon.term_value; unfold translate_model; simpl.
+    rewrite <- Z.opp_eq_mul_m1.
+    destruct (wordToN (m x)); auto.
+Qed.
+
+Lemma translate_le_preserves_information
+  (m: Constraints.assignment)(l r: Constraints.cliteral):
+  let m_opt := translate_model m in
+  Constraints.satisfies_single_constraint m (Constraints.C_LE l r) = true <->
+  Octagon.satisfies_single_constraint m_opt (translate_le (extract_values l r)) = true.
+Proof.
+  simpl.
+  rewrite N.leb_le.
+  destruct l as [n|d|n d]; destruct r as [n'|d'|n' d'];
+    split; unfold cliteral_to_nat; intros h;
+    simpl in *;
+    repeat rewrite -> term_value_on_tranlate_model in *;
+    simpl in *;
+    lia.
+Qed.
+
+Lemma translate_constraint_preserves_information(c: Constraints.constraint) :
+  forall (m: Constraints.assignment),
+    let m_oct := translate_model m in
+      Constraints.satisfies_single_constraint m c = true <->
+      Octagon.satisfies_constraints m_oct (translate_constraint c) = true.
+Proof.
+  intros m; simpl.
+  destruct c.
+  - rewrite translate_constraint_lt_to_le.
+    unfold Octagon.satisfies_constraints.
+    destruct l;
+      unfold translate_constraint;
+      unfold forallb;
+      rewrite Bool.andb_true_r;
+      rewrite <- translate_le_preserves_information;
+      simpl; rewrite N.ltb_lt; rewrite N.leb_le;
+      lia.
+  - rewrite translate_constraint_eq_to_le.
+    unfold Octagon.satisfies_constraints.
+    unfold translate_constraint.
+    rewrite Octagon.app_and_cons.
+    unfold forallb.
+    rewrite Bool.andb_true_r.
+    rewrite Bool.andb_true_iff.
+    rewrite <- translate_le_preserves_information.
+    rewrite <- translate_le_preserves_information.
+    simpl; rewrite N.eqb_eq; repeat rewrite N.leb_le; lia.
+  - 
+    unfold Octagon.satisfies_constraints.
+    unfold translate_constraint.
+    unfold forallb.
+    rewrite Bool.andb_true_r.
+    rewrite <- translate_le_preserves_information.
+    reflexivity.
+Qed.
+
+Definition translate_constraints(cs: Constraints.conjunction):
+  list Octagon.Constraint := flat_map translate_constraint cs.
+
+Lemma translate_preserves_information(m: Constraints.assignment)(C: list Constraints.constraint) :
+    let m_oct := translate_model m in
+    let C_oct := translate_constraints C in
+      Constraints.satisfies_conjunction m C = true <->
+      Octagon.satisfies_constraints m_oct C_oct = true.
+Proof.
+  induction C as [|c cs IHcs]; try reflexivity.
+  unfold satisfies_conjunction in *.
+  unfold Octagon.satisfies_constraints in *.
+  simpl.
+  rewrite forallb_app.
+  repeat rewrite Bool.andb_true_iff.
+  rewrite <- IHcs.
+  apply and_iff_compat_r.
+  apply translate_constraint_preserves_information.
+Qed.
+
+Program Definition translate_conj_imp_checker
+  (oct_checker: Octagon.ImplChecker.conj_imp_checker)
+  : Constraints.conj_imp_checker := {|
+  conj_imp_checker_fun cs c :=
+    let oct_hypotothesis := translate_constraints cs in
+    let oct_thesis := translate_constraint c in
+    let oct_checker_fn := 
+      Octagon.ImplChecker.conj_imp_checker_fun oct_checker
+    in
+    forallb (oct_checker_fn oct_hypotothesis) oct_thesis
+|}.
+Next Obligation.
+  rename H0 into c_sat.
+  destruct oct_checker as [oct_checker_fn oct_checker_snd].
+  simpl in H.
+  apply translate_constraint_preserves_information.
+  unfold Octagon.imply in oct_checker_snd.
+  unfold Octagon.satisfies_constraints.
+  rewrite forallb_forall in *.
+  intros t t_in_tc.
+  specialize (H t t_in_tc).
+  remember (translate_constraints cs) as hs.
+  apply (oct_checker_snd hs t H (translate_model model)).
+  rewrite Heqhs.
+  rewrite <- translate_preserves_information.
+  assumption.
+Qed.
+
+Program Definition conj_trans_closure_checker(n: nat)
+  : Constraints.conj_imp_checker :=
+  translate_conj_imp_checker (Octagon.ImplChecker.conj_trans_closure_checker n).
+End ForvesIntegration.
+
