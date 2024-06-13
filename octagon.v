@@ -1269,6 +1269,8 @@ Proof.
   apply translate_constraint_preserves_information.
 Qed.
 
+Check forallb.
+
 Program Definition translate_conj_imp_checker
   (oct_checker: Octagon.ImplChecker.conj_imp_checker)
   : Constraints.conj_imp_checker := {|
@@ -1281,6 +1283,8 @@ Program Definition translate_conj_imp_checker
     forallb (oct_checker_fn oct_hypotothesis) oct_thesis
 |}.
 Next Obligation.
+  unfold conj_imply.
+  intros model H0.
   rename H0 into c_sat.
   destruct oct_checker as [oct_checker_fn oct_checker_snd].
   simpl in H.
