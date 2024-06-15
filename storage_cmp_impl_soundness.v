@@ -53,6 +53,9 @@ Import ConcreteInterpreter.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 
 Module StorageCmpImplSoundness.
 
@@ -79,7 +82,7 @@ Module StorageCmpImplSoundness.
     unfold safe_sstorage_cmp_ext_d.
     intros d' H_d'_le_d.
     unfold safe_sstorage_cmp.
-    intros ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2.
+    intros ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2.
     revert sstrg2.
     revert sstrg1.
     induction sstrg1 as [|u1 sstrg1' IHsstrg1'].
@@ -109,10 +112,10 @@ Module StorageCmpImplSoundness.
          unfold safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
          pose proof (H_sstack_val_cmp_snd d' H_d'_le_d) as H_sstack_val_cmp_snd_d'.
          unfold safe_sstack_val_cmp in H_sstack_val_cmp_snd_d'.
-         pose proof(H_sstack_val_cmp_snd_d' ctx skey1 skey2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_skey1 H_valid_skey2 H_valid_sb1 H_valid_sb2 E_cmp_skey1_skey2 model mem strg exts H_is_model) as H_eval_skey1_skey2.
+         pose proof(H_sstack_val_cmp_snd_d' ctx skey1 skey2 maxidx1 sb1 maxidx2 sb2 ops H_valid_skey1 H_valid_skey2 H_valid_sb1 H_valid_sb2 E_cmp_skey1_skey2 model mem strg exts H_is_model) as H_eval_skey1_skey2.
          destruct H_eval_skey1_skey2 as [skey_1_2_v [H_eval_skey1 H_eval_skey2]].
 
-         pose proof(H_sstack_val_cmp_snd_d' ctx svalue1 svalue2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_svalue1 H_valid_svalue2 H_valid_sb1 H_valid_sb2 E_cmp_svalue1_svalue2 model mem strg exts H_is_model) as H_eval_svalue1_svalue2.
+         pose proof(H_sstack_val_cmp_snd_d' ctx svalue1 svalue2 maxidx1 sb1 maxidx2 sb2 ops H_valid_svalue1 H_valid_svalue2 H_valid_sb1 H_valid_sb2 E_cmp_svalue1_svalue2 model mem strg exts H_is_model) as H_eval_svalue1_svalue2.
          destruct H_eval_svalue1_svalue2 as [svalue_1_2_v [H_eval_svalue1 H_eval_svalue2]].
          exists (fun key => if (key =? wordToN skey_1_2_v)%N then svalue_1_2_v else strg' key).
 
@@ -178,20 +181,19 @@ Module StorageCmpImplSoundness.
   
   Lemma swap_storage_update_snd:
     forall ctx sstrg u1 u2 maxidx sb ops,
-      is_sat ctx ->
       valid_sstorage maxidx sstrg ->
       valid_sstorage_update maxidx u1 ->
       valid_sstorage_update maxidx u2 ->
       valid_bindings maxidx sb ops ->
       swap_storage_update ctx u1 u2 maxidx sb = true ->
       forall model mem strg exts, 
-             is_model ctx model = true ->
+             is_model (ctx_cs ctx) model = true ->
              exists strg' : storage,
                eval_sstorage (u1::u2::sstrg) maxidx sb model mem strg exts ops = Some strg' /\
                  eval_sstorage (u2::u1::sstrg) maxidx sb model mem strg exts ops = Some strg'.
   Proof.
     intros ctx sstrg u1 u2 maxidx sb ops.
-    intros H_is_sat H_valid_sstrg H_valid_u1 H_valid_u2 H_valid_bs H_swap.
+    intros H_valid_sstrg H_valid_u1 H_valid_u2 H_valid_bs H_swap.
     intros model mem strg exts H_is_model.
     destruct u1 as [skey1 svalue1] eqn:E_u1.
     destruct u2 as [skey2 svalue2] eqn:E_u2.
@@ -348,18 +350,17 @@ Qed.
  
   Lemma reorder_updates'_snd:
     forall ctx maxidx sb ops,
-      is_sat ctx ->
       valid_bindings maxidx sb ops ->
       forall d sstrg b sstrg_r,
       valid_sstorage maxidx sstrg ->
       reorder_updates' d ctx sstrg maxidx sb = (b,sstrg_r) ->
       forall model mem strg exts, 
-             is_model ctx model = true ->
+             is_model (ctx_cs ctx) model = true ->
              exists strg' : storage,
                eval_sstorage sstrg maxidx sb model mem strg exts ops = Some strg' /\
                  eval_sstorage sstrg_r maxidx sb model mem strg exts ops = Some strg'.
   Proof.
-    intros ctx maxidx sb ops H_is_sat H_valid_sb.
+    intros ctx maxidx sb ops H_valid_sb.
     induction d as [|d' IHd'].
     + intros sstrg b sstrg_r H_valid_sstrg H_reorder'.
       intros model mem strg exts H_is_model.
@@ -408,7 +409,7 @@ Qed.
                   simpl in H_valid_sstrg.
                   destruct H_valid_sstrg as [H_valid_u1 [H_valid_u2 H_valid_sstrg'']].
                    
-                  pose proof (swap_storage_update_snd  ctx sstrg'' u1 u2 maxidx sb ops H_is_sat H_valid_sstrg'' H_valid_u1 H_valid_u2 H_valid_sb E_swap model mem strg exts H_is_model) as H_swap_storage_update_snd.
+                  pose proof (swap_storage_update_snd  ctx sstrg'' u1 u2 maxidx sb ops H_valid_sstrg'' H_valid_u1 H_valid_u2 H_valid_sb E_swap model mem strg exts H_is_model) as H_swap_storage_update_snd.
 
                   destruct H_swap_storage_update_snd as [strg_aux [H_eval_u1_u2_sstrg'' H_eval_u2_u1_sstrg'' ]].
 		  rewrite <- H_eval_u2_u1_sstrg'' in H_eval_u1_u2_sstrg''.
@@ -557,18 +558,17 @@ Qed.
 
   Lemma reorder_storage_updates_snd:
     forall ctx maxidx sb ops,
-      is_sat ctx ->
       valid_bindings maxidx sb ops ->
       forall d n sstrg sstrg_r,
         valid_sstorage maxidx sstrg ->
       reorder_storage_updates d n ctx sstrg maxidx sb = sstrg_r ->
       forall model mem strg exts,
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         exists strg' : storage,
           eval_sstorage sstrg maxidx sb model mem strg exts ops = Some strg' /\
             eval_sstorage sstrg_r maxidx sb model mem strg exts ops = Some strg'.
   Proof.
-    intros ctx maxidx sb ops H_is_sat H_valid_sb.
+    intros ctx maxidx sb ops H_valid_sb.
     induction d as [|d' IHd'].
     + intros n sstrg sstrg' H_valid_sstrg H_reorder stk mem strg exts H_is_model.
       simpl in H_reorder.
@@ -581,7 +581,7 @@ Qed.
       simpl in H_reorder.
       destruct (reorder_updates' n ctx sstrg maxidx sb) as [changed sstrg_r] eqn:E_reorder_updates'.
      
-      pose proof (reorder_updates'_snd ctx maxidx sb ops H_is_sat H_valid_sb n sstrg changed sstrg_r H_valid_sstrg E_reorder_updates' stk mem strg exts H_is_model) as H_reorder_updates'_snd.
+      pose proof (reorder_updates'_snd ctx maxidx sb ops H_valid_sb n sstrg changed sstrg_r H_valid_sstrg E_reorder_updates' stk mem strg exts H_is_model) as H_reorder_updates'_snd.
       destruct H_reorder_updates'_snd as [strg' [H_eval_sstrg H_eval_sstrg_r]].
       
       destruct changed eqn:E_changed.
@@ -612,19 +612,19 @@ Qed.
     unfold safe_sstorage_cmp_ext_wrt_sstack_value_cmp.
     unfold safe_sstorage_cmp_ext_d.
     unfold safe_sstorage_cmp.
-    intros d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2 H_valid_sstrg1 H_valid_sstrg2 H_po_cmp stk mem strg exts H_is_model.
+    intros d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2 H_valid_sstrg1 H_valid_sstrg2 H_po_cmp stk mem strg exts H_is_model.
     unfold po_storage_cmp in H_po_cmp.
     destruct (length sstrg1 =? length sstrg2); try discriminate.
 
     remember (reorder_storage_updates (length sstrg1) (length sstrg1) ctx sstrg1 maxidx1 sb1) as sstrg1_r.
     remember (reorder_storage_updates (length sstrg2) (length sstrg2) ctx sstrg2 maxidx2 sb2) as sstrg2_r.
     
-    pose proof (reorder_storage_updates_snd ctx maxidx1 sb1 ops H_is_sat H_valid_sb1 (length sstrg1) (length sstrg1) sstrg1 sstrg1_r H_valid_sstrg1 (eq_sym Heqsstrg1_r) stk mem strg exts H_is_model) as H_reorder_storage_updates_snd_sstrg1_r.
+    pose proof (reorder_storage_updates_snd ctx maxidx1 sb1 ops H_valid_sb1 (length sstrg1) (length sstrg1) sstrg1 sstrg1_r H_valid_sstrg1 (eq_sym Heqsstrg1_r) stk mem strg exts H_is_model) as H_reorder_storage_updates_snd_sstrg1_r.
     pose proof (reorder_storage_updates_valid ctx maxidx1 sb1 ops H_valid_sb1 (length sstrg1) (length sstrg1) sstrg1 sstrg1_r H_valid_sstrg1 (eq_sym Heqsstrg1_r)) as H_valid_sstrg1_r.
 
     destruct H_reorder_storage_updates_snd_sstrg1_r as [strg1' [H_eval_sstrg1 H_eval_sstrg1_r]].
 
-    pose proof (reorder_storage_updates_snd ctx maxidx2 sb2 ops H_is_sat H_valid_sb2 (length sstrg2) (length sstrg2) sstrg2 sstrg2_r H_valid_sstrg2 (eq_sym Heqsstrg2_r) stk mem strg exts H_is_model) as H_reorder_storage_updates_snd_sstrg2_r.
+    pose proof (reorder_storage_updates_snd ctx maxidx2 sb2 ops H_valid_sb2 (length sstrg2) (length sstrg2) sstrg2 sstrg2_r H_valid_sstrg2 (eq_sym Heqsstrg2_r) stk mem strg exts H_is_model) as H_reorder_storage_updates_snd_sstrg2_r.
     pose proof (reorder_storage_updates_valid ctx maxidx2 sb2 ops H_valid_sb2 (length sstrg2) (length sstrg2) sstrg2 sstrg2_r H_valid_sstrg2 (eq_sym Heqsstrg2_r)) as H_valid_sstrg2_r.
 
     destruct H_reorder_storage_updates_snd_sstrg2_r as [strg2' [H_eval_sstrg2 H_eval_sstrg2_r]].
@@ -634,7 +634,7 @@ Qed.
     unfold safe_sstorage_cmp_ext_d in H_basic_storage_cmp_snd.
     unfold safe_sstorage_cmp in H_basic_storage_cmp_snd.
 
-    pose proof (H_basic_storage_cmp_snd d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx sstrg1_r sstrg2_r maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2 H_valid_sstrg1_r H_valid_sstrg2_r H_po_cmp stk mem strg exts H_is_model) as H_basic_cmp_snd.
+    pose proof (H_basic_storage_cmp_snd d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx sstrg1_r sstrg2_r maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2 H_valid_sstrg1_r H_valid_sstrg2_r H_po_cmp stk mem strg exts H_is_model) as H_basic_cmp_snd.
 
     destruct H_basic_cmp_snd as [strg' [H_eval_sstrg1_r_bis H_eval_sstrg2_r_bis]].
     exists strg1'.

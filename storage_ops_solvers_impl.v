@@ -40,28 +40,31 @@ Import SymbolicStateCmp.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module StorageOpsSolversImpl.
 
  
 (* Basic/trivial solvers *)  
 
 (* Doesn't check the storage for the value, just returns an abstract load *)
-Definition trivial_sload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
+Definition trivial_sload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
   SymSLOAD skey sstrg.
 
 
 (* Doesn't check the storage, just appends the abstract store *)
-Definition trivial_sstorage_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (update: storage_update sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
+Definition trivial_sstorage_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (update: storage_update sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
   (update::sstrg).
 
 
-Definition not_eq_keys (ctx: constraints) (skey skey': sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map) : bool :=
+Definition not_eq_keys (ctx: ctx_t) (skey skey': sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map) : bool :=
   match follow_in_smap skey maxidx sb, follow_in_smap skey' maxidx sb with
   | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) => negb (weqb v1 v2)
   | _, _ => false
   end.
 
-Fixpoint basic_sload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
+Fixpoint basic_sload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
   match sstrg with
   | [] => SymSLOAD skey []
   | (U_SSTORE _ skey' svalue)::sstrg' =>
@@ -74,7 +77,7 @@ Fixpoint basic_sload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: const
           SymSLOAD skey sstrg
   end.
 
-Fixpoint basic_sstorage_updater_remove_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
+Fixpoint basic_sstorage_updater_remove_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
   match sstrg with
   | [] => []
   | (U_SSTORE _ skey' svalue)::sstrg' =>
@@ -84,7 +87,7 @@ Fixpoint basic_sstorage_updater_remove_dups (sstack_val_cmp: sstack_val_cmp_ext_
         (U_SSTORE sstack_val skey' svalue)::(basic_sstorage_updater_remove_dups sstack_val_cmp ctx skey sstrg' m ops)
   end.
                                       
-Definition basic_sstorage_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (update: storage_update sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
+Definition basic_sstorage_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (update: storage_update sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
   match update with
   | U_SSTORE _ skey _ =>
       update::(basic_sstorage_updater_remove_dups sstack_val_cmp ctx skey sstrg m ops)

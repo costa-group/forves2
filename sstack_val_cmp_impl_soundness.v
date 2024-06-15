@@ -78,7 +78,7 @@ Module SStackValCmpImplSoundness.
     intros d' H_d'_le_Sd'.
     unfold safe_sstack_val_cmp.
     intros ctx sv1 sv2 maxidx1 bs1 maxidx2 bs2 ops.
-    intros H_is_sat H_valid_sv1 H_valid_sv2 H_valid_bs1 H_valid_bs2 H_cmp.
+    intros H_valid_sv1 H_valid_sv2 H_valid_bs1 H_valid_bs2 H_cmp.
     intros model mem strg exts H_is_model.
     unfold trivial_compare_sstack_val in H_cmp.
     destruct d' as [|d''] eqn:E_d; try discriminate.
@@ -147,7 +147,7 @@ Module SStackValCmpImplSoundness.
       unfold safe_sstack_val_cmp_ext_1_d.
       intros d' H_d'_le_1.
       unfold safe_sstack_val_cmp.
-      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
+      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
       apply Nat.leb_le in H_d'_le_1 as H_d'_le_1_leb.
 
       intros model mem strg exts H_is_model.
@@ -227,7 +227,7 @@ Module SStackValCmpImplSoundness.
         pose proof (H_maxidx2_gt_maxidx2' (eq_refl true)) as  H_maxidx2_gt_maxidx2'.
         
         
-        pose proof (H_safe_sha3_cmp ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_follow_valid_offset H_follow_valid_size H_follow_valid_offset0 H_follow_valid_size0 H_follow_valid_sb1' H_follow_valid_sb2' H_follow_valid_smem H_follow_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp.
+        pose proof (H_safe_sha3_cmp ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_follow_valid_offset H_follow_valid_size H_follow_valid_offset0 H_follow_valid_size0 H_follow_valid_sb1' H_follow_valid_sb2' H_follow_valid_smem H_follow_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp.
         destruct H_safe_sha3_cmp as [coffset [csize [mem1 [coffset0 [csize0 [mem2 [v [H_eval_smem [H_eval_smem0 [H_eval_offset [H_eval_size [H_eval_offset0 [H_eval_size0 [H_sha3_mem1 H_sha3_mem2]]]]]]]]]]]]]].
 
         unfold eval_smemory in H_eval_smem.
@@ -275,7 +275,7 @@ Module SStackValCmpImplSoundness.
       unfold safe_sstack_val_cmp_ext_1_d.
       unfold safe_sstack_val_cmp.
       intros d'0 H_d'0_le_SS_d'.
-      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
+      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
       intros model mem strg exts H_is_model.
       destruct d'0; try discriminate.
       simpl in H_cmp_sv1_sv2.
@@ -381,7 +381,7 @@ Module SStackValCmpImplSoundness.
              simpl in H_valid_sstack_args2.
              destruct H_valid_sstack_args2 as [H_valid_a1_2 H_valid_arg2'].
              
-             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1_1 a1_2 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_a1_1 H_valid_a1_2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_1_a1_2 model mem strg exts H_is_model) as H_eval_sstack_value_a1_1_a1_2.
+             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1_1 a1_2 maxidx1' sb1' maxidx2' sb2' ops H_valid_a1_1 H_valid_a1_2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_1_a1_2 model mem strg exts H_is_model) as H_eval_sstack_value_a1_1_a1_2.
              destruct H_eval_sstack_value_a1_1_a1_2 as [v [H_eval_sstack_value_a1_1 H_eval_sstack_value_a1_2]].
 
              unfold eval_sstack_val in H_eval_sstack_value_a1_1.
@@ -435,11 +435,11 @@ Module SStackValCmpImplSoundness.
              simpl in H_follow_valid_sv2_0_1.
              destruct H_follow_valid_sv2_0_1 as [H_follow_valid_b1 [H_follow_valid_b2 _]].
              
-             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1 b2 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_follow_valid_a1 H_follow_valid_b2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_b2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a1_b2.
+             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1 b2 maxidx1' sb1' maxidx2' sb2' ops H_follow_valid_a1 H_follow_valid_b2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_b2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a1_b2.
              unfold eval_sstack_val in H_safe_sstack_value_cmp_a1_b2.
              destruct H_safe_sstack_value_cmp_a1_b2 as [v1 [H_safe_sstack_value_cmp_a1 H_safe_sstack_value_cmp_b2]].
 
-             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a2 b1 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_follow_valid_a2 H_follow_valid_b1 H_follow_valid_sv1_1 H_follow_valid_sv2_1 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a2_b1.
+             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a2 b1 maxidx1' sb1' maxidx2' sb2' ops H_follow_valid_a2 H_follow_valid_b1 H_follow_valid_sv1_1 H_follow_valid_sv2_1 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a2_b1.
              unfold eval_sstack_val in H_safe_sstack_value_cmp_a2_b1.
              destruct H_safe_sstack_value_cmp_a2_b1 as [v2 [H_safe_sstack_value_cmp_a2 H_safe_sstack_value_cmp_b1]].
 
@@ -476,7 +476,7 @@ Module SStackValCmpImplSoundness.
         pose proof (H_maxidx2_gt_maxidx2' (eq_refl true)) as H_maxidx2_gt_maxidx2'.
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
         unfold eval_sstack_val in H_eval_offset_offset0.
         destruct H_eval_offset_offset0 as [v [H_eval_offset H_eval_offset0]].
         
@@ -493,7 +493,7 @@ Module SStackValCmpImplSoundness.
 
         assert(H_d'0_le_d': d'0 <= S d'). intuition.
 
-        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
+        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
 
         destruct H_safe_smemory_cmp_0 as [mem' [H_eval_mem H_eval_mem0]].
         unfold eval_smemory in H_eval_mem.
@@ -540,7 +540,7 @@ Module SStackValCmpImplSoundness.
         pose proof (H_maxidx2_gt_maxidx2' (eq_refl true)) as H_maxidx2_gt_maxidx2'.
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx key key0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_key H_valid_key0 H_valid_sb1' H_valid_sb2' E_cmp_key_key0 model mem strg exts H_is_model) as H_eval_key_key0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx key key0 maxidx1' sb1' maxidx2' sb2' ops H_valid_key H_valid_key0 H_valid_sb1' H_valid_sb2' E_cmp_key_key0 model mem strg exts H_is_model) as H_eval_key_key0.
         unfold eval_sstack_val in H_eval_key_key0.
         destruct H_eval_key_key0 as [v [H_eval_key H_eval_key0]].
         
@@ -557,7 +557,7 @@ Module SStackValCmpImplSoundness.
 
         assert(H_d'0_le_d': d'0 <= S d'). intuition.
 
-        pose proof (H_safe_sstorage_cmp d'0 H_d'0_le_d' ctx sstrg sstrg0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_sb1' H_valid_sb2' H_valid_sstrg H_valid_sstrg0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstorage_cmp_0.
+        pose proof (H_safe_sstorage_cmp d'0 H_d'0_le_d' ctx sstrg sstrg0 maxidx1' sb1' maxidx2' sb2' ops H_valid_sb1' H_valid_sb2' H_valid_sstrg H_valid_sstrg0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstorage_cmp_0.
 
         destruct H_safe_sstorage_cmp_0 as [strg' [H_eval_sstrg H_eval_sstrg0]].
         unfold eval_sstorage in H_eval_sstrg.
@@ -623,7 +623,7 @@ Module SStackValCmpImplSoundness.
 
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
         unfold eval_sstack_val in H_eval_offset_offset0.
         destruct H_eval_offset_offset0 as [v [H_eval_offset H_eval_offset0]].
         
@@ -634,7 +634,7 @@ Module SStackValCmpImplSoundness.
         rewrite H_eval_soffset0_ext.
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx size size0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_size H_valid_size0 H_valid_sb1' H_valid_sb2' E_cmp_size_size0 model mem strg exts H_is_model) as H_eval_size_size0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx size size0 maxidx1' sb1' maxidx2' sb2' ops H_valid_size H_valid_size0 H_valid_sb1' H_valid_sb2' E_cmp_size_size0 model mem strg exts H_is_model) as H_eval_size_size0.
         unfold eval_sstack_val in H_eval_size_size0.
         destruct H_eval_size_size0 as [v' [H_eval_size H_eval_size0]].
         
@@ -649,7 +649,7 @@ Module SStackValCmpImplSoundness.
         unfold safe_smemory_cmp in H_safe_smemory_cmp.
 
 
-        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 E_std_sha3 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
+        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 E_std_sha3 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
 
         destruct H_safe_smemory_cmp_0 as [mem' [H_eval_mem H_eval_mem0]].
         unfold eval_smemory in H_eval_mem.
@@ -685,7 +685,7 @@ Module SStackValCmpImplSoundness.
         split; reflexivity.
         * unfold safe_sha3_cmp_ext_d in H_safe_sha3_cmp.
           unfold safe_sha3_cmp in H_safe_sha3_cmp.
-          pose proof (H_safe_sha3_cmp d'0 H_d'0_le_d' ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_offset H_valid_size H_valid_offset0 H_valid_size0 H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp_0.
+          pose proof (H_safe_sha3_cmp d'0 H_d'0_le_d' ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_valid_offset H_valid_size H_valid_offset0 H_valid_size0 H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp_0.
 
           destruct H_safe_sha3_cmp_0 as [coffset [csize [mem1 [coffset0 [csize0 [mem2 [v [H_eval_smem [H_eval_smem0 [H_eval_offset [H_eval_size [H_eval_offset0 [H_eval_size0 [H_sha3_mem1 H_sha3_mem2]]]]]]]]]]]]]].
 
@@ -749,7 +749,7 @@ Module SStackValCmpImplSoundness.
       unfold safe_sstack_val_cmp_ext_1_d.
       intros d' H_d'_le_1.
       unfold safe_sstack_val_cmp.
-      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
+      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
       apply Nat.leb_le in H_d'_le_1 as H_d'_le_1_leb.
 
       destruct d' as [|d''] eqn:E_d'; try discriminate; destruct d'' as [|d'''] eqn:E_d''; try discriminate.
@@ -880,7 +880,7 @@ Module SStackValCmpImplSoundness.
         pose proof (H_maxidx2_gt_maxidx2' (eq_refl true)) as  H_maxidx2_gt_maxidx2'.
         
         
-        pose proof (H_safe_sha3_cmp ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_follow_valid_offset H_follow_valid_size H_follow_valid_offset0 H_follow_valid_size0 H_follow_valid_sb1' H_follow_valid_sb2' H_follow_valid_smem H_follow_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp.
+        pose proof (H_safe_sha3_cmp ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_follow_valid_offset H_follow_valid_size H_follow_valid_offset0 H_follow_valid_size0 H_follow_valid_sb1' H_follow_valid_sb2' H_follow_valid_smem H_follow_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp.
         destruct H_safe_sha3_cmp as [coffset [csize [mem1 [coffset0 [csize0 [mem2 [v [H_eval_smem [H_eval_smem0 [H_eval_offset [H_eval_size [H_eval_offset0 [H_eval_size0 [H_sha3_mem1 H_sha3_mem2]]]]]]]]]]]]]].
 
         unfold eval_smemory in H_eval_smem.
@@ -928,7 +928,7 @@ Module SStackValCmpImplSoundness.
       unfold safe_sstack_val_cmp_ext_1_d.
       unfold safe_sstack_val_cmp.
       intros d'0 H_d'0_le_SS_d'.
-      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
+      intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_cmp_sv1_sv2.
       intros model mem strg exts H_is_model.
       destruct d'0; try discriminate.
       simpl in H_cmp_sv1_sv2.
@@ -1108,7 +1108,7 @@ Module SStackValCmpImplSoundness.
              simpl in H_valid_sstack_args2.
              destruct H_valid_sstack_args2 as [H_valid_a1_2 H_valid_arg2'].
              
-             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1_1 a1_2 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_a1_1 H_valid_a1_2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_1_a1_2 model mem strg exts H_is_model) as H_eval_sstack_value_a1_1_a1_2.
+             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1_1 a1_2 maxidx1' sb1' maxidx2' sb2' ops H_valid_a1_1 H_valid_a1_2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_1_a1_2 model mem strg exts H_is_model) as H_eval_sstack_value_a1_1_a1_2.
              destruct H_eval_sstack_value_a1_1_a1_2 as [v [H_eval_sstack_value_a1_1 H_eval_sstack_value_a1_2]].
 
              unfold eval_sstack_val in H_eval_sstack_value_a1_1.
@@ -1162,11 +1162,11 @@ Module SStackValCmpImplSoundness.
              simpl in H_follow_valid_sv2_0_1.
              destruct H_follow_valid_sv2_0_1 as [H_follow_valid_b1 [H_follow_valid_b2 _]].
              
-             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1 b2 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_follow_valid_a1 H_follow_valid_b2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_b2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a1_b2.
+             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a1 b2 maxidx1' sb1' maxidx2' sb2' ops H_follow_valid_a1 H_follow_valid_b2 H_follow_valid_sv1_1 H_follow_valid_sv2_1 E_cmp_a1_b2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a1_b2.
              unfold eval_sstack_val in H_safe_sstack_value_cmp_a1_b2.
              destruct H_safe_sstack_value_cmp_a1_b2 as [v1 [H_safe_sstack_value_cmp_a1 H_safe_sstack_value_cmp_b2]].
 
-             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a2 b1 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_follow_valid_a2 H_follow_valid_b1 H_follow_valid_sv1_1 H_follow_valid_sv2_1 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a2_b1.
+             pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx a2 b1 maxidx1' sb1' maxidx2' sb2' ops H_follow_valid_a2 H_follow_valid_b1 H_follow_valid_sv1_1 H_follow_valid_sv2_1 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstack_value_cmp_a2_b1.
              unfold eval_sstack_val in H_safe_sstack_value_cmp_a2_b1.
              destruct H_safe_sstack_value_cmp_a2_b1 as [v2 [H_safe_sstack_value_cmp_a2 H_safe_sstack_value_cmp_b1]].
 
@@ -1203,7 +1203,7 @@ Module SStackValCmpImplSoundness.
         pose proof (H_maxidx2_gt_maxidx2' (eq_refl true)) as H_maxidx2_gt_maxidx2'.
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
         unfold eval_sstack_val in H_eval_offset_offset0.
         destruct H_eval_offset_offset0 as [v [H_eval_offset H_eval_offset0]].
         
@@ -1220,7 +1220,7 @@ Module SStackValCmpImplSoundness.
 
         assert(H_d'0_le_d': d'0 <= S d'). intuition.
 
-        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
+        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
 
         destruct H_safe_smemory_cmp_0 as [mem' [H_eval_mem H_eval_mem0]].
         unfold eval_smemory in H_eval_mem.
@@ -1267,7 +1267,7 @@ Module SStackValCmpImplSoundness.
         pose proof (H_maxidx2_gt_maxidx2' (eq_refl true)) as H_maxidx2_gt_maxidx2'.
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx key key0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_key H_valid_key0 H_valid_sb1' H_valid_sb2' E_cmp_key_key0 model mem strg exts H_is_model) as H_eval_key_key0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx key key0 maxidx1' sb1' maxidx2' sb2' ops H_valid_key H_valid_key0 H_valid_sb1' H_valid_sb2' E_cmp_key_key0 model mem strg exts H_is_model) as H_eval_key_key0.
         unfold eval_sstack_val in H_eval_key_key0.
         destruct H_eval_key_key0 as [v [H_eval_key H_eval_key0]].
         
@@ -1284,7 +1284,7 @@ Module SStackValCmpImplSoundness.
 
         assert(H_d'0_le_d': d'0 <= S d'). intuition.
 
-        pose proof (H_safe_sstorage_cmp d'0 H_d'0_le_d' ctx sstrg sstrg0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_sb1' H_valid_sb2' H_valid_sstrg H_valid_sstrg0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstorage_cmp_0.
+        pose proof (H_safe_sstorage_cmp d'0 H_d'0_le_d' ctx sstrg sstrg0 maxidx1' sb1' maxidx2' sb2' ops H_valid_sb1' H_valid_sb2' H_valid_sstrg H_valid_sstrg0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sstorage_cmp_0.
 
         destruct H_safe_sstorage_cmp_0 as [strg' [H_eval_sstrg H_eval_sstrg0]].
         unfold eval_sstorage in H_eval_sstrg.
@@ -1350,7 +1350,7 @@ Module SStackValCmpImplSoundness.
 
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx offset offset0 maxidx1' sb1' maxidx2' sb2' ops H_valid_offset H_valid_offset0 H_valid_sb1' H_valid_sb2' E_cmp_offset_offset0 model mem strg exts H_is_model) as H_eval_offset_offset0.
         unfold eval_sstack_val in H_eval_offset_offset0.
         destruct H_eval_offset_offset0 as [v [H_eval_offset H_eval_offset0]].
         
@@ -1361,7 +1361,7 @@ Module SStackValCmpImplSoundness.
         rewrite H_eval_soffset0_ext.
 
 
-        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx size size0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_size H_valid_size0 H_valid_sb1' H_valid_sb2' E_cmp_size_size0 model mem strg exts H_is_model) as H_eval_size_size0.
+        pose proof (H_safe_sstack_value_cmp_cmp_d'0 d'0 (Nat.le_refl d'0) ctx size size0 maxidx1' sb1' maxidx2' sb2' ops H_valid_size H_valid_size0 H_valid_sb1' H_valid_sb2' E_cmp_size_size0 model mem strg exts H_is_model) as H_eval_size_size0.
         unfold eval_sstack_val in H_eval_size_size0.
         destruct H_eval_size_size0 as [v' [H_eval_size H_eval_size0]].
         
@@ -1376,7 +1376,7 @@ Module SStackValCmpImplSoundness.
         unfold safe_smemory_cmp in H_safe_smemory_cmp.
 
 
-        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 E_std_sha3 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
+        pose proof (H_safe_smemory_cmp d'0 H_d'0_le_d' ctx smem smem0 maxidx1' sb1' maxidx2' sb2' ops H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 E_std_sha3 model mem strg exts H_is_model) as H_safe_smemory_cmp_0.
 
         destruct H_safe_smemory_cmp_0 as [mem' [H_eval_mem H_eval_mem0]].
         unfold eval_smemory in H_eval_mem.
@@ -1412,7 +1412,7 @@ Module SStackValCmpImplSoundness.
         split; reflexivity.
         * unfold safe_sha3_cmp_ext_d in H_safe_sha3_cmp.
           unfold safe_sha3_cmp in H_safe_sha3_cmp.
-          pose proof (H_safe_sha3_cmp d'0 H_d'0_le_d' ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_is_sat H_valid_offset H_valid_size H_valid_offset0 H_valid_size0 H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp_0.
+          pose proof (H_safe_sha3_cmp d'0 H_d'0_le_d' ctx offset size smem offset0 size0 smem0 maxidx1' sb1' maxidx2' sb2' ops H_valid_offset H_valid_size H_valid_offset0 H_valid_size0 H_valid_sb1' H_valid_sb2' H_valid_smem H_valid_smem0 H_cmp_sv1_sv2 model mem strg exts H_is_model) as H_safe_sha3_cmp_0.
 
           destruct H_safe_sha3_cmp_0 as [coffset [csize [mem1 [coffset0 [csize0 [mem2 [v [H_eval_smem [H_eval_smem0 [H_eval_offset [H_eval_size [H_eval_offset0 [H_eval_size0 [H_sha3_mem1 H_sha3_mem2]]]]]]]]]]]]]].
 

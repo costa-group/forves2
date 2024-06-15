@@ -54,6 +54,9 @@ Import MemoryOpsSolversImplSoundness.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module MemoryCmpImplSoundness.
 
   Theorem trivial_memory_cmp_snd:
@@ -79,7 +82,7 @@ Module MemoryCmpImplSoundness.
     unfold safe_smemory_cmp_ext_d.
     intros d' H_d'_le_d.
     unfold safe_smemory_cmp.
-    intros ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2.
+    intros ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2.
     revert smem2.
     revert smem1.
     induction smem1 as [|u1 smem1' IHsmem1'].
@@ -107,10 +110,10 @@ Module MemoryCmpImplSoundness.
              unfold safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
              pose proof (H_sstack_val_cmp_snd d' H_d'_le_d) as H_sstack_val_cmp_snd_d'.
              unfold safe_sstack_val_cmp in H_sstack_val_cmp_snd_d'.
-             pose proof(H_sstack_val_cmp_snd_d' ctx soffset1 soffset2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_soffset1 H_valid_soffset2 H_valid_sb1 H_valid_sb2 E_cmp_soffset1_soffset2 model mem strg exts H_is_model) as H_eval_soffset1_soffset2.
+             pose proof(H_sstack_val_cmp_snd_d' ctx soffset1 soffset2 maxidx1 sb1 maxidx2 sb2 ops H_valid_soffset1 H_valid_soffset2 H_valid_sb1 H_valid_sb2 E_cmp_soffset1_soffset2 model mem strg exts H_is_model) as H_eval_soffset1_soffset2.
              destruct H_eval_soffset1_soffset2 as [soffset_1_2_v [H_eval_soffset1 H_eval_soffset2]].
              
-             pose proof(H_sstack_val_cmp_snd_d' ctx svalue1 svalue2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_svalue1 H_valid_svalue2 H_valid_sb1 H_valid_sb2 E_cmp_svalue1_svalue2 model mem strg exts H_is_model) as H_eval_svalue1_svalue2.
+             pose proof(H_sstack_val_cmp_snd_d' ctx svalue1 svalue2 maxidx1 sb1 maxidx2 sb2 ops H_valid_svalue1 H_valid_svalue2 H_valid_sb1 H_valid_sb2 E_cmp_svalue1_svalue2 model mem strg exts H_is_model) as H_eval_svalue1_svalue2.
              destruct H_eval_svalue1_svalue2 as [svalue_1_2_v [H_eval_svalue1 H_eval_svalue2]].
              
              exists (mstore mem' svalue_1_2_v  soffset_1_2_v).
@@ -159,10 +162,10 @@ Module MemoryCmpImplSoundness.
              unfold safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
              pose proof (H_sstack_val_cmp_snd d' H_d'_le_d) as H_sstack_val_cmp_snd_d'.
              unfold safe_sstack_val_cmp in H_sstack_val_cmp_snd_d'.
-             pose proof(H_sstack_val_cmp_snd_d' ctx soffset1 soffset2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_soffset1 H_valid_soffset2 H_valid_sb1 H_valid_sb2 E_cmp_soffset1_soffset2 model mem strg exts H_is_model) as H_eval_soffset1_soffset2.
+             pose proof(H_sstack_val_cmp_snd_d' ctx soffset1 soffset2 maxidx1 sb1 maxidx2 sb2 ops H_valid_soffset1 H_valid_soffset2 H_valid_sb1 H_valid_sb2 E_cmp_soffset1_soffset2 model mem strg exts H_is_model) as H_eval_soffset1_soffset2.
              destruct H_eval_soffset1_soffset2 as [soffset_1_2_v [H_eval_soffset1 H_eval_soffset2]].
              
-             pose proof(H_sstack_val_cmp_snd_d' ctx svalue1 svalue2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_svalue1 H_valid_svalue2 H_valid_sb1 H_valid_sb2 E_cmp_svalue1_svalue2 model mem strg exts H_is_model) as H_eval_svalue1_svalue2.
+             pose proof(H_sstack_val_cmp_snd_d' ctx svalue1 svalue2 maxidx1 sb1 maxidx2 sb2 ops H_valid_svalue1 H_valid_svalue2 H_valid_sb1 H_valid_sb2 E_cmp_svalue1_svalue2 model mem strg exts H_is_model) as H_eval_svalue1_svalue2.
              destruct H_eval_svalue1_svalue2 as [svalue_1_2_v [H_eval_svalue1 H_eval_svalue2]].
              
              exists (mstore mem' (split1_byte (svalue_1_2_v: word ((S (pred BytesInEVMWord))*8))) soffset_1_2_v).
@@ -424,20 +427,19 @@ Qed.
   
     Lemma swap_memory_update_snd:
       forall ctx smem u1 u2 maxidx sb ops,
-        is_sat ctx ->
         valid_smemory maxidx smem ->
         valid_smemory_update maxidx u1 ->
         valid_smemory_update maxidx u2 ->
         valid_bindings maxidx sb ops ->
         swap_memory_update ctx u1 u2 maxidx sb = true ->
         forall model mem strg exts,
-          is_model ctx model = true ->
+          is_model (ctx_cs ctx) model = true ->
           exists mem' : memory,
             eval_smemory (u1::u2::smem) maxidx sb model mem strg exts ops = Some mem' /\
               eval_smemory (u2::u1::smem) maxidx sb model mem strg exts ops = Some mem'.
     Proof.
       intros ctx smem u1 u2 maxidx sb ops.
-      intros H_is_sat H_valid_smem H_valid_u1 H_valid_u2 H_valid_sb H_swap_mem_u.
+      intros H_valid_smem H_valid_u1 H_valid_u2 H_valid_sb H_swap_mem_u.
       intros model mem strg exts.
       intros H_is_model.
      
@@ -777,18 +779,17 @@ Qed.
     
   Lemma reorder_updates'_snd:
     forall ctx maxidx sb ops,
-      is_sat ctx ->
       valid_bindings maxidx sb ops ->
       forall d smem b smem_r,
       valid_smemory maxidx smem ->
       reorder_updates' d ctx smem maxidx sb = (b,smem_r) ->
       forall model mem strg exts,
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
              exists mem' : memory,
                eval_smemory smem maxidx sb model mem strg exts ops = Some mem' /\
                  eval_smemory smem_r maxidx sb model mem strg exts ops = Some mem'.
   Proof.
-    intros ctx maxidx sb ops H_is_sat H_valid_sb.
+    intros ctx maxidx sb ops H_valid_sb.
     induction d as [|d' IHd'].
     + intros smem b smem_r H_valid_smem H_reorder'.
       intros model mem strg exts H_is_model.
@@ -856,7 +857,7 @@ Qed.
                   simpl in H_valid_smem.
                   destruct H_valid_smem as [H_valid_u1 [H_valid_u2 H_valid_smem'']].
                    
-                  pose proof (swap_memory_update_snd ctx smem'' u1 u2 maxidx sb ops H_is_sat H_valid_smem'' H_valid_u1 H_valid_u2 H_valid_sb E_swap model mem strg exts H_is_model) as H_swap_memory_update_snd.
+                  pose proof (swap_memory_update_snd ctx smem'' u1 u2 maxidx sb ops H_valid_smem'' H_valid_u1 H_valid_u2 H_valid_sb E_swap model mem strg exts H_is_model) as H_swap_memory_update_snd.
 
                   destruct H_swap_memory_update_snd as [strg_aux [H_eval_u1_u2_smem'' H_eval_u2_u1_smem'' ]].
 		  rewrite <- H_eval_u2_u1_smem'' in H_eval_u1_u2_smem''.
@@ -1089,18 +1090,17 @@ Qed.
     
   Lemma reorder_memory_updates_snd:
     forall ctx maxidx sb ops,
-      is_sat ctx ->
       valid_bindings maxidx sb ops ->
       forall d n smem smem_r,
         valid_smemory maxidx smem ->
         reorder_memory_updates d n ctx smem maxidx sb = smem_r ->
         forall model mem strg exts,
-          is_model ctx model = true ->
+          is_model (ctx_cs ctx) model = true ->
           exists mem' : memory,
             eval_smemory smem maxidx sb model mem strg exts ops = Some mem' /\
             eval_smemory smem_r maxidx sb model mem strg exts ops = Some mem'.
   Proof.
-    intros ctx maxidx sb ops H_is_sat H_valid_sb.
+    intros ctx maxidx sb ops H_valid_sb.
     induction d as [|d' IHd'].
     + intros n smem smem' H_valid_smem H_reorder model mem strg exts H_is_model.
       simpl in H_reorder.
@@ -1113,7 +1113,7 @@ Qed.
       simpl in H_reorder.
       destruct (reorder_updates' n ctx smem maxidx sb) as [changed smem_r] eqn:E_reorder_updates'.
      
-      pose proof (reorder_updates'_snd ctx maxidx sb ops H_is_sat H_valid_sb n smem changed smem_r H_valid_smem E_reorder_updates' model mem strg exts H_is_model) as H_reorder_updates'_snd.
+      pose proof (reorder_updates'_snd ctx maxidx sb ops H_valid_sb n smem changed smem_r H_valid_smem E_reorder_updates' model mem strg exts H_is_model) as H_reorder_updates'_snd.
       destruct H_reorder_updates'_snd as [strg' [H_eval_smem H_eval_smem_r]].
       
       destruct changed eqn:E_changed.
@@ -1144,7 +1144,7 @@ Qed.
     unfold safe_smemory_cmp_ext_d.
     unfold safe_smemory_cmp.
 
-    intros d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2 H_valid_smem1 H_valid_smem2 H_po_cmp model mem strg exts H_is_model.
+    intros d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2 H_valid_smem1 H_valid_smem2 H_po_cmp model mem strg exts H_is_model.
 
     unfold po_memory_cmp in H_po_cmp.
     destruct (length smem1 =? length smem2); try discriminate.
@@ -1153,14 +1153,14 @@ Qed.
     remember (reorder_memory_updates (length smem1) (length smem1) ctx smem1 maxidx1 sb1) as smem1_r.
     remember (reorder_memory_updates (length smem2) (length smem2) ctx smem2 maxidx2 sb2) as smem2_r.
 
-    pose proof (reorder_memory_updates_snd ctx maxidx1 sb1 ops H_is_sat H_valid_sb1 (length smem1) (length smem1) smem1 smem1_r H_valid_smem1 (eq_sym Heqsmem1_r) model mem strg exts H_is_model) as H_reorder_memory_updates_snd_smem1_r.
+    pose proof (reorder_memory_updates_snd ctx maxidx1 sb1 ops H_valid_sb1 (length smem1) (length smem1) smem1 smem1_r H_valid_smem1 (eq_sym Heqsmem1_r) model mem strg exts H_is_model) as H_reorder_memory_updates_snd_smem1_r.
     
     pose proof (reorder_memory_updates_valid ctx maxidx1 sb1 ops H_valid_sb1 (length smem1) (length smem1) smem1 smem1_r H_valid_smem1 (eq_sym Heqsmem1_r)) as H_valid_smem1_r.
 
     destruct H_reorder_memory_updates_snd_smem1_r as [mem1' [H_eval_smem1 H_eval_smem1_r]].
 
 
-    pose proof (reorder_memory_updates_snd ctx maxidx2 sb2 ops H_is_sat H_valid_sb2 (length smem2) (length smem2) smem2 smem2_r H_valid_smem2 (eq_sym Heqsmem2_r) model mem strg exts H_is_model) as H_reorder_memory_updates_snd_smem2_r.
+    pose proof (reorder_memory_updates_snd ctx maxidx2 sb2 ops H_valid_sb2 (length smem2) (length smem2) smem2 smem2_r H_valid_smem2 (eq_sym Heqsmem2_r) model mem strg exts H_is_model) as H_reorder_memory_updates_snd_smem2_r.
     pose proof (reorder_memory_updates_valid ctx maxidx2 sb2 ops H_valid_sb2 (length smem2) (length smem2) smem2 smem2_r H_valid_smem2 (eq_sym Heqsmem2_r)) as H_valid_smem2_r.
 
     destruct H_reorder_memory_updates_snd_smem2_r as [mem2' [H_eval_smem2 H_eval_smem2_r]].
@@ -1171,7 +1171,7 @@ Qed.
     unfold safe_smemory_cmp in H_basic_memory_cmp_snd.
 
 
-    pose proof (H_basic_memory_cmp_snd d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx smem1_r smem2_r maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2 H_valid_smem1_r H_valid_smem2_r H_po_cmp model mem strg exts H_is_model) as H_basic_cmp_snd.
+    pose proof (H_basic_memory_cmp_snd d sstack_val_cmp H_sstack_val_cmp_snd d' H_d'_le_d ctx smem1_r smem2_r maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2 H_valid_smem1_r H_valid_smem2_r H_po_cmp model mem strg exts H_is_model) as H_basic_cmp_snd.
 
     destruct H_basic_cmp_snd as [mem' [H_eval_smem1_r_bis H_eval_smem2_r_bis]].
     exists mem1'.

@@ -55,6 +55,9 @@ Import Optimizations_Common.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Require Import List.
 Import ListNotations.
 
@@ -63,7 +66,7 @@ Module Opt_jumpi_eval.
 
 
 Definition val_diff_zero (arg: sstack_val) (fcmp: sstack_val_cmp_t) 
-  (maxid: nat) (sb: sbindings) (ctx: constraints) (ops: stack_op_instr_map) 
+  (maxid: nat) (sb: sbindings) (ctx: ctx_t) (ops: stack_op_instr_map) 
   : bool :=
 match follow_in_smap arg maxid sb with
   | Some (FollowSmapVal (SymBasicVal (Val v)) _ _) => 
@@ -78,7 +81,7 @@ fun (val: smap_value) =>
 fun (fcmp: sstack_val_cmp_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
-fun (ctx: constraints) =>
+fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp JUMPI [arg1; arg2] => 
@@ -95,7 +98,7 @@ opt_smapv_valid_snd optimize_jumpi_eval_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
 intros ctx n fcmp sb val val' flag.
-intros _ _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+intros _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
 unfold optimize_jumpi_eval_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -136,7 +139,7 @@ opt_sbinding_snd optimize_jumpi_eval_sbinding.
 Proof.
 unfold opt_sbinding_snd.
 intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid His_sat Hoptm_sbinding.
+  Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_jumpi_eval_sbinding)

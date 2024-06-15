@@ -54,6 +54,9 @@ Import Optimizations_Common.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Require Import List.
 Import ListNotations.
 
@@ -67,7 +70,7 @@ fun (val: smap_value) =>
 fun (fcmp: sstack_val_cmp_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
-fun (ctx: constraints) =>
+fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp SHR [x; zero] => 
@@ -95,7 +98,7 @@ opt_smapv_valid_snd optimize_shr_x_zero_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
 intros ctx n fcmp sb val val' flag.
-intros _ _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
+intros _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
 unfold optimize_shr_x_zero_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -118,7 +121,7 @@ opt_sbinding_snd optimize_shr_x_zero_sbinding.
 Proof.
 unfold opt_sbinding_snd.
 intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid Hissat Hoptm_sbinding.
+  Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_shr_x_zero_sbinding)
@@ -161,7 +164,7 @@ split.
   destruct Hvalid_smap_value as [_ [Hvalid_arg1 [Hvalid_arg2 _ ]]].
   pose proof (valid_sstack_value_const idx WZero) as valid_WZero.
   pose proof (Hsafe_sstack_val_cmp ctx zero (Val WZero) idx sb idx sb 
-    evm_stack_opm Hissat Hvalid_arg2 valid_WZero Hvalid_bindings_sb 
+    evm_stack_opm Hvalid_arg2 valid_WZero Hvalid_bindings_sb 
     Hvalid_bindings_sb fcmp_zero_WZero model mem strg ext Hismodel)
     as [vv [eval_zero eval_wzero]].
   unfold eval_sstack_val in eval_zero.

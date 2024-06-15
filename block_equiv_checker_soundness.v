@@ -102,6 +102,9 @@ Import BlockEquivChecker.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 From Coq Require Import Lists.List. Import ListNotations.
 
 Module BlockEquivCheckerSoundness.
@@ -115,6 +118,7 @@ Lemma evm_eq_block_chkr'_snd: forall
     (smemory_cmp_ext: smemory_cmp_ext_t)
     (sstorage_cmp_ext: sstorage_cmp_ext_t)
     (sha3_cmp_ext: sha3_cmp_ext_t)
+    (imp_chkr: imp_checker)
     (opt_pipeline: opt_pipeline)
     (opt_step_rep: nat)
     (opt_pipeline_rep: nat),
@@ -128,33 +132,30 @@ Lemma evm_eq_block_chkr'_snd: forall
     safe_sha3_cmp_ext_wrt_sstack_value_cmp sha3_cmp_ext ->
     safe_sstack_value_cmp_wrt_others sstack_value_cmp_ext ->
 
-    eq_block_chkr_snd (evm_eq_block_chkr' memory_updater storage_updater mload_solver sload_solver sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext opt_pipeline opt_step_rep opt_pipeline_rep).
+    eq_block_chkr_snd (evm_eq_block_chkr' memory_updater storage_updater mload_solver sload_solver sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext imp_chkr opt_pipeline opt_step_rep opt_pipeline_rep).
 Proof.
-  intros memory_updater storage_updater mload_solver sload_solver sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext opt_pipeline opt_step_rep opt_pipeline_rep H_smemory_updater_ext_snd H_sstorage_updater_ext_snd H_mload_solver_ext_snd H_sload_solver_ext_snd H_sstack_val_cmp_fail_for_d_eq_0 H_safe_smemory_cmp_ext_wrt_sstack_value_cmp H_safe_sstorage_cmp_ext_wrt_sstack_value_cmp H_safe_sha3_cmp_ext_wrt_sstack_value_cmp H_safe_sstack_value_cmp_wrt_others.
+  intros memory_updater storage_updater mload_solver sload_solver sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext imp_chkr opt_pipeline opt_step_rep opt_pipeline_rep H_smemory_updater_ext_snd H_sstorage_updater_ext_snd H_mload_solver_ext_snd H_sload_solver_ext_snd H_sstack_val_cmp_fail_for_d_eq_0 H_safe_smemory_cmp_ext_wrt_sstack_value_cmp H_safe_sstorage_cmp_ext_wrt_sstack_value_cmp H_safe_sha3_cmp_ext_wrt_sstack_value_cmp H_safe_sstack_value_cmp_wrt_others.
 
   (* combining the comparators results in a sound one *)
   pose proof (safe_all_cmp smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext sstack_value_cmp_ext H_sstack_val_cmp_fail_for_d_eq_0 H_safe_smemory_cmp_ext_wrt_sstack_value_cmp H_safe_sstorage_cmp_ext_wrt_sstack_value_cmp H_safe_sha3_cmp_ext_wrt_sstack_value_cmp H_safe_sstack_value_cmp_wrt_others) as H_safe_all_cmp.
 
   unfold eq_block_chkr_snd.
-  intros p1 p2 ctx sst H_evm_eq_block_chkr'.
+  intros p1 p2 cs sst H_evm_eq_block_chkr'.
 
   unfold evm_eq_block_chkr' in H_evm_eq_block_chkr'.
+ 
 
-
-  destruct (chk_valid_sstate sst evm_stack_opm && sat_checker_fun chk_is_sat ctx)%bool eqn:E_valid_and_sat; try discriminate.
-  apply andb_prop in E_valid_and_sat.
-  destruct E_valid_and_sat as [H_valid_sst_b H_is_sat_b].
+  destruct (chk_valid_sstate sst evm_stack_opm) eqn:E_valid_sst_b; try discriminate.
   
-  pose proof (chk_valid_sstate_snd sst evm_stack_opm H_valid_sst_b) as H_valid_sst.
+  pose proof (chk_valid_sstate_snd sst evm_stack_opm E_valid_sst_b) as H_valid_sst.
   
-  pose proof ((sat_checker_snd chk_is_sat) ctx H_is_sat_b) as H_is_sat.
-
   remember (sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext) as sstack_value_cmp_1.
   remember (memory_updater sstack_value_cmp_1) as memory_updater'.
 
   remember (storage_updater sstack_value_cmp_1) as storage_updater'.
   remember (mload_solver sstack_value_cmp_1) as mload_solver'.
   remember (sload_solver sstack_value_cmp_1) as sload_solver'.
+  remember (mk_ctx imp_chkr cs) as ctx.
 
 
   destruct (evm_exec_block_s memory_updater' storage_updater' mload_solver' sload_solver' p1 ctx sst evm_stack_opm) as [sst_opt|] eqn:E_sym_exec_p1; try discriminate.
@@ -227,10 +228,10 @@ Proof.
   (* end of proof of assert *)
 
   (* soundness of symbolic execution of p1 *)
-  pose proof (symbolic_exec_snd memory_updater' storage_updater' mload_solver' sload_solver' p1 ctx sst sst_opt evm_stack_opm H_is_sat H_valid_sst H_memory_updater'_snd H_storage_updater'_snd H_mload_solver'_snd H_sload_solver'_snd E_sym_exec_p1) as [H_sym_exc_snd_p1_1 H_sym_exc_snd_p1_2].
+  pose proof (symbolic_exec_snd memory_updater' storage_updater' mload_solver' sload_solver' p1 ctx sst sst_opt evm_stack_opm H_valid_sst H_memory_updater'_snd H_storage_updater'_snd H_mload_solver'_snd H_sload_solver'_snd E_sym_exec_p1) as [H_sym_exc_snd_p1_1 H_sym_exc_snd_p1_2].
 
   (* soundness of symbolic execution of p2 *)
-  pose proof (symbolic_exec_snd memory_updater' storage_updater' mload_solver' sload_solver' p2 ctx sst sst_p evm_stack_opm H_is_sat H_valid_sst H_memory_updater'_snd H_storage_updater'_snd H_mload_solver'_snd H_sload_solver'_snd E_sym_exec_p2) as [H_sym_exc_snd_p2_1  H_sym_exc_snd_p2_2].
+  pose proof (symbolic_exec_snd memory_updater' storage_updater' mload_solver' sload_solver' p2 ctx sst sst_p evm_stack_opm H_valid_sst H_memory_updater'_snd H_storage_updater'_snd H_mload_solver'_snd H_sload_solver'_snd E_sym_exec_p2) as [H_sym_exc_snd_p2_1  H_sym_exc_snd_p2_2].
 
   assert (H_safe_sstack_value_cmp: safe_sstack_val_cmp sstack_value_cmp).
   (* proof of assert *)
@@ -275,6 +276,9 @@ Proof.
   unfold sem_eq_blocks.
   intros mem strg exts in_st model H_is_model H_in_st_is_instance_of_sst.
 
+  assert (H_ctx_cs: (ctx_cs ctx) = cs). rewrite Heqctx. simpl. reflexivity.
+  rewrite <- H_ctx_cs in H_is_model.
+
   pose proof (H_sym_exc_snd_p1_2 mem strg exts in_st model H_is_model H_in_st_is_instance_of_sst) as H_sym_exc_snd_p1_2.
   destruct H_sym_exc_snd_p1_2 as [st'_1 [H_sym_exc_snd_p1_2_1 H_sym_exc_snd_p1_2_2]].
   
@@ -287,9 +291,9 @@ Proof.
   unfold optim_snd in H_safe_opt.
 
   
-  pose proof (H_safe_opt ctx sst_opt sst_opt' aux_bool_opt1 H_is_sat H_sym_exc_snd_p1_1 H_sst_opt_apply_op) as [H_optim_snd_1_1 H_optim_snd_1_2].
+  pose proof (H_safe_opt ctx sst_opt sst_opt' aux_bool_opt1 H_sym_exc_snd_p1_1 H_sst_opt_apply_op) as [H_optim_snd_1_1 H_optim_snd_1_2].
  
-  pose proof (H_safe_opt ctx sst_p sst_p' aux_bool_opt2 H_is_sat H_sym_exc_snd_p2_1 H_sst_p_apply_op) as [H_optim_snd_2_1 H_optim_snd_2_2].
+  pose proof (H_safe_opt ctx sst_p sst_p' aux_bool_opt2 H_sym_exc_snd_p2_1 H_sst_p_apply_op) as [H_optim_snd_2_1 H_optim_snd_2_2].
  
   unfold st_is_instance_of_sst in H_sym_exc_snd_p1_2_2.
   destruct H_sym_exc_snd_p1_2_2 as [st1' [H_sym_exc_snd_p1_2_2_0 H_sym_exc_snd_p1_2_2_1]].
@@ -309,7 +313,7 @@ Proof.
 
   unfold symbolic_state_cmp_snd in H_sstate_cmp_snd.
 
-  pose proof (H_sstate_cmp_snd ctx sst_p' sst_opt' evm_stack_opm H_is_sat H_optim_snd_2_1 H_optim_snd_1_1 H_evm_eq_block_chkr' mem strg exts model H_is_model) as H_sstate_cmp_snd_1.
+  pose proof (H_sstate_cmp_snd ctx sst_p' sst_opt' evm_stack_opm H_optim_snd_2_1 H_optim_snd_1_1 H_evm_eq_block_chkr' mem strg exts model H_is_model) as H_sstate_cmp_snd_1.
   
   destruct H_sstate_cmp_snd_1 as [st' [H_sstate_cmp_snd_1_0 H_sstate_cmp_snd_1_1]].
   
@@ -358,11 +362,11 @@ Qed.
 Lemma evm_eq_block_chkr_lazy_snd:
   forall (memory_updater_tag: available_smemory_updaters) (storage_updater_tag: available_sstorage_updaters) (mload_solver_tag: available_mload_solvers) 
   (sload_solver_tag: available_sload_solvers) (sstack_value_cmp_tag: available_sstack_val_cmp) (memory_cmp_tag: available_memory_cmp)
-  (storage_cmp_tag: available_storage_cmp) (sha3_cmp_tag: available_sha3_cmp) (optimization_steps: list_opt_steps) (opt_step_rep: nat) (opt_pipeline_rep: nat) (chkr: checker_type),
-    evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep opt_pipeline_rep = chkr ->
+  (storage_cmp_tag: available_storage_cmp) (sha3_cmp_tag: available_sha3_cmp) (imp_chkr_tag: available_imp_chkr) (optimization_steps: list_opt_steps) (opt_step_rep: nat) (opt_pipeline_rep: nat) (chkr: checker_type),
+    evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag optimization_steps opt_step_rep opt_pipeline_rep = chkr ->
     eq_block_chkr_snd chkr.
 Proof.
-  intros memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep opt_pipeline_rep chkr H_chkr.
+  intros memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag optimization_steps opt_step_rep opt_pipeline_rep chkr H_chkr.
 
   unfold evm_eq_block_chkr_lazy in H_chkr.
   destruct (get_smemory_updater memory_updater_tag) as [smemory_updater H_smemory_updater_snd].
@@ -375,9 +379,11 @@ Proof.
   destruct (get_sha3_cmp sha3_cmp_tag) as [ssha3_cmp H_ssha3_cmp_snd].
 
   unfold eq_block_chkr_snd.
-  intros p1 p2 ctx sst H_apply_chkr.
+  intros p1 p2 cs sst H_apply_chkr.
   rewrite <- H_chkr in H_apply_chkr.
-  pose proof (evm_eq_block_chkr'_snd smemory_updater sstorage_updater mload_solver sload_solver sstack_value_cmp smemory_cmp sstorage_cmp ssha3_cmp (get_pipeline optimization_steps) opt_step_rep opt_pipeline_rep H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd H_sstack_value_cmp_snd_d0 H_smemory_cmp_snd H_sstorage_cmp_snd H_ssha3_cmp_snd H_sstack_value_cmp_snd) as H_evm_eq_block_chkr'_snd.
+  remember (get_impl_chkr imp_chkr_tag cs) as imp_chkr.
+  
+  pose proof (evm_eq_block_chkr'_snd smemory_updater sstorage_updater mload_solver sload_solver sstack_value_cmp smemory_cmp sstorage_cmp ssha3_cmp imp_chkr (get_pipeline optimization_steps) opt_step_rep opt_pipeline_rep H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd H_sstack_value_cmp_snd_d0 H_smemory_cmp_snd H_sstorage_cmp_snd H_ssha3_cmp_snd H_sstack_value_cmp_snd) as H_evm_eq_block_chkr'_snd.
   unfold eq_block_chkr_snd in H_evm_eq_block_chkr'_snd.
   apply H_evm_eq_block_chkr'_snd.
   apply H_apply_chkr.
@@ -387,16 +393,16 @@ Qed.
 Lemma evm_eq_block_chkr_snd:
   forall (memory_updater_tag: available_smemory_updaters) (storage_updater_tag: available_sstorage_updaters) (mload_solver_tag: available_mload_solvers) 
   (sload_solver_tag: available_sload_solvers) (sstack_value_cmp_tag: available_sstack_val_cmp) (memory_cmp_tag: available_memory_cmp)
-  (storage_cmp_tag: available_storage_cmp) (sha3_cmp_tag: available_sha3_cmp) (optimization_steps: list_opt_steps) (opt_step_rep: nat) (opt_pipeline_rep: nat),
-    eq_block_chkr_snd (evm_eq_block_chkr memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep opt_pipeline_rep).
+  (storage_cmp_tag: available_storage_cmp) (sha3_cmp_tag: available_sha3_cmp)  (imp_chkr_tag: available_imp_chkr) (optimization_steps: list_opt_steps) (opt_step_rep: nat) (opt_pipeline_rep: nat),
+    eq_block_chkr_snd (evm_eq_block_chkr memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag optimization_steps opt_step_rep opt_pipeline_rep).
 Proof.
   intros.  
   unfold eq_block_chkr_snd.
   unfold evm_eq_block_chkr.
-  remember (evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep opt_pipeline_rep) as chkr.
+  remember (evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag optimization_steps opt_step_rep opt_pipeline_rep) as chkr.
   symmetry in Heqchkr.
 
-  pose proof (evm_eq_block_chkr_lazy_snd memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep opt_pipeline_rep chkr Heqchkr) as H_evm_eq_block_chkr_lazy_snd.
+  pose proof (evm_eq_block_chkr_lazy_snd memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag optimization_steps opt_step_rep opt_pipeline_rep chkr Heqchkr) as H_evm_eq_block_chkr_lazy_snd.
   apply H_evm_eq_block_chkr_lazy_snd.
   
 Qed.

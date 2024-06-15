@@ -55,6 +55,9 @@ Import MemoryOpsSolversImplSoundnessMisc.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module MemoryOpsSolversImplSoundness.
 
   Lemma trivial_mload_solver_snd: mload_solver_ext_snd trivial_mload_solver.
@@ -65,33 +68,33 @@ Module MemoryOpsSolversImplSoundness.
     split.
     - unfold mload_solver_valid_res.
       intros.
-      unfold trivial_mload_solver in H3.
-      rewrite <- H3.
+      unfold trivial_mload_solver in H2.
+      rewrite <- H2.
       simpl.
       intuition.
     - unfold mload_solver_correct_res.
       intros.
-      unfold trivial_mload_solver in H4.
-      rewrite <- H4 in H5.
-      rewrite H5.
+      unfold trivial_mload_solver in H3.
+      rewrite <- H3 in H4.
+      rewrite H4.
       exists idx1.
       exists m1.
       split; try reflexivity.
       intros.
       unfold eval_sstack_val.
-      symmetry in H6.
+      symmetry in H5.
 
       assert (H_valid_smap_value: valid_smap_value (get_maxidx_smap m) ops (SymMLOAD soffset smem)). simpl. intuition.
 
-      symmetry in H5.
-      pose proof (add_to_smap_key_lt_maxidx m m1 idx1 (SymMLOAD soffset smem) H5).
-      pose proof (valid_sstack_val_freshvar (get_maxidx_smap m1) idx1 H7).
-      symmetry in H5.
-      pose proof (add_to_smap_valid_smap idx1 m m1 (SymMLOAD soffset smem) ops H1 H_valid_smap_value H5).
-      pose proof (eval_sstack_val'_succ (S (get_maxidx_smap m1)) (FreshVar idx1) model mem strg exts (get_maxidx_smap m1) (get_bindings_smap m1) ops H8 H9 (gt_Sn_n (get_maxidx_smap m1))).
-      destruct H10 as [v H10].
+      symmetry in H4.
+      pose proof (add_to_smap_key_lt_maxidx m m1 idx1 (SymMLOAD soffset smem) H4).
+      pose proof (valid_sstack_val_freshvar (get_maxidx_smap m1) idx1 H6).
+      symmetry in H4.
+      pose proof (add_to_smap_valid_smap idx1 m m1 (SymMLOAD soffset smem) ops H0 H_valid_smap_value H4).
+      pose proof (eval_sstack_val'_succ (S (get_maxidx_smap m1)) (FreshVar idx1) model mem strg exts (get_maxidx_smap m1) (get_bindings_smap m1) ops H7 H8 (gt_Sn_n (get_maxidx_smap m1))).
+      destruct H9 as [v H9].
       exists v.
-      split; apply H10.
+      split; apply H9.
   Qed.
   
   Lemma trivial_smemory_updater_snd: smemory_updater_ext_snd trivial_smemory_updater.
@@ -101,7 +104,7 @@ Module MemoryOpsSolversImplSoundness.
     unfold smemory_updater_snd.
     split.
     - unfold smemory_updater_valid_res.
-      intros ctx m smem smem' u ops H_is_sat H_valid_smem H_valid_u H_updater.
+      intros ctx m smem smem' u ops H_valid_smem H_valid_u H_updater.
       unfold trivial_smemory_updater in H_updater.
       rewrite <- H_updater.
       simpl.
@@ -109,7 +112,7 @@ Module MemoryOpsSolversImplSoundness.
       + apply H_valid_u.
       + apply H_valid_smem.
     - unfold smemory_updater_correct_res.
-      intros ctx m smem smem' u ops H_is_sat H_valid_smap H_valid_smem H_valid_u H_updater.
+      intros ctx m smem smem' u ops H_valid_smap H_valid_smem H_valid_u H_updater.
       unfold trivial_smemory_updater in H_updater.
       rewrite <- H_updater.
       intros model mem strg exts H_is_model.
@@ -129,7 +132,7 @@ Lemma  H_memory_slots_do_not_overlap:
       valid_sstack_value maxidx soffset' ->
       memory_slots_do_not_overlap ctx soffset soffset' size size' maxidx sbindings ops = true ->
       forall model mem strg exts,
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         exists v1 v2,
         eval_sstack_val' (S maxidx) soffset model mem strg exts maxidx sbindings ops = Some v1 /\
           eval_sstack_val' (S maxidx) soffset' model mem strg exts maxidx sbindings ops = Some v2 /\
@@ -169,7 +172,7 @@ Lemma  H_memory_slots_do_not_overlap:
       valid_sstack_value maxidx soffset_mstore ->
       mstore8_is_included_in_mstore sstack_val_cmp ctx soffset_mstore8 soffset_mstore maxidx sbindings ops = true ->
       forall model mem strg exts,
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         exists v1 v2,
         eval_sstack_val' (S maxidx) soffset_mstore8 model mem strg exts maxidx sbindings ops = Some v1 /\
           eval_sstack_val' (S maxidx) soffset_mstore model mem strg exts maxidx sbindings ops = Some v2 /\
@@ -207,7 +210,7 @@ Lemma  H_memory_slots_do_not_overlap:
   Proof.
     intros sstack_val_cmp.
     unfold mload_solver_valid_res.
-    intros ctx m smem soffset smv ops H_is_sat H_valid_smem H_valid_offset.
+    intros ctx m smem soffset smv ops H_valid_smem H_valid_offset.
     revert H_valid_smem.
     revert smem.
     induction smem as [|u smem' IHsmem'].
@@ -252,7 +255,7 @@ Lemma H_map_o_smem:
     valid_smemory maxidx smem ->
     valid_bindings maxidx bs ops ->
     d > maxidx ->
-    is_model ctx model = true ->
+    is_model (ctx_cs ctx) model = true ->
     exists v,
       map_option (eval_common.EvalCommon.instantiate_memory_update (fun sv : sstack_val => eval_sstack_val' d sv model mem strg exts maxidx bs ops)) smem = Some v.
 Proof.
@@ -943,7 +946,6 @@ Qed.
                                                
 Lemma two_consecutive_updates_same_address:
   forall ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v,
-    is_sat ctx ->
     eval_sstack_val soffset model mem strg exts maxidx bs ops = Some v ->
     eval_sstack_val soffset' model mem strg exts maxidx bs ops = Some v ->
     valid_smemory maxidx smem ->
@@ -952,11 +954,11 @@ Lemma two_consecutive_updates_same_address:
     valid_sstack_value maxidx svalue ->
     valid_sstack_value maxidx soffset' ->
     valid_sstack_value maxidx svalue' ->
-    is_model ctx model = true ->
+    is_model (ctx_cs ctx) model = true ->
     eval_smemory (U_MSTORE sstack_val soffset svalue :: U_MSTORE sstack_val soffset' svalue' :: smem) maxidx bs model mem strg exts ops =
       eval_smemory (U_MSTORE sstack_val soffset svalue :: smem) maxidx bs model mem strg exts ops.
 Proof.
-  intros ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v H_is_sat H_eval_soffset H_eval_soffset' H_valid_smem H_valid_bs H_valid_soffset H_valid_svalue H_vlaid_soffset' H_valid_svalue' H_is_model.
+  intros ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v H_eval_soffset H_eval_soffset' H_valid_smem H_valid_bs H_valid_soffset H_valid_svalue H_vlaid_soffset' H_valid_svalue' H_is_model.
 
   pose proof (eval_sstack_val'_succ (S maxidx) svalue model mem strg exts maxidx bs ops H_valid_svalue H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue.
   destruct H_eval_svalue as [v1 H_eval_svalue].
@@ -1018,7 +1020,6 @@ Qed.
 
 Lemma two_consecutive_mstore8_updates_same_address:
   forall ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v,
-    is_sat ctx ->
     eval_sstack_val soffset model mem strg exts maxidx bs ops = Some v ->
     eval_sstack_val soffset' model mem strg exts maxidx bs ops = Some v ->
     valid_smemory maxidx smem ->
@@ -1027,11 +1028,11 @@ Lemma two_consecutive_mstore8_updates_same_address:
     valid_sstack_value maxidx svalue ->
     valid_sstack_value maxidx soffset' ->
     valid_sstack_value maxidx svalue' ->
-    is_model ctx model = true ->
+    is_model (ctx_cs ctx) model = true ->
     eval_smemory (U_MSTORE8 sstack_val soffset svalue :: U_MSTORE8 sstack_val soffset' svalue' :: smem) maxidx bs model mem strg exts ops =
       eval_smemory (U_MSTORE8 sstack_val soffset svalue :: smem) maxidx bs model mem strg exts ops.
 Proof. 
-  intros ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v H_is_sat H_eval_soffset H_eval_soffset' H_valid_smem H_valid_bs H_valid_soffset H_valid_svalue H_vlaid_soffset' H_valid_svalue' H_is_model.
+  intros ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v H_eval_soffset H_eval_soffset' H_valid_smem H_valid_bs H_valid_soffset H_valid_svalue H_vlaid_soffset' H_valid_svalue' H_is_model.
 
   pose proof (eval_sstack_val'_succ (S maxidx) svalue model mem strg exts maxidx bs ops H_valid_svalue H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue.
   destruct H_eval_svalue as [v1 H_eval_svalue].
@@ -1093,7 +1094,6 @@ Qed.
 
 Lemma two_consecutive_updates_same_address_mstore8:
   forall ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v1 v2,
-    is_sat ctx ->
     eval_sstack_val soffset model mem strg exts maxidx bs ops = Some v1 ->
     eval_sstack_val soffset' model mem strg exts maxidx bs ops = Some v2 ->
     valid_smemory maxidx smem ->
@@ -1102,12 +1102,12 @@ Lemma two_consecutive_updates_same_address_mstore8:
     valid_sstack_value maxidx svalue ->
     valid_sstack_value maxidx soffset' ->
     valid_sstack_value maxidx svalue' ->
-    is_model ctx model = true ->
+    is_model (ctx_cs ctx) model = true ->
     andb ((wordToN v2) <=? (wordToN v1) )%N ((wordToN v1) <=? (wordToN v2)+31)%N = true ->
     eval_smemory (U_MSTORE sstack_val soffset' svalue' :: U_MSTORE8 sstack_val soffset svalue :: smem) maxidx bs model mem strg exts ops =
       eval_smemory (U_MSTORE sstack_val soffset' svalue' :: smem) maxidx bs model mem strg exts ops.
 Proof.
-  intros ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v1 v2 H_is_sat H_eval_soffset H_eval_soffset' H_valid_smem H_valid_bs H_valid_soffset H_valid_svalue H_vlaid_soffset' H_valid_svalue' H_is_model H_v1_in_v2.
+  intros ctx soffset soffset' svalue svalue' smem maxidx bs model mem strg exts ops v1 v2 H_eval_soffset H_eval_soffset' H_valid_smem H_valid_bs H_valid_soffset H_valid_svalue H_vlaid_soffset' H_valid_svalue' H_is_model H_v1_in_v2.
 
   pose proof (eval_sstack_val'_succ (S maxidx) svalue model mem strg exts maxidx bs ops H_valid_svalue H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue.
   destruct H_eval_svalue as [svalue_v H_eval_svalue].
@@ -1271,7 +1271,7 @@ Lemma basic_mload_solver_snd: mload_solver_ext_snd basic_mload_solver.
   split. apply basic_mload_solver_valid.
   unfold mload_solver_correct_res.
   intros ctx m smem soffset smv ops idx1 m1.
-  intros H_is_sat H_valid_smap H_valid_smem H_valid_soffset H_basic_mload_solver H_add_to_smap.
+  intros H_valid_smap H_valid_smem H_valid_soffset H_basic_mload_solver H_add_to_smap.
   induction smem as [|u smem' IHsmem'].
   + exists idx1. exists m1.
     split.
@@ -1357,7 +1357,7 @@ Lemma basic_mload_solver_snd: mload_solver_ext_snd basic_mload_solver.
              unfold safe_sstack_val_cmp_ext_1 in H_sstack_val_cmp.
              unfold safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp.
              unfold safe_sstack_val_cmp in H_sstack_val_cmp.
-             pose proof (H_sstack_val_cmp (S maxidx) (S maxidx) (Nat.le_refl (S maxidx)) ctx soffset soffset' maxidx bs maxidx bs ops H_is_sat H_valid_soffset H_valid_soffset' H_valid_smap H_valid_smap E_cmp_soffset_soffset' model mem strg exts H_is_model) as H_eval_soffset_soffset'.
+             pose proof (H_sstack_val_cmp (S maxidx) (S maxidx) (Nat.le_refl (S maxidx)) ctx soffset soffset' maxidx bs maxidx bs ops H_valid_soffset H_valid_soffset' H_valid_smap H_valid_smap E_cmp_soffset_soffset' model mem strg exts H_is_model) as H_eval_soffset_soffset'.
              unfold eval_sstack_val in H_eval_soffset_soffset'.
              destruct  H_eval_soffset_soffset' as [soffset_soffset'_v  [H_eval_soffset_bis  H_eval_soffset'_bis]].
              rewrite H_eval_soffset' in H_eval_soffset'_bis.
@@ -1598,7 +1598,6 @@ Qed.
 
   Lemma basic_smemory_updater_remove_mstore_dups_valid:
     forall sstack_val_cmp ctx soffset m ops smem smem_r,
-      is_sat ctx ->
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
       valid_sstack_value (get_maxidx_smap m) soffset ->
       valid_smemory (get_maxidx_smap m) smem ->
@@ -1607,17 +1606,16 @@ Qed.
   Proof.
     intros sstack_val_cmp ctx soffset m ops.
     induction smem as [| u smem' IHsmem'].
-    + intros smem_r H_is_sat H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
+    + intros smem_r H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
       simpl in H_basic_smem_updater_remove_dups.
       rewrite <- H_basic_smem_updater_remove_dups.
       reflexivity.
-    + intros smem_r H_is_sat H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
+    + intros smem_r H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
       unfold basic_smemory_updater_remove_mstore_dups in H_basic_smem_updater_remove_dups.
       fold basic_smemory_updater_remove_mstore_dups in H_basic_smem_updater_remove_dups.
       destruct u as [soffset' svalue|soffset' svalue] eqn:E_u.
       ++ destruct (sstack_val_cmp (S (get_maxidx_smap m)) ctx soffset soffset' (get_maxidx_smap m) (get_bindings_smap m) (get_maxidx_smap m) (get_bindings_smap m) ops) eqn:E_cmp_soffset_soffset'.
          +++ apply IHsmem'.
-             ++++ apply H_is_sat.
              ++++ apply H_sstack_val_cmp_snd.
              ++++ apply H_valid_soffset.
              ++++ apply H_valid_smem.
@@ -1630,14 +1628,12 @@ Qed.
                   simpl.
                   split; apply H_valid_smem.
              ++++ apply IHsmem'.
-                  +++++ apply H_is_sat.
                   +++++ apply H_sstack_val_cmp_snd.
                   +++++ apply H_valid_soffset.
                   +++++ apply H_valid_smem.
                   +++++ apply H_smem_r'.
       ++ destruct (mstore8_is_included_in_mstore sstack_val_cmp ctx soffset' soffset) eqn:E_cmp_soffset_soffset'.
          +++ apply IHsmem'.
-             ++++ apply H_is_sat.
              ++++ apply H_sstack_val_cmp_snd.
              ++++ apply H_valid_soffset.
              ++++ apply H_valid_smem.
@@ -1650,7 +1646,6 @@ Qed.
                   simpl.
                   split; apply H_valid_smem.
              ++++ apply IHsmem'.
-                  +++++ apply H_is_sat.
                   +++++ apply H_sstack_val_cmp_snd.
                   +++++ apply H_valid_soffset.
                   +++++ apply H_valid_smem.
@@ -1659,7 +1654,6 @@ Qed.
 
     Lemma basic_smemory_updater_remove_mstore8_dups_valid:
     forall sstack_val_cmp ctx soffset m ops smem smem_r,
-      is_sat ctx ->
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
       valid_sstack_value (get_maxidx_smap m) soffset ->
       valid_smemory (get_maxidx_smap m) smem ->
@@ -1668,11 +1662,11 @@ Qed.
   Proof.
     intros sstack_val_cmp ctx soffset m ops.
     induction smem as [| u smem' IHsmem'].
-    + intros smem_r H_is_sat H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
+    + intros smem_r H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
       simpl in H_basic_smem_updater_remove_dups.
       rewrite <- H_basic_smem_updater_remove_dups.
       reflexivity.
-    + intros smem_r H_is_sat H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
+    + intros smem_r H_sstack_val_cmp_snd H_valid_soffset H_valid_smem H_basic_smem_updater_remove_dups.
       unfold basic_smemory_updater_remove_mstore8_dups in H_basic_smem_updater_remove_dups.
       fold basic_smemory_updater_remove_mstore8_dups in H_basic_smem_updater_remove_dups.
       destruct u as [soffset' svalue|soffset' svalue] eqn:E_u.
@@ -1684,7 +1678,6 @@ Qed.
              simpl.
              split; apply H_valid_smem.
          +++ apply IHsmem'.
-             ++++ apply H_is_sat.
              ++++ apply H_sstack_val_cmp_snd.
              ++++ apply H_valid_soffset.
              ++++ apply H_valid_smem.
@@ -1692,7 +1685,6 @@ Qed.
 
       ++ destruct (sstack_val_cmp (S (get_maxidx_smap m)) ctx soffset soffset' (get_maxidx_smap m) (get_bindings_smap m) (get_maxidx_smap m) (get_bindings_smap m) ops) eqn:E_cmp_soffset_soffset'.
          +++ apply IHsmem'.
-             ++++ apply H_is_sat.
              ++++ apply H_sstack_val_cmp_snd.
              ++++ apply H_valid_soffset.
              ++++ apply H_valid_smem.
@@ -1705,7 +1697,6 @@ Qed.
                   simpl.
                   split; apply H_valid_smem.
              ++++ apply IHsmem'.
-                  +++++ apply H_is_sat.
                   +++++ apply H_sstack_val_cmp_snd.
                   +++++ apply H_valid_soffset.
                   +++++ apply H_valid_smem.
@@ -1720,7 +1711,7 @@ Qed.
     intros sstack_val_cmp H_sstack_val_cmp_snd.
     unfold smemory_updater_valid_res.
     intros ctx m smem smem' u ops.
-    intros H_is_sat H_valid_smem H_valid_u H_basic_smem_updater.
+    intros H_valid_smem H_valid_u H_basic_smem_updater.
     unfold basic_smemory_updater in H_basic_smem_updater.
     destruct u as [soffset svalue|soffset svalue] eqn:E_u.
     + destruct smem' as [|u' smem'']; try discriminate.
@@ -1731,7 +1722,6 @@ Qed.
       apply basic_smemory_updater_remove_mstore_dups_valid in H_smem''.
     
       ++ apply H_smem''.
-      ++ apply H_is_sat.
       ++ apply H_sstack_val_cmp_snd.
       ++ apply H_valid_u.
       ++ apply H_valid_smem.
@@ -1743,7 +1733,6 @@ Qed.
       apply basic_smemory_updater_remove_mstore8_dups_valid in H_smem''.
     
       ++ apply H_smem''.
-      ++ apply H_is_sat.
       ++ apply H_sstack_val_cmp_snd.
       ++ apply H_valid_u.
       ++ apply H_valid_smem.
@@ -1754,8 +1743,7 @@ Qed.
   Lemma basic_smemory_updater_remove_dups_correct_eq_key:
     forall sstack_val_cmp ctx soffset svalue model mem strg exts m ops smem1 smem2 mem1 mem2 v,
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-      is_sat ctx ->
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       valid_sstack_value (get_maxidx_smap m) soffset ->
       valid_sstack_value (get_maxidx_smap m) svalue ->
       valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
@@ -1767,7 +1755,7 @@ Qed.
       concrete_interpreter.ConcreteInterpreter.mload mem1 v = concrete_interpreter.ConcreteInterpreter.mload mem2 v.
   Proof.
     intros sstack_val_cmp ctx soffset svalue model mem strg exts m ops smem1 smem2 mem1 mem2 v.
-    intros H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_soffset H_valid_svalue H_valid_smap H_valid_smem1 H_valid_smem2 H_eval_smem1 H_eval_smem2 H_eval_soffset.
+    intros H_sstack_val_cmp_snd H_is_model H_valid_soffset H_valid_svalue H_valid_smap H_valid_smem1 H_valid_smem2 H_eval_smem1 H_eval_smem2 H_eval_soffset.
 
     unfold eval_smemory in H_eval_smem1.
     destruct (map_option (eval_common.EvalCommon.instantiate_memory_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts (get_maxidx_smap m) (get_bindings_smap m) ops)) (U_MSTORE sstack_val soffset svalue :: smem1)) as [updates1|] eqn:E_mo_1; try discriminate.
@@ -1816,8 +1804,7 @@ Qed.
     Lemma basic_smemory_updater_remove_mstore_dups_correct:
     forall sstack_val_cmp ctx soffset svalue model mem strg exts m ops,
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-      is_sat ctx ->
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       valid_sstack_value (get_maxidx_smap m) soffset ->
       valid_sstack_value (get_maxidx_smap m) svalue ->
       valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
@@ -1831,7 +1818,7 @@ Qed.
           forall w, mem1 w = mem2 w.
     Proof.
       intros sstack_val_cmp ctx soffset svalue model mem strg exts m ops.
-      intros H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_soffset H_valid_svalue H_valid_smap.
+      intros H_sstack_val_cmp_snd H_is_model H_valid_soffset H_valid_svalue H_valid_smap.
  
       induction smem as [|u smem' IHsmem'].
       + intros smem_r H_valid_smem H_basic_mstore_up.
@@ -1855,10 +1842,10 @@ Qed.
                destruct IHsmem'_0 as [mem1' [mem2' [IHsmem'_0_1 [IHsmem'_0_2 IHsmem'_0_3]]]].
                unfold safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
                unfold safe_sstack_val_cmp in H_sstack_val_cmp_snd.
-               pose proof (H_sstack_val_cmp_snd (S (get_maxidx_smap m)) (S (get_maxidx_smap m)) (Nat.le_refl (S (get_maxidx_smap m))) ctx soffset soffset' (get_maxidx_smap m) (get_bindings_smap m) (get_maxidx_smap m) (get_bindings_smap m) ops H_is_sat H_valid_soffset H_valid_soffset' H_valid_smap H_valid_smap E_cmp_soffset_soffset' model mem strg exts H_is_model) as H_eq_soffset_soffset'.
+               pose proof (H_sstack_val_cmp_snd (S (get_maxidx_smap m)) (S (get_maxidx_smap m)) (Nat.le_refl (S (get_maxidx_smap m))) ctx soffset soffset' (get_maxidx_smap m) (get_bindings_smap m) (get_maxidx_smap m) (get_bindings_smap m) ops H_valid_soffset H_valid_soffset' H_valid_smap H_valid_smap E_cmp_soffset_soffset' model mem strg exts H_is_model) as H_eq_soffset_soffset'.
                destruct H_eq_soffset_soffset' as [soffset_v [ H_eval_soffset H_eval_soffset']].
 
-               pose proof (two_consecutive_updates_same_address ctx soffset soffset' svalue svalue' smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops soffset_v H_is_sat H_eval_soffset H_eval_soffset' H_valid_smem' H_valid_smap H_valid_soffset H_valid_svalue H_valid_soffset' H_valid_svalue' H_is_model) as H_remove_soffset'.
+               pose proof (two_consecutive_updates_same_address ctx soffset soffset' svalue svalue' smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops soffset_v H_eval_soffset H_eval_soffset' H_valid_smem' H_valid_smap H_valid_soffset H_valid_svalue H_valid_soffset' H_valid_svalue' H_is_model) as H_remove_soffset'.
                
                rewrite H_remove_soffset'.
 
@@ -1981,7 +1968,7 @@ Qed.
                pose proof (H_mstore8_is_included_in_mstore sstack_val_cmp ctx soffset' soffset (get_maxidx_smap m) (get_bindings_smap m) ops H_sstack_val_cmp_snd H_valid_smap H_valid_soffset' H_valid_soffset E_mstore8_inc model mem strg exts H_is_model) as E_mstore8_not_inc.
                destruct E_mstore8_not_inc as [soffset'_v [soffset_v [H_eval_soffset' [H_eval_soffset H_addr_inc]]]].
                
-               pose proof (two_consecutive_updates_same_address_mstore8 ctx soffset' soffset svalue' svalue smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops soffset'_v soffset_v H_is_sat H_eval_soffset' H_eval_soffset H_valid_smem' H_valid_smap H_valid_soffset' H_valid_svalue' H_valid_soffset H_valid_svalue H_is_model H_addr_inc) as H_remove_soffset'.
+               pose proof (two_consecutive_updates_same_address_mstore8 ctx soffset' soffset svalue' svalue smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops soffset'_v soffset_v H_eval_soffset' H_eval_soffset H_valid_smem' H_valid_smap H_valid_soffset' H_valid_svalue' H_valid_soffset H_valid_svalue H_is_model H_addr_inc) as H_remove_soffset'.
 
                rewrite H_remove_soffset'.
 
@@ -2100,8 +2087,7 @@ Qed.
     Lemma basic_smemory_updater_remove_mstore8_dups_correct:
       forall sstack_val_cmp ctx soffset svalue model mem strg exts m ops,
         symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-        is_sat ctx ->
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         valid_sstack_value (get_maxidx_smap m) soffset ->
         valid_sstack_value (get_maxidx_smap m) svalue ->
         valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
@@ -2115,7 +2101,7 @@ Qed.
               forall w, mem1 w = mem2 w.
     Proof.
       intros sstack_val_cmp ctx soffset svalue model mem strg exts m ops.
-      intros H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_soffset H_valid_svalue H_valid_smap.
+      intros H_sstack_val_cmp_snd H_is_model H_valid_soffset H_valid_svalue H_valid_smap.
  
       induction smem as [|u smem' IHsmem'].
       + intros smem_r H_valid_smem H_basic_mstore_up.
@@ -2244,10 +2230,10 @@ Qed.
                destruct IHsmem'_0 as [mem1' [mem2' [IHsmem'_0_1 [IHsmem'_0_2 IHsmem'_0_3]]]].
                unfold safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
                unfold safe_sstack_val_cmp in H_sstack_val_cmp_snd.
-               pose proof (H_sstack_val_cmp_snd (S (get_maxidx_smap m)) (S (get_maxidx_smap m)) (Nat.le_refl (S (get_maxidx_smap m))) ctx soffset soffset' (get_maxidx_smap m) (get_bindings_smap m) (get_maxidx_smap m) (get_bindings_smap m) ops H_is_sat H_valid_soffset H_valid_soffset' H_valid_smap H_valid_smap E_cmp_soffset_soffset' model mem strg exts H_is_model) as H_eq_soffset_soffset'.
+               pose proof (H_sstack_val_cmp_snd (S (get_maxidx_smap m)) (S (get_maxidx_smap m)) (Nat.le_refl (S (get_maxidx_smap m))) ctx soffset soffset' (get_maxidx_smap m) (get_bindings_smap m) (get_maxidx_smap m) (get_bindings_smap m) ops H_valid_soffset H_valid_soffset' H_valid_smap H_valid_smap E_cmp_soffset_soffset' model mem strg exts H_is_model) as H_eq_soffset_soffset'.
                destruct H_eq_soffset_soffset' as [soffset_v [ H_eval_soffset H_eval_soffset']].
 
-               pose proof (two_consecutive_mstore8_updates_same_address ctx soffset soffset' svalue svalue' smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops soffset_v H_is_sat H_eval_soffset H_eval_soffset' H_valid_smem' H_valid_smap H_valid_soffset H_valid_svalue H_valid_soffset' H_valid_svalue' H_is_model) as H_remove_soffset'.
+               pose proof (two_consecutive_mstore8_updates_same_address ctx soffset soffset' svalue svalue' smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops soffset_v H_eval_soffset H_eval_soffset' H_valid_smem' H_valid_smap H_valid_soffset H_valid_svalue H_valid_soffset' H_valid_svalue' H_is_model) as H_remove_soffset'.
                rewrite H_remove_soffset'.
 
                rewrite IHsmem'_0_1.
@@ -2370,7 +2356,7 @@ Qed.
     + apply basic_smemory_updater_valid.
       apply H_sstack_val_cmp_snd. 
     + unfold smemory_updater_correct_res.
-      intros ctx m smem smem' u ops H_is_sat H_valid_smap H_valid_smem H_valid_u H_basic_smem_updater.
+      intros ctx m smem smem' u ops H_valid_smap H_valid_smem H_valid_u H_basic_smem_updater.
       intros model mem strg exts H_is_model.
       unfold basic_smemory_updater in H_basic_smem_updater.
       destruct u as [soffset svalue|soffset svalue] eqn:E_u.
@@ -2378,7 +2364,7 @@ Qed.
          destruct H_valid_u as [H_valid_soffset H_valid_svalue].
          destruct smem' as [|u' smem'']; try discriminate.
          injection H_basic_smem_updater as H_u' H_smem''.
-         pose proof (basic_smemory_updater_remove_mstore_dups_correct sstack_val_cmp ctx soffset svalue model mem strg exts m ops H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_soffset H_valid_svalue H_valid_smap smem smem''  H_valid_smem H_smem'') as H_basic_smemory_updater_remove_mstore_dups_correct.
+         pose proof (basic_smemory_updater_remove_mstore_dups_correct sstack_val_cmp ctx soffset svalue model mem strg exts m ops H_sstack_val_cmp_snd H_is_model H_valid_soffset H_valid_svalue H_valid_smap smem smem''  H_valid_smem H_smem'') as H_basic_smemory_updater_remove_mstore_dups_correct.
          destruct H_basic_smemory_updater_remove_mstore_dups_correct as [mem1 [mem2 H_basic_smemory_updater_remove_mstore_dups_correct]].
          destruct H_basic_smemory_updater_remove_mstore_dups_correct as [H_mem1 [H_mem2 H_eq_mem1_mem2]].
          rewrite <- H_u'.
@@ -2393,7 +2379,7 @@ Qed.
          destruct H_valid_u as [H_valid_soffset H_valid_svalue].
          destruct smem' as [|u' smem'']; try discriminate.
          injection H_basic_smem_updater as H_u' H_smem''.
-         pose proof (basic_smemory_updater_remove_mstore8_dups_correct sstack_val_cmp ctx soffset svalue model mem strg exts m ops H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_soffset H_valid_svalue H_valid_smap smem smem''  H_valid_smem H_smem'') as H_basic_smemory_updater_remove_mstore8_dups_correct.
+         pose proof (basic_smemory_updater_remove_mstore8_dups_correct sstack_val_cmp ctx soffset svalue model mem strg exts m ops H_sstack_val_cmp_snd H_is_model H_valid_soffset H_valid_svalue H_valid_smap smem smem''  H_valid_smem H_smem'') as H_basic_smemory_updater_remove_mstore8_dups_correct.
          destruct H_basic_smemory_updater_remove_mstore8_dups_correct as [mem1 [mem2 H_basic_smemory_updater_remove_mstore8_dups_correct]].
          destruct H_basic_smemory_updater_remove_mstore8_dups_correct as [H_mem1 [H_mem2 H_eq_mem1_mem2]].
          rewrite <- H_u'.

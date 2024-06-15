@@ -53,6 +53,9 @@ Import Optimizations_Common.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Require Import List.
 Import ListNotations.
 
@@ -62,7 +65,7 @@ Module Opt_iszero_lt.
 
 Definition is_lt_zero (sv: sstack_val) (fcmp: sstack_val_cmp_t) 
   (maxid: nat) (sb: sbindings) (ops: stack_op_instr_map) 
-  (ctx: constraints):=
+  (ctx: ctx_t):=
 match follow_in_smap sv maxid sb with 
 | Some (FollowSmapVal (SymOp LT [arg1; arg2]) idx' sb') => 
     if fcmp ctx arg1 (Val WZero) maxid sb maxid sb  ops
@@ -79,7 +82,7 @@ fun (val: smap_value) =>
 fun (fcmp: sstack_val_cmp_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
-fun (ctx: constraints) =>
+fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp ISZERO [arg] => 
@@ -164,7 +167,7 @@ opt_smapv_valid_snd optimize_iszero_lt_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
 intros ctx n fcmp sb val val' flag.
-intros _ _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
+intros _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
 unfold optimize_iszero_lt_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -215,7 +218,7 @@ opt_sbinding_snd optimize_iszero_lt_sbinding.
 Proof.
 unfold opt_sbinding_snd.
 intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid Hissat Hoptm_sbinding.
+  Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_iszero_lt_sbinding)
@@ -297,7 +300,7 @@ split.
      
   pose proof (valid_sstack_value_const  idx WZero) as Hvalid_WZero.
   pose proof (Hsafe_sstack_val_cmp ctx zerov (Val WZero) idx sb idx sb 
-    evm_stack_opm Hissat Hvalid_zero Hvalid_WZero Hvalid_sb Hvalid_sb fcmp_onev
+    evm_stack_opm Hvalid_zero Hvalid_WZero Hvalid_sb Hvalid_sb fcmp_onev
     model mem strg ext Hismodel) as [vv [eval_zerov' eval_WZero]].
   unfold eval_sstack_val in eval_zerov'.
   unfold eval_sstack_val in eval_WZero.

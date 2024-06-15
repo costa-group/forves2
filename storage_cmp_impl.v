@@ -43,19 +43,22 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module StorageCmpImpl.
 
 
 
   (* just handles the case of empty storage updates *)
-  Definition trivial_storage_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: constraints) (sstrg1 sstrg2 :sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Definition trivial_storage_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: ctx_t) (sstrg1 sstrg2 :sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   match sstrg1,sstrg2 with
   | [], [] => true
   | _, _ =>  false
   end.
 
   (* identical storage updates *)
-  Fixpoint basic_storage_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: constraints) (sstrg1 sstrg2 :sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Fixpoint basic_storage_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: ctx_t) (sstrg1 sstrg2 :sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   match sstrg1,sstrg2 with
   | [], [] => true
   | (U_SSTORE _ skey1 svalue1)::sstrg1', (U_SSTORE _ skey2 svalue2)::sstrg2' =>
@@ -70,7 +73,7 @@ Module StorageCmpImpl.
   end.
 
   
-  Definition swap_storage_update (ctx: constraints) (u1 u2 : storage_update sstack_val) (maxid: nat) (sb: sbindings) : bool :=
+  Definition swap_storage_update (ctx: ctx_t) (u1 u2 : storage_update sstack_val) (maxid: nat) (sb: sbindings) : bool :=
     match u1, u2 with
     | U_SSTORE _ key1 _, U_SSTORE _ key2 _ => 
         match follow_in_smap key1 maxid sb, follow_in_smap key2 maxid sb with
@@ -79,7 +82,7 @@ Module StorageCmpImpl.
         end
     end.
   
-  Fixpoint reorder_updates' (d : nat) (ctx: constraints) (sstrg :sstorage) (maxid: nat) (sb: sbindings) : bool * sstorage :=
+  Fixpoint reorder_updates' (d : nat) (ctx: ctx_t) (sstrg :sstorage) (maxid: nat) (sb: sbindings) : bool * sstorage :=
     match d with
     | O => (false,sstrg)
     | S d' =>
@@ -99,7 +102,7 @@ Module StorageCmpImpl.
 
   (* n is basically the length of sstrg, we pass it as a parameter to
   avoid computing *)
-  Fixpoint reorder_storage_updates (d n: nat) (ctx: constraints) (sstrg :sstorage) (maxid: nat) (sb: sbindings) : sstorage :=
+  Fixpoint reorder_storage_updates (d n: nat) (ctx: ctx_t) (sstrg :sstorage) (maxid: nat) (sb: sbindings) : sstorage :=
     match d with
     | O => sstrg
     | S d' =>
@@ -113,7 +116,7 @@ Module StorageCmpImpl.
     end.
 
 
-  Definition po_storage_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: constraints)  (sstrg1 sstrg2 :sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Definition po_storage_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: ctx_t)  (sstrg1 sstrg2 :sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
     let n1 := length sstrg1 in
     let n2 := length sstrg2 in
     if (n1 =? n2) then 

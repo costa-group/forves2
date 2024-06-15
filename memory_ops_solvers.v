@@ -37,16 +37,18 @@ Import SymbolicStateCmp.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module MemoryOpsSolvers.
 
 (* ctx sv smem m ops -> smap_value *)
-Definition mload_solver_type := constraints -> sstack_val -> smemory -> smap -> stack_op_instr_map -> smap_value.
+Definition mload_solver_type := ctx_t -> sstack_val -> smemory -> smap -> stack_op_instr_map -> smap_value.
 
 Definition mload_solver_ext_type := sstack_val_cmp_ext_1_t -> mload_solver_type.
 
 Definition mload_solver_valid_res (mload_solver: mload_solver_type) :=
   forall ctx m smem soffset smv ops,
-    is_sat ctx -> (* this is not really required *)
     valid_smemory (get_maxidx_smap m) smem -> (* The memory is valid *)
     valid_sstack_value (get_maxidx_smap m) soffset -> (* The offset is valid *)    
     mload_solver ctx soffset smem m ops = smv ->
@@ -54,7 +56,6 @@ Definition mload_solver_valid_res (mload_solver: mload_solver_type) :=
 
 Definition mload_solver_correct_res (mload_solver: mload_solver_type) :=
   forall ctx m smem soffset smv ops idx1 m1,
-    is_sat ctx ->
     valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops -> (* The smap is valid *)
     valid_smemory (get_maxidx_smap m) smem -> (* The memory is valid *)
     valid_sstack_value (get_maxidx_smap m) soffset -> (* The offset is valid *)    
@@ -63,7 +64,7 @@ Definition mload_solver_correct_res (mload_solver: mload_solver_type) :=
     exists idx2 m2,
       add_to_smap m (SymMLOAD soffset smem) = (idx2, m2) /\
         forall model mem strg exts,
-          is_model ctx model = true ->
+          is_model (ctx_cs ctx) model = true ->
           exists v,
             eval_sstack_val(FreshVar idx1) model mem strg exts (get_maxidx_smap m1) (get_bindings_smap m1) ops = Some v /\
               eval_sstack_val(FreshVar idx2) model mem strg exts (get_maxidx_smap m2) (get_bindings_smap m2) ops = Some v.
@@ -78,14 +79,13 @@ Definition mload_solver_ext_snd (mload_solver: mload_solver_ext_type) :=
 
 
 (* ctx u smem m ops -> smem' *)
-Definition smemory_updater_type := constraints -> memory_update sstack_val -> smemory -> smap -> stack_op_instr_map -> smemory.
+Definition smemory_updater_type := ctx_t -> memory_update sstack_val -> smemory -> smap -> stack_op_instr_map -> smemory.
 
 Definition smemory_updater_ext_type := sstack_val_cmp_ext_1_t -> smemory_updater_type.
 
 
 Definition smemory_updater_valid_res (smemory_updater: smemory_updater_type) :=
   forall ctx m smem smem' u ops,
-    is_sat ctx -> (* this is not really required *)
     valid_smemory (get_maxidx_smap m) smem -> (* The memory is valid *)
     valid_smemory_update (get_maxidx_smap m) u -> (* The update is valid *)    
     smemory_updater ctx u smem m ops = smem' ->
@@ -93,13 +93,12 @@ Definition smemory_updater_valid_res (smemory_updater: smemory_updater_type) :=
 
 Definition smemory_updater_correct_res (smemory_updater: smemory_updater_type) :=
   forall ctx m smem smem' u ops,
-    is_sat ctx ->
     valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops -> (* The smap is valid *)
     valid_smemory (get_maxidx_smap m) smem -> (* The memory is valid *)
     valid_smemory_update (get_maxidx_smap m) u -> (* The update is valid *)    
     smemory_updater ctx u smem m ops = smem' ->
     forall model mem strg exts,
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       exists mem1 mem2,
         eval_smemory (u::smem) (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops = Some mem1 /\
           eval_smemory smem' (get_maxidx_smap m) (get_bindings_smap m) model mem strg exts ops = Some mem2 /\

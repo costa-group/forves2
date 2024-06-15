@@ -59,6 +59,9 @@ Import MemoryCmpImplSoundness.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module SHA3CmpImplSoundness.
 
   Theorem trivial_sha3_cmp_snd:
@@ -220,8 +223,7 @@ Qed.
                                  
 
   Lemma remove_out_of_slot'_valid:
-    forall (min max: N) (smem smem': smemory) (ctx: constraints) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map),
-      is_sat ctx -> 
+    forall (min max: N) (smem smem': smemory) (ctx: ctx_t) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map),
       valid_bindings maxidx sb ops ->
   valid_smemory maxidx smem ->
   remove_out_of_slot' ctx smem min max maxidx sb ops = smem' ->
@@ -230,13 +232,13 @@ Qed.
     intros min max.
     induction smem as [|u smem'' IHsmem''].
     + intros smem' ctx maxidx sb ops.
-      intros H_is_sat H_valid_sb H_valid_smem H_remove_out_of_slot'.
+      intros H_valid_sb H_valid_smem H_remove_out_of_slot'.
       simpl in H_remove_out_of_slot'.
       rewrite <- H_remove_out_of_slot'.
       simpl.
       apply I.
     + intros smem' ctx maxidx sb ops.
-      intros H_is_sat H_valid_sb H_valid_smem H_remove_out_of_slot'.
+      intros H_valid_sb H_valid_smem H_remove_out_of_slot'.
       unfold remove_out_of_slot' in H_remove_out_of_slot'.
       fold remove_out_of_slot' in H_remove_out_of_slot'.
       
@@ -244,10 +246,10 @@ Qed.
       destruct H_valid_smem as [H_valid_u H_valid_smem''].
       destruct (update_out_of_slot ctx u min max maxidx sb ops) eqn:H_out_of_slot.
       
-      ++ pose proof (IHsmem'' smem' ctx maxidx sb ops H_is_sat H_valid_sb H_valid_smem'' H_remove_out_of_slot') as IHsmem''_0.
+      ++ pose proof (IHsmem'' smem' ctx maxidx sb ops H_valid_sb H_valid_smem'' H_remove_out_of_slot') as IHsmem''_0.
          apply IHsmem''_0.
       ++ remember (remove_out_of_slot' ctx smem'' min max maxidx sb ops) as smem'''.
-         pose proof (IHsmem'' smem''' ctx maxidx sb ops H_is_sat H_valid_sb H_valid_smem''  (eq_sym Heqsmem''')) as IHsmem''_0.
+         pose proof (IHsmem'' smem''' ctx maxidx sb ops H_valid_sb H_valid_smem''  (eq_sym Heqsmem''')) as IHsmem''_0.
          rewrite <- H_remove_out_of_slot'.
          simpl; intuition.
   Qed.
@@ -422,9 +424,8 @@ Qed.
   Qed.
   
   Lemma update_out_of_slot_snd_1:
-    forall (ctx: constraints) (min max: N) (u: memory_update sstack_val) (smem: smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map) (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem1' : memory) (offset size : EVMWord),
-      is_sat ctx ->
-      is_model ctx model = true ->
+    forall (ctx: ctx_t) (min max: N) (u: memory_update sstack_val) (smem: smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map) (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem1' : memory) (offset size : EVMWord),
+      is_model (ctx_cs ctx) model = true ->
       valid_bindings maxidx sb ops ->
       valid_smemory maxidx smem ->
       valid_smemory_update maxidx u ->
@@ -438,7 +439,7 @@ Qed.
           (mload' mem1' offset (wordToNat size)) = v.
   Proof.
     intros ctx min max u smem maxidx sb ops model mem strg exts mem1 mem1' offset size.
-    intros H_is_sat H_is_model H_valid_bs H_valid_smem H_valid_u H_eval_smem H_eval_u_smem H_lb H_ub H_update_oos.
+    intros H_is_model H_valid_bs H_valid_smem H_valid_u H_eval_smem H_eval_u_smem H_lb H_ub H_update_oos.
 
     unfold eval_smemory in H_eval_smem.
     destruct (map_option (instantiate_memory_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx sb ops)) smem) as [updates|] eqn:E_mo_updates; try discriminate.
@@ -711,9 +712,8 @@ Qed.
 
   
   Lemma update_out_of_slot_snd_2:
-    forall (ctx: constraints) (smem1 smem2: smemory) (u: memory_update sstack_val) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map) (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem2 mem1' mem2' : memory) (offset size : EVMWord),
-      is_sat ctx ->
-      is_model ctx model = true ->
+    forall (ctx: ctx_t) (smem1 smem2: smemory) (u: memory_update sstack_val) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map) (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem2 mem1' mem2' : memory) (offset size : EVMWord),
+      is_model (ctx_cs ctx) model = true ->
       valid_bindings maxidx sb ops ->
       valid_smemory maxidx smem1 ->
       valid_smemory maxidx smem2 ->
@@ -728,7 +728,7 @@ Qed.
           (mload' mem2' offset (wordToNat size)) = v.
   Proof.
     intros ctx smem1 smem2 u maidx sb ops model mem strg exts mem1 mem2 mem1' mem2' offset size.
-    intros H_is_sat H_is_model H_valid_bs H_valid_smem1 H_valid_smem2 H_valid_u H_eval_smem1 H_eval_smem2 H_eval_u_smem1 H_eval_u_smem2 H_mload'.
+    intros H_is_model H_valid_bs H_valid_smem1 H_valid_smem2 H_valid_u H_eval_smem1 H_eval_smem2 H_eval_u_smem1 H_eval_u_smem2 H_mload'.
 
     unfold eval_smemory in H_eval_smem1.
     destruct (map_option (instantiate_memory_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maidx sb ops)) smem1) as [updates1|] eqn:E_mo_updates1; try discriminate.
@@ -781,11 +781,10 @@ Qed.
   Qed.
 
   Lemma remove_out_of_slot'_snd_1:
-    forall  (min max: N) (smem smem_r: smemory) (ctx: constraints) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map)
+    forall  (min max: N) (smem smem_r: smemory) (ctx: ctx_t) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map)
            (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem1' : memory)
            (offset size : EVMWord),
-      is_sat ctx ->
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       valid_bindings maxidx sb ops ->
       valid_smemory maxidx smem ->
       eval_smemory smem maxidx sb model mem strg exts ops = Some mem1 ->
@@ -800,7 +799,7 @@ Qed.
     intros min max.
     induction smem as [|u smem'].
     + intros smem_r ctx maxidx sb ops model mem strg exts mem1 mem1' offset size.
-      intros H_is_sat H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_lb H_ub H_remove_out_of_slot'.
+      intros H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_lb H_ub H_remove_out_of_slot'.
       simpl in H_remove_out_of_slot'.
       rewrite <- H_remove_out_of_slot' in H_eval_smem_r.
       unfold eval_smemory in H_eval_smem.
@@ -814,7 +813,7 @@ Qed.
       exists (mload' mem offset (wordToNat size)).
       split; reflexivity.
     + intros smem_r ctx maxidx sb ops model mem strg exts mem1 mem1' offset size.
-      intros H_is_sat H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_lb H_ub H_remove_out_of_slot'.
+      intros H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_lb H_ub H_remove_out_of_slot'.
       unfold remove_out_of_slot' in H_remove_out_of_slot'.
       fold remove_out_of_slot' in H_remove_out_of_slot'.
       destruct (update_out_of_slot ctx u min max maxidx sb ops) eqn:E_update_out_of_slot.
@@ -822,13 +821,13 @@ Qed.
          destruct H_valid_smem as [H_valid_u H_valid_smem'].
          pose proof (eval_smemory_succ maxidx sb model mem strg exts ops smem' H_valid_smem' H_valid_sb) as H_eval_smem'.
          destruct H_eval_smem' as [mem' H_eval_smem'].
-         pose proof (update_out_of_slot_snd_1 ctx min max u smem' maxidx sb ops model mem strg exts mem' mem1 offset size H_is_sat H_is_model H_valid_sb H_valid_smem' H_valid_u H_eval_smem' H_eval_smem H_lb H_ub E_update_out_of_slot) as H_update_out_of_slot_snd_1.
+         pose proof (update_out_of_slot_snd_1 ctx min max u smem' maxidx sb ops model mem strg exts mem' mem1 offset size H_is_model H_valid_sb H_valid_smem' H_valid_u H_eval_smem' H_eval_smem H_lb H_ub E_update_out_of_slot) as H_update_out_of_slot_snd_1.
          destruct H_update_out_of_slot_snd_1 as [v [H_mload'_mem' H_mload_mem1]].
          rewrite <- H_mload'_mem' in H_mload_mem1.
          exists (mload' mem' offset (wordToNat size)).
          rewrite H_mload_mem1.
          split; try reflexivity.
-         pose proof (IHsmem' smem_r ctx maxidx sb ops model mem strg exts mem' mem1' offset size H_is_sat H_is_model H_valid_sb H_valid_smem' H_eval_smem' H_eval_smem_r H_lb H_ub H_remove_out_of_slot') as IHsmem'_0.
+         pose proof (IHsmem' smem_r ctx maxidx sb ops model mem strg exts mem' mem1' offset size H_is_model H_valid_sb H_valid_smem' H_eval_smem' H_eval_smem_r H_lb H_ub H_remove_out_of_slot') as IHsmem'_0.
          destruct IHsmem'_0 as [v' [H_mload'_mem'_0 H_mload_mem1'_0]].
          rewrite H_mload'_mem'_0.
          rewrite H_mload_mem1'_0.
@@ -837,25 +836,24 @@ Qed.
          rewrite <- H_remove_out_of_slot' in H_eval_smem_r.
          simpl in H_valid_smem.
          destruct H_valid_smem as [H_valid_u H_valid_smem'].
-         pose proof (remove_out_of_slot'_valid min max smem' smem'' ctx maxidx sb ops H_is_sat H_valid_sb H_valid_smem' (eq_sym Heqsmem'')) as H_valid_smem''.
+         pose proof (remove_out_of_slot'_valid min max smem' smem'' ctx maxidx sb ops H_valid_sb H_valid_smem' (eq_sym Heqsmem'')) as H_valid_smem''.
          pose proof (eval_smemory_succ maxidx sb model mem strg exts ops smem' H_valid_smem' H_valid_sb) as H_eval_smem'.
          destruct H_eval_smem' as [mem2 H_eval_smem'].
          
          pose proof (eval_smemory_succ maxidx sb model mem strg exts ops smem'' H_valid_smem'' H_valid_sb) as H_eval_smem''.
          destruct H_eval_smem'' as [mem2' H_eval_smem''].
-         pose proof (IHsmem' smem'' ctx maxidx sb ops model mem strg exts mem2 mem2' offset size H_is_sat H_is_model H_valid_sb H_valid_smem' H_eval_smem' H_eval_smem'' H_lb H_ub (eq_sym Heqsmem'' )) as IHsmem'_0.
+         pose proof (IHsmem' smem'' ctx maxidx sb ops model mem strg exts mem2 mem2' offset size H_is_model H_valid_sb H_valid_smem' H_eval_smem' H_eval_smem'' H_lb H_ub (eq_sym Heqsmem'' )) as IHsmem'_0.
          destruct IHsmem'_0 as [v' [IHsmem'_0_1 IHsmem'_0_2]].
          rewrite <- IHsmem'_0_2 in IHsmem'_0_1.
-         pose proof (update_out_of_slot_snd_2 ctx smem' smem'' u maxidx sb ops model mem strg exts mem2 mem2' mem1 mem1' offset size H_is_sat H_is_model H_valid_sb H_valid_smem' H_valid_smem'' H_valid_u H_eval_smem' H_eval_smem'' H_eval_smem H_eval_smem_r IHsmem'_0_1) as H_update_out_of_slot_snd_2.
+         pose proof (update_out_of_slot_snd_2 ctx smem' smem'' u maxidx sb ops model mem strg exts mem2 mem2' mem1 mem1' offset size H_is_model H_valid_sb H_valid_smem' H_valid_smem'' H_valid_u H_eval_smem' H_eval_smem'' H_eval_smem H_eval_smem_r IHsmem'_0_1) as H_update_out_of_slot_snd_2.
          apply H_update_out_of_slot_snd_2.
   Qed.
              
 
 Lemma remove_out_of_slot'_snd:
-  forall (ctx: constraints) (min max: N) (smem smem_r: smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map) (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem1' : memory)
+  forall (ctx: ctx_t) (min max: N) (smem smem_r: smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map) (model : assignment) (mem : memory) (strg : storage) (exts : externals) (mem1 mem1' : memory)
          (offset size : EVMWord),
-    is_sat ctx ->
-    is_model ctx model = true ->
+    is_model (ctx_cs ctx) model = true ->
     valid_bindings maxidx sb ops ->
     valid_smemory maxidx smem ->
     eval_smemory smem maxidx sb model mem strg exts ops = Some mem1 ->
@@ -870,8 +868,8 @@ Lemma remove_out_of_slot'_snd:
           (mload' mem1' offset (wordToNat size)) = v.
 Proof.
   intros ctx min max smem smem_r maxidx sb ops model mem strg exts mem1 mem1' offset size.
-  intros H_is_sat H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_b1 H_b2 H_remove_out_of_slot'.
-  pose proof (remove_out_of_slot'_snd_1 min max smem smem_r ctx maxidx sb ops model mem strg exts mem1 mem1' offset size H_is_sat H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_b1 H_b2 H_remove_out_of_slot') as H_snd_1.
+  intros H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_b1 H_b2 H_remove_out_of_slot'.
+  pose proof (remove_out_of_slot'_snd_1 min max smem smem_r ctx maxidx sb ops model mem strg exts mem1 mem1' offset size H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem_r H_b1 H_b2 H_remove_out_of_slot') as H_snd_1.
   destruct H_snd_1 as [v' [H_snd_1_0 H_snd_1_1]].
   rewrite H_snd_1_0.
   rewrite H_snd_1_1.
@@ -880,8 +878,7 @@ Proof.
 Qed.
   
 Lemma remove_out_of_slot_valid:
-  forall (ctx: constraints) (soffset ssize : sstack_val) (smem smem': smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map),
-    is_sat ctx ->
+  forall (ctx: ctx_t) (soffset ssize : sstack_val) (smem smem': smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map),
     valid_sstack_value maxidx soffset ->
     valid_sstack_value maxidx ssize ->
     valid_bindings maxidx sb ops ->
@@ -890,7 +887,7 @@ Lemma remove_out_of_slot_valid:
     valid_smemory maxidx smem'.
   Proof.
     intros ctx soffset ssize smem smem' maxidx sb ops.
-    intros H_is_sat H_valid_soffset H_valid_ssize H_valid_sb H_valid_smem H_remove_out_of_slot.
+    intros H_valid_soffset H_valid_ssize H_valid_sb H_valid_smem H_remove_out_of_slot.
     unfold remove_out_of_slot in H_remove_out_of_slot.
     destruct (follow_in_smap soffset maxidx sb).
      destruct f.
@@ -900,7 +897,7 @@ Lemma remove_out_of_slot_valid:
       destruct f.
       destruct smv.
       destruct val0.
-      pose proof (remove_out_of_slot'_valid (wordToN val) (wordToN val + wordToN val0) smem smem' ctx maxidx sb ops H_is_sat H_valid_sb H_valid_smem H_remove_out_of_slot) as H_valid_smem'.
+      pose proof (remove_out_of_slot'_valid (wordToN val) (wordToN val + wordToN val0) smem smem' ctx maxidx sb ops H_valid_sb H_valid_smem H_remove_out_of_slot) as H_valid_smem'.
       apply H_valid_smem'.
 
       (* TODO somehow did not suceed to write ot with repeat, try again *)
@@ -923,15 +920,14 @@ Lemma remove_out_of_slot_valid:
 Qed.
 
   Lemma remove_out_of_slot_snd:
-    forall (ctx: constraints) (soffset ssize : sstack_val) (smem smem': smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map),
-      is_sat ctx ->
+    forall (ctx: ctx_t) (soffset ssize : sstack_val) (smem smem': smemory) (maxidx : nat) (sb : sbindings) (ops : stack_op_instr_map),
       valid_sstack_value maxidx soffset ->
       valid_sstack_value maxidx ssize ->
       valid_bindings maxidx sb ops ->
       valid_smemory maxidx smem ->
       remove_out_of_slot ctx smem soffset ssize maxidx sb ops = smem' ->
       forall (model : assignment) (mem : memory) (strg : storage) (exts : externals),
-        is_model ctx model = true ->    
+        is_model (ctx_cs ctx) model = true ->    
         exists
           (offset size : EVMWord) (mem1 mem1' : memory) (v : EVMWord),
           eval_smemory smem maxidx sb model mem strg exts ops = Some mem1 /\
@@ -944,10 +940,10 @@ Qed.
               (mload' mem1' offset (wordToNat size)) = v.
   Proof.
     intros ctx soffset ssize smem smem' maxidx sb ops.
-    intros H_is_sat H_valid_soffset H_valid_ssize H_valid_sb H_valid_smem H_remove_out_of_slot.
+    intros H_valid_soffset H_valid_ssize H_valid_sb H_valid_smem H_remove_out_of_slot.
     intros model mem strg exts H_is_model.
 
-    pose proof (remove_out_of_slot_valid ctx soffset ssize smem smem' maxidx sb ops H_is_sat H_valid_soffset H_valid_ssize H_valid_sb H_valid_smem H_remove_out_of_slot) as H_valid_smem'.
+    pose proof (remove_out_of_slot_valid ctx soffset ssize smem smem' maxidx sb ops H_valid_soffset H_valid_ssize H_valid_sb H_valid_smem H_remove_out_of_slot) as H_valid_smem'.
 
     pose proof (eval_smemory_succ maxidx sb model mem strg exts ops smem H_valid_smem H_valid_sb) as H_eval_smem.
     destruct H_eval_smem as [mem1 H_eval_smem].
@@ -1025,7 +1021,7 @@ Qed.
     apply N.le_refl. 
     (* end of proof of assert *)
 
-    pose proof (remove_out_of_slot'_snd ctx (wordToN val) (wordToN val + wordToN val0) smem smem' maxidx sb ops model mem strg exts mem1 mem1' soffset_v ssize_v H_is_sat H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem' H_l H_u H_remove_out_of_slot) as H_remove_out_of_slot'_snd.
+    pose proof (remove_out_of_slot'_snd ctx (wordToN val) (wordToN val + wordToN val0) smem smem' maxidx sb ops model mem strg exts mem1 mem1' soffset_v ssize_v H_is_model H_valid_sb H_valid_smem H_eval_smem H_eval_smem' H_l H_u H_remove_out_of_slot) as H_remove_out_of_slot'_snd.
     destruct H_remove_out_of_slot'_snd as [v H_remove_out_of_slot'_snd].
 
     exists soffset_v. exists ssize_v. exists mem1. exists mem1'. exists v.
@@ -1042,7 +1038,7 @@ Qed.
     intros d' H_d'_le_d.
     unfold safe_sha3_cmp.
     intros ctx soffset1 ssize1 smem1 soffset2 ssize2 smem2 maxidx1 sb1 maxidx2 sb2 ops.
-    intros H_is_sat H_valid_soffset1 H_valid_ssize1 H_valid_soffset2 H_valid_ssize2 H_valid_sb1 H_valid_sb2 H_valid_smem1 H_valid_smem2.
+    intros H_valid_soffset1 H_valid_ssize1 H_valid_soffset2 H_valid_ssize2 H_valid_sb1 H_valid_sb2 H_valid_smem1 H_valid_smem2.
     intros H_basic_sha3_cmp.
     intros model mem strg exts H_is_model.
     unfold basic_sha3_cmp in H_basic_sha3_cmp.
@@ -1051,16 +1047,16 @@ Qed.
     remember (remove_out_of_slot ctx smem1 soffset1 ssize1 maxidx1 sb1 ops) as smem1' eqn:H_smem1'.
     remember (remove_out_of_slot ctx smem2 soffset2 ssize2 maxidx2 sb2 ops) as smem2' eqn:H_smem2'.
 
-    pose proof (remove_out_of_slot_valid ctx soffset1 ssize1 smem1 smem1' maxidx1 sb1 ops H_is_sat H_valid_soffset1 H_valid_ssize1 H_valid_sb1 H_valid_smem1 (eq_sym H_smem1')) as H_valid_smem1'.
+    pose proof (remove_out_of_slot_valid ctx soffset1 ssize1 smem1 smem1' maxidx1 sb1 ops H_valid_soffset1 H_valid_ssize1 H_valid_sb1 H_valid_smem1 (eq_sym H_smem1')) as H_valid_smem1'.
     
-    pose proof (remove_out_of_slot_snd ctx soffset1 ssize1 smem1 smem1' maxidx1 sb1 ops H_is_sat H_valid_soffset1 H_valid_ssize1 H_valid_sb1 H_valid_smem1 (eq_sym H_smem1')) as H_out_of_slot_1_2.
+    pose proof (remove_out_of_slot_snd ctx soffset1 ssize1 smem1 smem1' maxidx1 sb1 ops H_valid_soffset1 H_valid_ssize1 H_valid_sb1 H_valid_smem1 (eq_sym H_smem1')) as H_out_of_slot_1_2.
 
     pose proof (H_out_of_slot_1_2 model mem strg exts H_is_model) as H_out_of_slot_1_2.
     destruct H_out_of_slot_1_2 as [ofsset1 [size1 [mem1 [mem1' [v1 [H_eval_smem1 [ H_eval_smem1' [ H_eval_soffset1 [ H_eval_ssize1 [H_sha3_mem1 H_sha3_mem1']]]]]]]]]].
 
-    pose proof (remove_out_of_slot_valid ctx soffset2 ssize2 smem2 smem2' maxidx2 sb2 ops  H_is_sat H_valid_soffset2 H_valid_ssize2 H_valid_sb2 H_valid_smem2 (eq_sym H_smem2')) as H_valid_smem2'.
+    pose proof (remove_out_of_slot_valid ctx soffset2 ssize2 smem2 smem2' maxidx2 sb2 ops  H_valid_soffset2 H_valid_ssize2 H_valid_sb2 H_valid_smem2 (eq_sym H_smem2')) as H_valid_smem2'.
 
-    pose proof (remove_out_of_slot_snd ctx soffset2 ssize2 smem2 smem2' maxidx2 sb2 ops H_is_sat H_valid_soffset2 H_valid_ssize2 H_valid_sb2 H_valid_smem2 (eq_sym H_smem2')) as H_out_of_slot_2_2.
+    pose proof (remove_out_of_slot_snd ctx soffset2 ssize2 smem2 smem2' maxidx2 sb2 ops H_valid_soffset2 H_valid_ssize2 H_valid_sb2 H_valid_smem2 (eq_sym H_smem2')) as H_out_of_slot_2_2.
     
     pose proof (H_out_of_slot_2_2 model mem strg exts H_is_model) as H_out_of_slot_2_2.
     destruct H_out_of_slot_2_2 as [ofsset2 [size2 [mem2 [mem2' [v2 [H_eval_smem2 [ H_eval_smem2' [ H_eval_soffset2 [ H_eval_ssize2 [H_sha3_mem2 H_sha3_mem2']]]]]]]]]].
@@ -1072,7 +1068,7 @@ Qed.
     unfold safe_smemory_cmp_ext_d in H_po_memory_cmp_snd.
     pose proof (H_po_memory_cmp_snd d' H_d'_le_d) as H_po_memory_cmp_snd.
     unfold safe_smemory_cmp in H_po_memory_cmp_snd.
-    pose proof (H_po_memory_cmp_snd ctx smem1' smem2' maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sb1 H_valid_sb2 H_valid_smem1' H_valid_smem2' H_basic_sha3_cmp model mem strg exts H_is_model) as H_po_memory_cmp_snd.
+    pose proof (H_po_memory_cmp_snd ctx smem1' smem2' maxidx1 sb1 maxidx2 sb2 ops H_valid_sb1 H_valid_sb2 H_valid_smem1' H_valid_smem2' H_basic_sha3_cmp model mem strg exts H_is_model) as H_po_memory_cmp_snd.
     destruct H_po_memory_cmp_snd as [mem' [H_eval_smem1'_aux H_eval_smem2'_aux]].
 
     rewrite H_eval_smem1'_aux in H_eval_smem1'.
@@ -1095,10 +1091,10 @@ Qed.
     pose proof (H_safe_sstack_val_cmp d' H_d'_le_d) as H_safe_sstack_val_cmp.
     unfold safe_sstack_val_cmp in H_safe_sstack_val_cmp.
 
-    pose proof (H_safe_sstack_val_cmp ctx soffset1 soffset2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_soffset1 H_valid_soffset2 H_valid_sb1 H_valid_sb2 H_eq_soffset model mem strg exts H_is_model) as H_safe_sstack_val_cmp_soffset.
+    pose proof (H_safe_sstack_val_cmp ctx soffset1 soffset2 maxidx1 sb1 maxidx2 sb2 ops H_valid_soffset1 H_valid_soffset2 H_valid_sb1 H_valid_sb2 H_eq_soffset model mem strg exts H_is_model) as H_safe_sstack_val_cmp_soffset.
     destruct H_safe_sstack_val_cmp_soffset as [v_soffset [H_eval_soffset1' H_eval_soffset2']].
 
-    pose proof (H_safe_sstack_val_cmp ctx ssize1 ssize2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_ssize1 H_valid_ssize2 H_valid_sb1 H_valid_sb2 H_eq_ssize model mem strg exts H_is_model) as H_safe_sstack_val_cmp_ssize.
+    pose proof (H_safe_sstack_val_cmp ctx ssize1 ssize2 maxidx1 sb1 maxidx2 sb2 ops H_valid_ssize1 H_valid_ssize2 H_valid_sb1 H_valid_sb2 H_eq_ssize model mem strg exts H_is_model) as H_safe_sstack_val_cmp_ssize.
     destruct H_safe_sstack_val_cmp_ssize as [v_ssize [H_eval_ssize1' H_eval_ssize2']].
 
     rewrite H_eval_soffset1 in H_eval_soffset1'.

@@ -59,6 +59,9 @@ Import ConcreteInterpreter.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module StorageOpsSolversImplSoundness.
 
   Lemma trivial_sload_solver_snd: sload_solver_ext_snd trivial_sload_solver.
@@ -69,33 +72,33 @@ Module StorageOpsSolversImplSoundness.
     split.
     - unfold sload_solver_valid_res.
       intros.
-      unfold trivial_sload_solver in H3.
-      rewrite <- H3.
+      unfold trivial_sload_solver in H2.
+      rewrite <- H2.
       simpl.
       intuition.
     - unfold sload_solver_correct_res.
       intros.
-      unfold trivial_sload_solver in H4.
-      rewrite <- H4 in H5.
-      rewrite H5.
+      unfold trivial_sload_solver in H3.
+      rewrite <- H3 in H4.
+      rewrite H4.
       exists idx1.
       exists m1.
       split; try reflexivity.
       intros.
       unfold eval_sstack_val.
-      symmetry in H6.
+      symmetry in H5.
 
       assert (H_valid_smap_value: valid_smap_value (get_maxidx_smap m) ops (SymSLOAD skey sstrg)). simpl. intuition.
 
-      symmetry in H5.
-      pose proof (add_to_smap_key_lt_maxidx m m1 idx1 (SymSLOAD skey sstrg) H5).
-      pose proof (valid_sstack_val_freshvar (get_maxidx_smap m1) idx1 H7).
-      symmetry in H5.
-      pose proof (add_to_smap_valid_smap idx1 m m1 (SymSLOAD skey sstrg) ops H1 H_valid_smap_value H5).
-      pose proof (eval_sstack_val'_succ (S (get_maxidx_smap m1)) (FreshVar idx1) model mem strg exts (get_maxidx_smap m1) (get_bindings_smap m1) ops H8 H9 (gt_Sn_n (get_maxidx_smap m1))).
-      destruct H10 as [v H10].
+      symmetry in H4.
+      pose proof (add_to_smap_key_lt_maxidx m m1 idx1 (SymSLOAD skey sstrg) H4).
+      pose proof (valid_sstack_val_freshvar (get_maxidx_smap m1) idx1 H6).
+      symmetry in H4.
+      pose proof (add_to_smap_valid_smap idx1 m m1 (SymSLOAD skey sstrg) ops H0 H_valid_smap_value H4).
+      pose proof (eval_sstack_val'_succ (S (get_maxidx_smap m1)) (FreshVar idx1) model mem strg exts (get_maxidx_smap m1) (get_bindings_smap m1) ops H7 H8 (gt_Sn_n (get_maxidx_smap m1))).
+      destruct H9 as [v H9].
       exists v.
-      split; apply H10.
+      split; apply H9.
   Qed.
 
   
@@ -106,7 +109,7 @@ Module StorageOpsSolversImplSoundness.
     unfold sstorage_updater_snd.
     split.
     - unfold sstorage_updater_valid_res.
-      intros ctx m sstrg sstrg' u ops H_is_sat H_valid_sstrg H_valid_u H_updater.
+      intros ctx m sstrg sstrg' u ops H_valid_sstrg H_valid_u H_updater.
       unfold trivial_sstorage_updater in H_updater.
       rewrite <- H_updater.
       simpl.
@@ -114,7 +117,7 @@ Module StorageOpsSolversImplSoundness.
       + apply H_valid_u.
       + apply H_valid_sstrg.
     - unfold sstorage_updater_correct_res.
-      intros ctx m sstrg sstrg' u ops H_is_sat H_valid_smap H_valid_sstrg H_valid_u H_updater.
+      intros ctx m sstrg sstrg' u ops H_valid_smap H_valid_sstrg H_valid_u H_updater.
       unfold trivial_sstorage_updater in H_updater.
       rewrite <- H_updater.
       intros stk mem strg exts H_is_model.
@@ -134,7 +137,7 @@ Module StorageOpsSolversImplSoundness.
       valid_sstack_value maxidx skey' ->
       not_eq_keys ctx skey skey' maxidx sbindings ops = true ->
       forall model mem strg exts,
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         exists v1 v2,
         eval_sstack_val' (S maxidx) skey model mem strg exts maxidx sbindings ops = Some v1 /\
           eval_sstack_val' (S maxidx) skey' model mem strg exts maxidx sbindings ops = Some v2 /\
@@ -170,7 +173,7 @@ Lemma H_map_o_sstrg:
     valid_sstorage maxidx sstrg ->
     valid_bindings maxidx bs ops ->
     d > maxidx ->
-    is_model ctx model = true ->
+    is_model (ctx_cs ctx) model = true ->
     exists v,
       map_option (instantiate_storage_update (fun sv : sstack_val => eval_sstack_val' d sv model mem strg exts maxidx bs ops)) sstrg = Some v.
 Proof.
@@ -248,7 +251,7 @@ Proof.
     reflexivity.
 Qed.    
 
-  Lemma basic_sload_solver_snd: sload_solver_ext_snd basic_sload_solver.
+Lemma basic_sload_solver_snd: sload_solver_ext_snd basic_sload_solver.
   Proof.
     unfold sload_solver_ext_snd.
     intros sstack_val_cmp H_sstack_val_cmp_snd.
@@ -259,12 +262,12 @@ Qed.
     - unfold sload_solver_valid_res.      
       intros ctx m sstrg skey smv ops.
       induction sstrg as [|u sstrg' IH_sstrg'].
-      + intros H_is_sat H_valid_sstrg H_valid_skey H_smv.
+      + intros H_valid_sstrg H_valid_skey H_smv.
         simpl in H_smv.
         rewrite <- H_smv.
         simpl.
         auto.
-      + intros H_is_sat H_valid_sstrg H_valid_skey H_smv.
+      + intros H_valid_sstrg H_valid_skey H_smv.
         unfold basic_sload_solver in H_smv.
         fold basic_sload_solver in H_smv.
         destruct u as [skey' svalue] eqn:E_u.
@@ -275,7 +278,7 @@ Qed.
         ++ simpl in H_valid_sstrg.
            destruct H_valid_sstrg as [ [H_valid_skey' H_valid_svalue] H_valid_sstrg'].
            destruct (not_eq_keys ctx skey skey' (get_maxidx_smap m) (get_bindings_smap m)) eqn:E_not_eq_keys.
-           +++ pose proof (IH_sstrg' H_is_sat H_valid_sstrg' H_valid_skey H_smv) as IH_sstrg'_0.
+           +++ pose proof (IH_sstrg' H_valid_sstrg' H_valid_skey H_smv) as IH_sstrg'_0.
                apply IH_sstrg'_0.
            +++ rewrite <- H_smv.
                simpl.
@@ -284,7 +287,7 @@ Qed.
     (* correcrt *)
     - unfold sload_solver_correct_res.
       intros ctx  m sstrg skey smv ops idx1 m1.
-      intros H_is_sat H_valid_smap H_valid_sstrg H_valid_skey H_basic_sload_solver H_add_to_smap.
+      intros H_valid_smap H_valid_sstrg H_valid_skey H_basic_sload_solver H_add_to_smap.
       induction sstrg as [| u sstrg' IH_sstrg'].
       + simpl in H_basic_sload_solver.
         rewrite <- H_basic_sload_solver in H_add_to_smap.
@@ -334,7 +337,7 @@ Qed.
              unfold symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
              pose proof (H_sstack_val_cmp_snd (S maxidx_m) (Nat.le_refl (S maxidx_m) )) as H_sstack_val_cmp_snd.
              unfold symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp in H_sstack_val_cmp_snd.
-             pose proof (H_sstack_val_cmp_snd ctx skey key maxidx_m bs_m maxidx_m bs_m ops H_is_sat H_valid_skey H_valid_key H_valid_smap H_valid_smap E_cmp_skey_key model mem strg exts H_is_model) as H_sstack_val_cmp_snd.
+             pose proof (H_sstack_val_cmp_snd ctx skey key maxidx_m bs_m maxidx_m bs_m ops H_valid_skey H_valid_key H_valid_smap H_valid_smap E_cmp_skey_key model mem strg exts H_is_model) as H_sstack_val_cmp_snd.
              destruct H_sstack_val_cmp_snd as [v [H_sstack_val_cmp_snd_1 H_sstack_val_cmp_snd_2]].
              unfold eval_sstack_val in H_sstack_val_cmp_snd_1.
              unfold eval_sstack_val in H_sstack_val_cmp_snd_2.
@@ -538,7 +541,7 @@ Qed.
     intros sstack_val_cmp H_sstack_val_cmp_snd.
     unfold sstorage_updater_valid_res.
     intros ctx m sstrg sstrg' u ops.
-    intros H_is_sat H_valid_sstrg H_valid_u H_basic_sstrg_updater.
+    intros H_valid_sstrg H_valid_u H_basic_sstrg_updater.
     unfold basic_sstorage_updater in H_basic_sstrg_updater.
     destruct u as [skey svalue] eqn:E_u.
     destruct sstrg' as [|u' sstrg'']; try discriminate.
@@ -558,7 +561,7 @@ Qed.
   Lemma basic_sstorage_updater_remove_dups_correct_eq_key:
     forall sstack_val_cmp ctx skey svalue model mem strg exts m ops sstrg sstrg_r strg1 strg2 v,
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       valid_sstack_value (get_maxidx_smap m) skey ->
       valid_sstack_value (get_maxidx_smap m) svalue ->
       valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
@@ -632,18 +635,17 @@ Qed.
 Lemma eval_sstorage_eq_key_key':
 forall sstack_val_cmp ctx model mem strg exts ops maxidx bs skey svalue skey' sstrg strg',
   symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-  is_sat ctx ->
   valid_sstack_value maxidx skey ->
   valid_sstack_value maxidx svalue ->
   valid_sstack_value maxidx skey' ->
   valid_bindings maxidx bs ops ->
-  is_model ctx model = true ->
+  is_model (ctx_cs ctx) model = true ->
   sstack_val_cmp (S maxidx) ctx skey skey' maxidx bs maxidx bs ops = true ->
   eval_sstorage (U_SSTORE sstack_val skey svalue :: sstrg) maxidx bs model mem strg exts ops = Some strg' ->
   eval_sstorage (U_SSTORE sstack_val skey' svalue :: sstrg) maxidx bs model mem strg exts ops = Some strg'.
 Proof.
   intros sstack_val_cmp ctx model mem strg exts ops maxidx bs skey svalue skey' sstrg strg'.
-  intros H_sstack_val_cmp_snd H_is_sat H_valid_skey H_valid_svalue H_valid_skey' H_valid_bs H_is_model H_cmp_skey_skey' H_eval_u1_u2_sstrg.
+  intros H_sstack_val_cmp_snd H_valid_skey H_valid_svalue H_valid_skey' H_valid_bs H_is_model H_cmp_skey_skey' H_eval_u1_u2_sstrg.
 
   unfold eval_sstorage in H_eval_u1_u2_sstrg.
   destruct (map_option (instantiate_storage_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx bs ops)) (U_SSTORE sstack_val skey svalue :: sstrg)) as [updates1|] eqn:E_mo_1; try discriminate.
@@ -669,7 +671,7 @@ Proof.
   unfold symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
   pose proof (H_sstack_val_cmp_snd (S maxidx) (Nat.le_refl (S maxidx) )) as H_sstack_val_cmp_snd.
   unfold symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp in H_sstack_val_cmp_snd.
-  pose proof (H_sstack_val_cmp_snd ctx skey skey' maxidx bs maxidx bs ops H_is_sat H_valid_skey H_valid_skey' H_valid_bs H_valid_bs H_cmp_skey_skey' model mem strg exts H_is_model) as H_sstack_val_cmp_snd.
+  pose proof (H_sstack_val_cmp_snd ctx skey skey' maxidx bs maxidx bs ops H_valid_skey H_valid_skey' H_valid_bs H_valid_bs H_cmp_skey_skey' model mem strg exts H_is_model) as H_sstack_val_cmp_snd.
   destruct H_sstack_val_cmp_snd as [v [H_sstack_val_cmp_snd_1 H_sstack_val_cmp_snd_2]].
   unfold eval_sstack_val in H_sstack_val_cmp_snd_1.
   unfold eval_sstack_val in H_sstack_val_cmp_snd_2.
@@ -702,20 +704,19 @@ Qed.
 Lemma eval_sstorage_immediate_dup_key:
 forall sstack_val_cmp ctx model mem strg exts ops maxidx bs skey svalue skey' svalue' sstrg strg',
   symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-  is_sat ctx ->
   valid_sstack_value maxidx skey ->
   valid_sstack_value maxidx svalue ->
   valid_sstack_value maxidx skey' ->
   valid_sstack_value maxidx svalue' ->
   valid_bindings maxidx bs ops ->
-  is_model ctx model = true ->
+  is_model (ctx_cs ctx) model = true ->
 
   sstack_val_cmp (S maxidx) ctx skey skey' maxidx bs maxidx bs ops = true ->
   eval_sstorage (U_SSTORE sstack_val skey svalue :: U_SSTORE sstack_val skey' svalue' :: sstrg) maxidx bs model mem strg exts ops = Some strg' ->
   eval_sstorage (U_SSTORE sstack_val skey svalue :: sstrg) maxidx bs model mem strg exts ops = Some strg'.
 Proof.
   intros sstack_val_cmp ctx model mem strg exts ops maxidx bs skey svalue skey' svalue' sstrg strg'.
-  intros H_sstack_val_cmp_snd H_is_sat H_valid_skey H_valid_svalue H_valid_skey' H_valid_svalue' H_valid_bs H_is_model H_cmp_skey_skey' H_eval_u1_u2_sstrg.
+  intros H_sstack_val_cmp_snd H_valid_skey H_valid_svalue H_valid_skey' H_valid_svalue' H_valid_bs H_is_model H_cmp_skey_skey' H_eval_u1_u2_sstrg.
   unfold eval_sstorage in H_eval_u1_u2_sstrg.
   destruct (map_option (instantiate_storage_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx bs ops)) (U_SSTORE sstack_val skey svalue :: U_SSTORE sstack_val skey' svalue' :: sstrg)) as [updates1|] eqn:E_mo_1; try discriminate.
   
@@ -751,7 +752,7 @@ Proof.
   unfold symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1_d in H_sstack_val_cmp_snd.
   pose proof (H_sstack_val_cmp_snd (S maxidx) (Nat.le_refl (S maxidx) )) as H_sstack_val_cmp_snd.
   unfold symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp in H_sstack_val_cmp_snd.
-  pose proof (H_sstack_val_cmp_snd ctx skey skey' maxidx bs maxidx bs ops H_is_sat H_valid_skey H_valid_skey' H_valid_bs H_valid_bs H_cmp_skey_skey' model mem strg exts H_is_model) as H_sstack_val_cmp_snd.
+  pose proof (H_sstack_val_cmp_snd ctx skey skey' maxidx bs maxidx bs ops H_valid_skey H_valid_skey' H_valid_bs H_valid_bs H_cmp_skey_skey' model mem strg exts H_is_model) as H_sstack_val_cmp_snd.
   destruct H_sstack_val_cmp_snd as [v [H_sstack_val_cmp_snd_1 H_sstack_val_cmp_snd_2]].
   unfold eval_sstack_val in H_sstack_val_cmp_snd_1.
   unfold eval_sstack_val in H_sstack_val_cmp_snd_2.
@@ -800,8 +801,7 @@ Qed.
   Lemma basic_sstorage_updater_remove_dups_correct_neq_key:
     forall sstack_val_cmp ctx model mem strg exts m ops sstrg sstrg_r skey svalue strg1 strg2 v w,
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-      is_sat ctx ->
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       valid_sstack_value (get_maxidx_smap m) skey ->
       valid_sstack_value (get_maxidx_smap m) svalue ->
       valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
@@ -816,7 +816,7 @@ Qed.
     intros sstack_val_cmp ctx model mem strg exts m ops.
     induction sstrg as [|u' sstrg' IHsstrg'].
     + intros sstrg_r skey svalue strg1 strg2 v w.
-      intros H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg H_sstrg_r H_strg1 H_strg2 H_eval_skey H_neq_v_w.
+      intros H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg H_sstrg_r H_strg1 H_strg2 H_eval_skey H_neq_v_w.
       simpl in H_sstrg_r.
       rewrite <- H_sstrg_r in H_strg2.
       rewrite H_strg1 in H_strg2.
@@ -824,7 +824,7 @@ Qed.
       rewrite H_eq_strg1_strg2.
       reflexivity.
     + intros sstrg_r skey svalue strg1 strg2 v w.
-      intros H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg H_sstrg_r H_strg1 H_strg2 H_eval_skey H_neq_v_w.
+      intros H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg H_sstrg_r H_strg1 H_strg2 H_eval_skey H_neq_v_w.
  
       unfold basic_sstorage_updater_remove_dups in H_sstrg_r.
       fold basic_sstorage_updater_remove_dups in H_sstrg_r.
@@ -837,10 +837,10 @@ Qed.
          simpl in H_valid_sstrg'.
          destruct H_valid_sstrg' as [ [H_valid_sstrg'_0 H_valid_sstrg'_1] H_valid_sstrg'_2].
       
-      ++ pose proof (eval_sstorage_immediate_dup_key sstack_val_cmp ctx model mem strg exts ops (get_maxidx_smap m) (get_bindings_smap m) skey svalue skey' svalue' sstrg' strg1 H_sstack_val_cmp_snd H_is_sat H_valid_skey H_valid_svalue H_valid_sstrg'_0 H_valid_sstrg'_1 H_valid_smap H_is_model E_cmp_skey_skey' H_strg1) as H_strg1_red.
+      ++ pose proof (eval_sstorage_immediate_dup_key sstack_val_cmp ctx model mem strg exts ops (get_maxidx_smap m) (get_bindings_smap m) skey svalue skey' svalue' sstrg' strg1 H_sstack_val_cmp_snd H_valid_skey H_valid_svalue H_valid_sstrg'_0 H_valid_sstrg'_1 H_valid_smap H_is_model E_cmp_skey_skey' H_strg1) as H_strg1_red.
 
        
-         pose proof (IHsstrg' sstrg_r skey svalue strg1 strg2 v w H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg'_2 H_sstrg_r H_strg1_red H_strg2 H_eval_skey) as IHsstrg'_0.
+         pose proof (IHsstrg' sstrg_r skey svalue strg1 strg2 v w H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg'_2 H_sstrg_r H_strg1_red H_strg2 H_eval_skey) as IHsstrg'_0.
 
          assert( H_strg1_red' := H_strg1_red).
 
@@ -1013,7 +1013,7 @@ Qed.
          destruct H_eval_sstorage_u'_sstrg_r' as [strg2' H_eval_sstorage_u'_sstrg_r'].
          
                
-         pose proof (IHsstrg' sstrg_r' skey svalue strg1' strg2' v w H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg_2 H_sstrg_r_1 H_eval_sstorage_u'_sstrg' H_eval_sstorage_u'_sstrg_r' H_eval_skey H_neq_v_w) as IHsstrg'_0.
+         pose proof (IHsstrg' sstrg_r' skey svalue strg1' strg2' v w H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg_2 H_sstrg_r_1 H_eval_sstorage_u'_sstrg' H_eval_sstorage_u'_sstrg_r' H_eval_skey H_neq_v_w) as IHsstrg'_0.
 
          unfold eval_sstorage in H_eval_sstorage_u'_sstrg'.
          
@@ -1080,8 +1080,7 @@ Qed.
   Lemma basic_sstorage_updater_remove_dups_correct:
     forall sstack_val_cmp ctx skey svalue model mem strg exts m ops,
       symbolic_state_cmp.SymbolicStateCmp.safe_sstack_val_cmp_ext_1 sstack_val_cmp ->
-      is_sat ctx ->
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       valid_sstack_value (get_maxidx_smap m) skey ->
       valid_sstack_value (get_maxidx_smap m) svalue ->
       valid_smap (get_maxidx_smap m) (get_bindings_smap m) ops ->
@@ -1095,7 +1094,7 @@ Qed.
           forall w, strg1 w = strg2 w.
   Proof.
     intros sstack_val_cmp ctx skey svalue model mem strg exts m ops.
-    intros H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap.
+    intros H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap.
     intros sstrg sstrg' H_valid_sstrg H_sstrg'.
     
     pose proof (valid_sstorage_when_extended_with_valid_update (get_maxidx_smap m) (U_SSTORE sstack_val skey svalue) sstrg (valid_sstorage_update_kv (get_maxidx_smap m) skey svalue H_valid_skey H_valid_svalue) H_valid_sstrg) as H_valid_u_sstrg.
@@ -1168,7 +1167,7 @@ Qed.
 
     destruct ((w =? wordToN v)%N) eqn:E_w_v; try reflexivity.
 
-    pose proof (basic_sstorage_updater_remove_dups_correct_neq_key sstack_val_cmp ctx model mem strg exts m ops  sstrg sstrg' skey svalue strg1 strg2 v w H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg H_sstrg' H_strg1_aux H_strg2_aux H_eval_skey E_w_v) as H_neq_key.
+    pose proof (basic_sstorage_updater_remove_dups_correct_neq_key sstack_val_cmp ctx model mem strg exts m ops  sstrg sstrg' skey svalue strg1 strg2 v w H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap H_valid_sstrg H_sstrg' H_strg1_aux H_strg2_aux H_eval_skey E_w_v) as H_neq_key.
     
     rewrite <- H_strg1 in H_neq_key.
     rewrite <- H_strg2 in H_neq_key.
@@ -1187,7 +1186,7 @@ Qed.
     + apply basic_sstorage_updater_valid.
       apply H_sstack_val_cmp_snd. 
     + unfold sstorage_updater_correct_res.
-      intros ctx m sstrg sstrg' u ops H_is_sat H_valid_smap H_valid_sstrg H_valid_u H_basic_sstrg_updater.
+      intros ctx m sstrg sstrg' u ops H_valid_smap H_valid_sstrg H_valid_u H_basic_sstrg_updater.
       intros model mem strg exts H_is_model.
       unfold basic_sstorage_updater in H_basic_sstrg_updater.
       destruct u as [skey svalue] eqn:E_u.
@@ -1195,7 +1194,7 @@ Qed.
       destruct H_valid_u as [H_valid_skey H_valid_svalue].
       destruct sstrg' as [|u' sstrg'']; try discriminate.
       injection H_basic_sstrg_updater as H_u' H_sstrg''.
-      pose proof (basic_sstorage_updater_remove_dups_correct sstack_val_cmp ctx skey svalue model mem strg exts m ops H_sstack_val_cmp_snd H_is_sat H_is_model H_valid_skey H_valid_svalue H_valid_smap sstrg sstrg''  H_valid_sstrg H_sstrg'') as H_basic_sstorage_updater_remove_dups_correct.
+      pose proof (basic_sstorage_updater_remove_dups_correct sstack_val_cmp ctx skey svalue model mem strg exts m ops H_sstack_val_cmp_snd H_is_model H_valid_skey H_valid_svalue H_valid_smap sstrg sstrg''  H_valid_sstrg H_sstrg'') as H_basic_sstorage_updater_remove_dups_correct.
       destruct H_basic_sstorage_updater_remove_dups_correct as [strg1 [strg2 H_basic_sstorage_updater_remove_dups_correct]].
       destruct H_basic_sstorage_updater_remove_dups_correct as [H_strg1 [H_strg2 H_eq_strg1_strg2]].
       rewrite <- H_u'.

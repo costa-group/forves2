@@ -46,9 +46,12 @@ Import SymbolicStateDec.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module SStackValCmpImpl.
 
-  Definition trivial_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: constraints) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Definition trivial_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: ctx_t) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
     match d with
     | 0 => false
     | S d' =>
@@ -67,7 +70,7 @@ Module SStackValCmpImpl.
         end
     end.
 
-Fixpoint basic_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: constraints) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+Fixpoint basic_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: ctx_t) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   match d with
   | 0 => false
   | S d' =>
@@ -134,7 +137,7 @@ Fixpoint basic_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp
       end
   end.
 
-Fixpoint basic_compare_sstack_val_w_eq_chk (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: constraints) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+Fixpoint basic_compare_sstack_val_w_eq_chk (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp: sstorage_cmp_ext_t) (sha3_cmp: sha3_cmp_ext_t) (d: nat) (ctx: ctx_t) (sv1 sv2: sstack_val) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   if (trivial_compare_sstack_val smemory_cmp sstorage_cmp sha3_cmp d ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops)
   then true
   else

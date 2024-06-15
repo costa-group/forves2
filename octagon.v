@@ -1301,8 +1301,10 @@ Next Obligation.
   assumption.
 Qed.
 
-Program Definition conj_trans_closure_checker(n: nat)
+
+Program Definition conj_trans_closure_checker (n: nat)
   : Constraints.conj_imp_checker :=
   translate_conj_imp_checker (Octagon.ImplChecker.conj_trans_closure_checker n).
+
 End ForvesIntegration.
 

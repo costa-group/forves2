@@ -49,9 +49,11 @@ Import MemoryOpsSolvers.
 Require Import FORVES2.storage_ops_solvers.
 Import StorageOpsSolvers.
 
-
 Require Import FORVES2.constraints.
 Import Constraints.
+
+Require Import FORVES2.context.
+Import Context.
 
 Module SymbolicExecutionSoundness.
 
@@ -75,14 +77,13 @@ of _sst_ wrt _init_st_, _tr_ transformes from _st_ to _st'_ such that
 _st'_ is an instance of _sst'_ wrt _init_st_. In addition, sst is
 supposed to be valid, and sst' must be valid. *)
 
-Definition snd_state_transformer ( tr : state -> stack_op_instr_map -> option state ) (symtr : constraints -> sstate ->  stack_op_instr_map -> option sstate )  : Prop :=
-  forall (ctx: constraints) (sst sst': sstate) (ops : stack_op_instr_map),
-    is_sat ctx ->
+Definition snd_state_transformer ( tr : state -> stack_op_instr_map -> option state ) (symtr : ctx_t -> sstate ->  stack_op_instr_map -> option sstate )  : Prop :=
+  forall (ctx: ctx_t) (sst sst': sstate) (ops : stack_op_instr_map),
     valid_sstate sst ops ->
     symtr ctx sst ops = Some sst' ->
     valid_sstate sst' ops /\
       forall (mem: memory) (strg: storage) (exts: externals) (st: state) (model: assignment),
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         st_is_instance_of_sst mem strg exts st model sst ops ->
         exists (st': state),
           tr st ops = Some st' /\ st_is_instance_of_sst mem strg exts st' model sst' ops.
@@ -95,12 +96,11 @@ Definition snd_state_transformer ( tr : state -> stack_op_instr_map -> option st
 (* push_s generated valid states *)
 Lemma push_valid_sst:
   forall ctx sst sst' w ops,
-    is_sat ctx ->
     valid_sstate sst ops ->
     push_s w ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' w ops H_is_sat H_valid_sst H_push_s.
+  intros ctx sst sst' w ops H_valid_sst H_push_s.
   unfold push_s in H_push_s.
   destruct (push (Val w) (get_stack_sst sst)) as [sstk'|] eqn:E_push; try discriminate.
   injection H_push_s as H_sst'.
@@ -132,12 +132,11 @@ Qed.
 (* metapush_s generates valid states *)
 Lemma metapush_valid_sst:
   forall ctx sst sst' cat v ops,
-    is_sat ctx ->
     valid_sstate sst ops ->
     metapush_s cat v ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' cat v ops H_is_sat H_valid_sst H_metapush_s.
+  intros ctx sst sst' cat v ops H_valid_sst H_metapush_s.
   unfold metapush_s in H_metapush_s.
   destruct (add_to_smap (get_smap_sst sst) (SymMETAPUSH  cat v)) as [key sm'] eqn:E_add_to_smap.
   destruct (push (FreshVar key) (get_stack_sst sst)) as [sstk'|] eqn:E_push; try discriminate.
@@ -188,12 +187,11 @@ Qed.
 (* pop generates valid states *)
 Lemma pop_valid_sst:
   forall ctx sst sst' ops,
-    is_sat ctx ->
     valid_sstate sst ops ->
     pop_s ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_pop_s.
+  intros ctx sst sst' ops H_valid_sst H_pop_s.
   unfold pop_s in H_pop_s.
   destruct (pop (get_stack_sst sst)) as [sstk|] eqn:E_pop; try discriminate.
   injection H_pop_s as H_sst'.
@@ -229,12 +227,11 @@ Qed.
 (* metapush_s generates valid states *)
 Lemma dup_valid_sst:
   forall ctx sst sst' ops k,
-    is_sat ctx ->
     valid_sstate sst ops ->
     dup_s k ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops k H_is_sat H_valid_sst H_dup_s.
+  intros ctx sst sst' ops k H_valid_sst H_dup_s.
   unfold dup_s in H_dup_s.
   destruct (dup k (get_stack_sst sst)) as [sstk'|] eqn:E_dup; try discriminate.
   injection H_dup_s as H_dup_s.
@@ -269,12 +266,11 @@ Qed.
 (* metapush_s generates valid states *)
 Lemma swap_valid_sst:
   forall ctx sst sst' ops k,
-    is_sat ctx ->
     valid_sstate sst ops ->
     swap_s k ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops k H_is_sat H_valid_sst H_swap_s.
+  intros ctx sst sst' ops k H_valid_sst H_swap_s.
   unfold swap_s in H_swap_s.
   destruct (swap k (get_stack_sst sst)) as [sstk'|] eqn:E_swap; try discriminate.
   injection H_swap_s as H_swap_s.
@@ -325,12 +321,11 @@ Qed.
 (* exec_stack_op_intsr_s generates valid states *)
 Lemma exec_stack_op_intsr_valid_sst:
   forall ctx sst sst' label ops,
-    is_sat ctx ->
     valid_sstate sst ops ->
     exec_stack_op_intsr_s label ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' label ops H_is_sat H_valid_sst H_exec_s.
+  intros ctx sst sst' label ops H_valid_sst H_exec_s.
   unfold exec_stack_op_intsr_s in H_exec_s.
   destruct (ops label) as [nargs f H_com H_coh] eqn:E_label.
   destruct (firstn_e nargs (get_stack_sst sst)) as [args|] eqn:E_firstn; try discriminate.
@@ -405,13 +400,12 @@ Qed.
 (* mload generates valid states *)
 Lemma mload_valid_sst:
   forall ctx sst sst' ops mload_solver,
-    is_sat ctx ->
     valid_sstate sst ops ->
     mload_solver_snd mload_solver ->
     mload_s mload_solver ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops mload_solver H_is_sat H_valid_sst H_valid_solver H_mload_s.
+  intros ctx sst sst' ops mload_solver H_valid_sst H_valid_solver H_mload_s.
   
   unfold mload_s in H_mload_s.
   destruct (get_stack_sst sst) as [|soffset sstk'] eqn:E_sstk; try discriminate.
@@ -433,7 +427,7 @@ Proof.
 
   symmetry in H_eqsmv.
   
-  pose proof (H_valid_solver ctx (get_smap_sst sst) (get_memory_sst sst) soffset smv ops H_is_sat H_valid_sst_smemory H_valid_sst_soffset H_eqsmv) as H_valid_smv.
+  pose proof (H_valid_solver ctx (get_smap_sst sst) (get_memory_sst sst) soffset smv ops H_valid_sst_smemory H_valid_sst_soffset H_eqsmv) as H_valid_smv.
 
   symmetry in E_add_to_smap.
   pose proof (add_to_map_valid_sstate sst key sm' smv ops H_valid_sst H_valid_smv E_add_to_smap) as H_valid_sst_smap_add.
@@ -481,13 +475,12 @@ Qed.
 (* sload generates valid states *)
 Lemma sload_valid_sst:
   forall ctx sst sst' ops sload_solver,
-    is_sat ctx ->
     valid_sstate sst ops ->
     sload_solver_snd sload_solver ->
     sload_s sload_solver ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops sload_solver H_is_sat H_valid_sst H_valid_solver H_sload_s.
+  intros ctx sst sst' ops sload_solver H_valid_sst H_valid_solver H_sload_s.
   
   unfold sload_s in H_sload_s.
   destruct (get_stack_sst sst) as [|skey sstk'] eqn:E_sstk; try discriminate.
@@ -509,7 +502,7 @@ Proof.
 
   symmetry in H_eqsmv.
   
-  pose proof (H_valid_solver ctx (get_smap_sst sst) (get_storage_sst sst) skey smv ops H_is_sat H_valid_sst_sstorage H_valid_sst_soffset H_eqsmv) as H_valid_smv.
+  pose proof (H_valid_solver ctx (get_smap_sst sst) (get_storage_sst sst) skey smv ops H_valid_sst_sstorage H_valid_sst_soffset H_eqsmv) as H_valid_smv.
 
   symmetry in E_add_to_smap.
   pose proof (add_to_map_valid_sstate sst key sm' smv ops H_valid_sst H_valid_smv E_add_to_smap) as H_valid_sst_smap_add.
@@ -557,13 +550,12 @@ Qed.
 (* mstore generates valid states *)
 Lemma mstore_valid_sst:
   forall ctx sst sst' ops smemory_updater,
-      is_sat ctx ->
       smemory_updater_snd smemory_updater ->
       valid_sstate sst ops ->
       mstore_s smemory_updater ctx sst ops = Some sst' ->
       valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops smemory_updater H_is_sat H_smemory_updater_snd H_valid_sst H_mstore_s.
+  intros ctx sst sst' ops smemory_updater H_smemory_updater_snd H_valid_sst H_mstore_s.
   unfold mstore_s in H_mstore_s.
   destruct (get_stack_sst sst) as [|soffset sstk'] eqn:E_sstk; try discriminate.
   destruct sstk' as [|svalue sstk''] eqn:E_sstk'; try discriminate.
@@ -586,7 +578,7 @@ Proof.
   unfold smemory_updater_valid_res in H_smemory_updater_valid.
 
   symmetry in E_smem'.
-  pose proof (H_smemory_updater_valid ctx (get_smap_sst sst) (get_memory_sst sst) smem' (U_MSTORE sstack_val soffset svalue) ops H_is_sat H_valid_sst_smemory H_valid_u E_smem') as H_valid_smem'.
+  pose proof (H_smemory_updater_valid ctx (get_smap_sst sst) (get_memory_sst sst) smem' (U_MSTORE sstack_val soffset svalue) ops H_valid_sst_smemory H_valid_u E_smem') as H_valid_smem'.
 
   unfold valid_sstate.
   rewrite smap_preserved_when_updating_stack_sst.
@@ -608,13 +600,12 @@ Qed.
 (* mstore8 generates valid states *)
 Lemma mstore8_valid_sst:
   forall ctx sst sst' ops smemory_updater,
-    is_sat ctx ->
     smemory_updater_snd smemory_updater ->
     valid_sstate sst ops ->
     mstore8_s smemory_updater ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops smemory_updater H_is_sat H_smemory_updater_snd H_valid_sst H_mstore_s.
+  intros ctx sst sst' ops smemory_updater H_smemory_updater_snd H_valid_sst H_mstore_s.
   unfold mstore8_s in H_mstore_s.
   destruct (get_stack_sst sst) as [|soffset sstk'] eqn:E_sstk; try discriminate.
   destruct sstk' as [|svalue sstk''] eqn:E_sstk'; try discriminate.
@@ -637,7 +628,7 @@ Proof.
   unfold smemory_updater_valid_res in H_smemory_updater_valid.
 
   symmetry in E_smem'.
-  pose proof (H_smemory_updater_valid ctx (get_smap_sst sst) (get_memory_sst sst) smem' (U_MSTORE8 sstack_val soffset svalue) ops H_is_sat H_valid_sst_smemory H_valid_u E_smem') as H_valid_smem'.
+  pose proof (H_smemory_updater_valid ctx (get_smap_sst sst) (get_memory_sst sst) smem' (U_MSTORE8 sstack_val soffset svalue) ops H_valid_sst_smemory H_valid_u E_smem') as H_valid_smem'.
 
   unfold valid_sstate.
   rewrite smap_preserved_when_updating_stack_sst.
@@ -659,13 +650,12 @@ Qed.
 (* sstore generates valid states *)
 Lemma sstore_valid_sst:
   forall ctx sst sst' ops sstorage_updater,
-    is_sat ctx ->
     sstorage_updater_snd sstorage_updater ->
     valid_sstate sst ops ->
     sstore_s sstorage_updater ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops sstorage_updater H_is_sat H_sstorage_updater_snd H_valid_sst H_sstore_s.
+  intros ctx sst sst' ops sstorage_updater H_sstorage_updater_snd H_valid_sst H_sstore_s.
   unfold sstore_s in H_sstore_s.
   destruct (get_stack_sst sst) as [|skey sstk'] eqn:E_sstk; try discriminate.
   destruct sstk' as [|svalue sstk''] eqn:E_sstk'; try discriminate.
@@ -688,7 +678,7 @@ Proof.
   unfold sstorage_updater_valid_res in H_sstorage_updater_valid.
 
   symmetry in E_sstrg'.
-  pose proof (H_sstorage_updater_valid ctx (get_smap_sst sst) (get_storage_sst sst) sstrg' (U_SSTORE sstack_val skey svalue) ops H_is_sat H_valid_sst_sstorage H_valid_u E_sstrg') as H_valid_sstrg'.
+  pose proof (H_sstorage_updater_valid ctx (get_smap_sst sst) (get_storage_sst sst) sstrg' (U_SSTORE sstack_val skey svalue) ops H_valid_sst_sstorage H_valid_u E_sstrg') as H_valid_sstrg'.
 
   unfold valid_sstate.
   rewrite smap_preserved_when_updating_stack_sst.
@@ -711,12 +701,11 @@ Qed.
 (* sha3 generates valid states *)
 Lemma sha3_valid_sst:
   forall ctx sst sst' ops,
-    is_sat ctx ->
     valid_sstate sst ops ->
     sha3_s ctx sst ops = Some sst' ->
     valid_sstate sst' ops.
 Proof.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_sha3_s.
+  intros ctx sst sst' ops H_valid_sst H_sha3_s.
   unfold sha3_s in H_sha3_s.
   destruct (get_stack_sst sst) as [|soffset sstk'] eqn:E_sstk; try discriminate.
   destruct sstk' as [|ssize sstk''] eqn:E_sstk'; try discriminate.
@@ -1437,11 +1426,11 @@ Lemma push_snd:
 Proof.
   intro w.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_push_s.
+  intros ctx sst sst' ops H_valid_sst H_push_s.
   split.
 
   (* Validity *)
-  - pose proof (push_valid_sst ctx sst sst' w ops H_is_sat H_valid_sst H_push_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (push_valid_sst ctx sst sst' w ops H_valid_sst H_push_s) as H_valid_sst'. apply H_valid_sst'.
 
   (* Soundness *)
   - intros mem strg exts st model H_is_model H_st_inst_sst.
@@ -1481,11 +1470,11 @@ Proof.
 
   intros cat v.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_metapush_s.
+  intros ctx sst sst' ops H_valid_sst H_metapush_s.
   split.
 
   (* Validity *)
-  - pose proof (metapush_valid_sst ctx sst sst' cat v ops H_is_sat H_valid_sst H_metapush_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (metapush_valid_sst ctx sst sst' cat v ops H_valid_sst H_metapush_s) as H_valid_sst'. apply H_valid_sst'.
 
   (* Soundness *)
   - intros mem strg exts st model H_is_model H_st_inst_sst.
@@ -1670,9 +1659,9 @@ Lemma pop_snd:
   snd_state_transformer pop_c pop_s.       
 Proof.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_pop_s.
+  intros ctx sst sst' ops H_valid_sst H_pop_s.
   split.
-  - pose proof (pop_valid_sst ctx sst sst' ops H_is_sat H_valid_sst H_pop_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (pop_valid_sst ctx sst sst' ops H_valid_sst H_pop_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst. 
     unfold pop_s in H_pop_s.
     destruct (pop (get_stack_sst sst)) eqn:H_pop_sst; try discriminate.
@@ -1817,9 +1806,9 @@ Lemma dup_snd:
   forall k, snd_state_transformer (dup_c k) (dup_s k).       
 Proof.
   unfold snd_state_transformer.
-  intros k ctx sst sst' ops H_is_sat H_valid_sst H_dup_s.
+  intros k ctx sst sst' ops H_valid_sst H_dup_s.
   split.
-  - pose proof (dup_valid_sst ctx sst sst' ops k H_is_sat H_valid_sst H_dup_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (dup_valid_sst ctx sst sst' ops k H_valid_sst H_dup_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     pose proof (st_is_instance_of_sst_stk_len mem strg exts st model sst ops H_st_inst_sst) as H_st_sst_stk_len.
     unfold dup_s in H_dup_s.
@@ -2012,9 +2001,9 @@ Lemma swap_snd:
   forall k, snd_state_transformer (swap_c k) (swap_s k).
 Proof.
   unfold snd_state_transformer.
-  intros k ctx sst sst' ops H_is_sat H_valid_sst H_swap_s.
+  intros k ctx sst sst' ops H_valid_sst H_swap_s.
   split.
-  - pose proof (swap_valid_sst ctx sst sst' ops k H_is_sat H_valid_sst H_swap_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (swap_valid_sst ctx sst sst' ops k H_valid_sst H_swap_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold swap_s in H_swap_s.
     destruct (swap k (get_stack_sst sst)) eqn:E_swap; try discriminate.
@@ -2081,9 +2070,9 @@ Lemma sload_snd:
 Proof.
   intros sload_solver H_valid_sload_solver.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_sload_s.
+  intros ctx sst sst' ops H_valid_sst H_sload_s.
   split.
-  - pose proof (sload_valid_sst ctx sst sst' ops sload_solver H_is_sat H_valid_sst H_valid_sload_solver H_sload_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (sload_valid_sst ctx sst sst' ops sload_solver H_valid_sst H_valid_sload_solver H_sload_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold sload_s in H_sload_s.
     destruct (get_stack_sst sst) as [|skey sstk] eqn:E_sstk_sst; try discriminate.
@@ -2179,9 +2168,9 @@ Proof.
     unfold sload_solver_correct_res in H_valid_sload_solver_correct.
 
     symmetry in E_smv.
-    pose proof (H_valid_sload_solver_valid ctx (get_smap_sst sst) (get_storage_sst sst) skey smv ops H_is_sat H_valid_sst_sstorage H_valid_skey E_smv) as H_valid_smv.
+    pose proof (H_valid_sload_solver_valid ctx (get_smap_sst sst) (get_storage_sst sst) skey smv ops H_valid_sst_sstorage H_valid_skey E_smv) as H_valid_smv.
 
-    pose proof (H_valid_sload_solver_correct ctx (get_smap_sst sst) (get_storage_sst sst) skey smv ops key sm' H_is_sat H_valid_sst_smap H_valid_sst_sstorage H_valid_skey E_smv E_add_to_smap) as H_correct_sload.
+    pose proof (H_valid_sload_solver_correct ctx (get_smap_sst sst) (get_storage_sst sst) skey smv ops key sm' H_valid_sst_smap H_valid_sst_sstorage H_valid_skey E_smv E_add_to_smap) as H_correct_sload.
 
     destruct (get_smap_sst sst) as [maxidx sb] eqn:E_smap_sst.
     simpl in H_correct_sload.
@@ -2254,9 +2243,9 @@ Lemma sstore_snd:
 Proof.
   intros sstorage_updater H_sstorage_updater_snd.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_sstore_s.
+  intros ctx sst sst' ops H_valid_sst H_sstore_s.
   split.
-  - pose proof (sstore_valid_sst ctx sst sst' ops sstorage_updater H_is_sat H_sstorage_updater_snd H_valid_sst H_sstore_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (sstore_valid_sst ctx sst sst' ops sstorage_updater H_sstorage_updater_snd H_valid_sst H_sstore_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold sstore_s in H_sstore_s.
     destruct (get_stack_sst sst) as [|skey sstk] eqn:E_sstk_sst; try discriminate.
@@ -2346,7 +2335,7 @@ Proof.
     destruct H_sstorage_updater_snd as [H_sstorage_updater_valid H_sstorage_updater_correct].
 
     unfold sstorage_updater_correct_res in H_sstorage_updater_correct.
-    pose proof (H_sstorage_updater_correct ctx (get_smap_sst sst) (get_storage_sst sst) sstrg' u ops H_is_sat H_valid_sst_smap H_valid_sst_sstorage H_valid_u E_updater model mem strg exts H_is_model) as H_correct_sstrg'.
+    pose proof (H_sstorage_updater_correct ctx (get_smap_sst sst) (get_storage_sst sst) sstrg' u ops H_valid_sst_smap H_valid_sst_sstorage H_valid_u E_updater model mem strg exts H_is_model) as H_correct_sstrg'.
 
     destruct  H_correct_sstrg' as [strg1 [strg2 [H_eval_u_strg_sst [H_eval_sstrg' H_eq_str1_strg2]]]].
 
@@ -2408,9 +2397,9 @@ Lemma mload_snd:
 Proof.
   intros mload_solver H_valid_mload_solver.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_mload_s.
+  intros ctx sst sst' ops H_valid_sst H_mload_s.
   split.
-  - pose proof (mload_valid_sst ctx sst sst' ops mload_solver H_is_sat H_valid_sst H_valid_mload_solver H_mload_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (mload_valid_sst ctx sst sst' ops mload_solver H_valid_sst H_valid_mload_solver H_mload_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold mload_s in H_mload_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
@@ -2506,9 +2495,9 @@ Proof.
     unfold mload_solver_correct_res in H_valid_mload_solver_correct.
 
     symmetry in E_smv.
-    pose proof (H_valid_mload_solver_valid ctx (get_smap_sst sst) (get_memory_sst sst) soffset smv ops H_is_sat H_valid_sst_smemory H_valid_soffset E_smv) as H_valid_smv.
+    pose proof (H_valid_mload_solver_valid ctx (get_smap_sst sst) (get_memory_sst sst) soffset smv ops H_valid_sst_smemory H_valid_soffset E_smv) as H_valid_smv.
 
-    pose proof (H_valid_mload_solver_correct ctx (get_smap_sst sst) (get_memory_sst sst) soffset smv ops key sm' H_is_sat H_valid_sst_smap H_valid_sst_smemory H_valid_soffset E_smv E_add_to_smap) as H_correct_mload.
+    pose proof (H_valid_mload_solver_correct ctx (get_smap_sst sst) (get_memory_sst sst) soffset smv ops key sm' H_valid_sst_smap H_valid_sst_smemory H_valid_soffset E_smv E_add_to_smap) as H_correct_mload.
 
     destruct (get_smap_sst sst) as [maxidx sb] eqn:E_smap_sst.
     simpl in H_correct_mload.
@@ -2585,9 +2574,9 @@ Lemma mstore8_snd:
 Proof.
   intros smemory_updater H_smemory_updater_snd.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_mstore8_s.
+  intros ctx sst sst' ops H_valid_sst H_mstore8_s.
   split.
-  - pose proof (mstore8_valid_sst ctx sst sst' ops smemory_updater H_is_sat H_smemory_updater_snd H_valid_sst H_mstore8_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (mstore8_valid_sst ctx sst sst' ops smemory_updater H_smemory_updater_snd H_valid_sst H_mstore8_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold mstore8_s in H_mstore8_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
@@ -2678,7 +2667,7 @@ Proof.
     destruct H_smemory_updater_snd as [H_smemory_updater_valid H_smemory_updater_correct].
 
     unfold smemory_updater_correct_res in H_smemory_updater_correct.
-    pose proof (H_smemory_updater_correct ctx (get_smap_sst sst) (get_memory_sst sst) smem' u ops H_is_sat H_valid_sst_smap H_valid_sst_smemory H_valid_u E_updater model mem strg exts H_is_model) as H_correct_smem'.
+    pose proof (H_smemory_updater_correct ctx (get_smap_sst sst) (get_memory_sst sst) smem' u ops H_valid_sst_smap H_valid_sst_smemory H_valid_u E_updater model mem strg exts H_is_model) as H_correct_smem'.
 
     destruct  H_correct_smem' as [mem1 [mem2 [H_eval_u_mem_sst [H_eval_smem' H_eq_mem1_mem2]]]].
 
@@ -2744,9 +2733,9 @@ Lemma mstore_snd:
 Proof.
   intros smemory_updater H_smemory_updater_snd.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_mstore_s.
+  intros ctx sst sst' ops H_valid_sst H_mstore_s.
   split.
-  - pose proof (mstore_valid_sst ctx sst sst' ops smemory_updater H_is_sat H_smemory_updater_snd H_valid_sst H_mstore_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (mstore_valid_sst ctx sst sst' ops smemory_updater H_smemory_updater_snd H_valid_sst H_mstore_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold mstore_s in H_mstore_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
@@ -2837,7 +2826,7 @@ Proof.
     destruct H_smemory_updater_snd as [H_smemory_updater_valid H_smemory_updater_correct].
 
     unfold smemory_updater_correct_res in H_smemory_updater_correct.
-    pose proof (H_smemory_updater_correct ctx (get_smap_sst sst) (get_memory_sst sst) smem' u ops H_is_sat H_valid_sst_smap H_valid_sst_smemory H_valid_u E_updater model mem strg exts H_is_model) as H_correct_smem'.
+    pose proof (H_smemory_updater_correct ctx (get_smap_sst sst) (get_memory_sst sst) smem' u ops H_valid_sst_smap H_valid_sst_smemory H_valid_u E_updater model mem strg exts H_is_model) as H_correct_smem'.
 
     destruct  H_correct_smem' as [mem1 [mem2 [H_eval_u_mem_sst [H_eval_smem' H_eq_mem1_mem2]]]].
 
@@ -2896,9 +2885,9 @@ Lemma sha3_snd:
   snd_state_transformer sha3_c sha3_s.
 Proof.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_sha3_s.
+  intros ctx sst sst' ops H_valid_sst H_sha3_s.
   split.
-  - pose proof (sha3_valid_sst ctx sst sst' ops H_is_sat H_valid_sst H_sha3_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (sha3_valid_sst ctx sst sst' ops H_valid_sst H_sha3_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold sha3_s in H_sha3_s.
     destruct (get_stack_sst sst) as [|soffset sstk] eqn:E_sstk_sst; try discriminate.
@@ -3047,9 +3036,9 @@ Lemma exec_stack_op_intsr_snd:
 Proof.
   intro label.
   unfold snd_state_transformer.
-  intros ctx sst sst' ops H_is_sat H_valid_sst H_execop_s. 
+  intros ctx sst sst' ops H_valid_sst H_execop_s. 
   split.
-  - pose proof (exec_stack_op_intsr_valid_sst ctx sst sst' label ops H_is_sat H_valid_sst H_execop_s) as H_valid_sst'. apply H_valid_sst'.
+  - pose proof (exec_stack_op_intsr_valid_sst ctx sst sst' label ops H_valid_sst H_execop_s) as H_valid_sst'. apply H_valid_sst'.
   - intros mem strg exts st model H_is_model H_st_inst_sst.
     unfold exec_stack_op_intsr_s in H_execop_s.
     destruct (ops label) eqn:E_label.
@@ -3295,7 +3284,7 @@ Proof.
   induction p as [| i p' IHp']. (* induction of the length of the block p *)
 
   - simpl. (* execute the empty block -- in several places *)
-    intros ctx sst sst' ops H_is_sat H_valid_sst H_sexec_nil.
+    intros ctx sst sst' ops H_valid_sst H_sexec_nil.
     injection H_sexec_nil as H_sexec_nil.
     rewrite <- H_sexec_nil.
     split; try assumption.
@@ -3304,7 +3293,7 @@ Proof.
     split; try reflexivity. (* split the conjuction into two goals *)
     apply H_st_inst_sst. (* the goal is the assumption H_st_inst_sst *)
 
-  - intros ctx sst sst' ops H_is_sat H_valid_sst H_sexec_ip'.
+  - intros ctx sst sst' ops H_valid_sst H_sexec_ip'.
 
     (* unfold the symbolic execution of i::p' and fold the recursive call *)
     unfold evm_exec_block_s in H_sexec_ip'. 
@@ -3314,11 +3303,11 @@ Proof.
     destruct (evm_exec_instr_s smemory_updater sstorage_updater mload_solver sload_solver i ctx sst ops) as [sst''|] eqn:E_evm_exec_instr_s; try discriminate.
 
     (* derive relation between execution and symbolic execution of i *)
-    apply evm_exec_instr_snd with (i:=i) in E_evm_exec_instr_s as [H_eval_stt'' E_evm_exec_instr_s_0]; try (apply H_valid_sst || apply H_smemory_updater_snd || apply H_sstorage_updater_snd || apply H_mload_solver_snd || apply H_sload_solver_snd || apply H_is_sat).
+    apply evm_exec_instr_snd with (i:=i) in E_evm_exec_instr_s as [H_eval_stt'' E_evm_exec_instr_s_0]; try (apply H_valid_sst || apply H_smemory_updater_snd || apply H_sstorage_updater_snd || apply H_mload_solver_snd || apply H_sload_solver_snd).
     
     split.
     
-    + pose proof (IHp' ctx sst'' sst' ops H_is_sat H_eval_stt'' H_sexec_ip') as [IHp'_aux _]. apply IHp'_aux.
+    + pose proof (IHp' ctx sst'' sst' ops H_eval_stt'' H_sexec_ip') as [IHp'_aux _]. apply IHp'_aux.
     + intros mem strg exts st model H_is_model H_st_inst_sst.
       pose proof (E_evm_exec_instr_s_0 mem strg exts st model H_is_model H_st_inst_sst) as E_evm_exec_instr_c.
 
@@ -3329,7 +3318,7 @@ Proof.
       (* apply the induction hypothesis for symbolically exexuting p'
       from sst'' (the result of executing i) to st'. Use H_sexec_ip'
       for the premise that symbolic execution of p' succeeds *)
-      pose proof (IHp' ctx sst'' sst' ops H_is_sat H_eval_stt'' H_sexec_ip') as IHp'_sst''_sst'.
+      pose proof (IHp' ctx sst'' sst' ops H_eval_stt'' H_sexec_ip') as IHp'_sst''_sst'.
       destruct IHp'_sst''_sst' as [_ IHp'_sst''_sst'].
 
       (* Now we derive the concrete execution of p' and solut the resulting conjunction *)
@@ -3352,8 +3341,7 @@ Qed.
 
 
 Theorem symbolic_exec_snd:
-  forall (smemory_updater: smemory_updater_type) (sstorage_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (p : block) (ctx: constraints) (sst sst': sstate) (ops : stack_op_instr_map),
-    is_sat ctx ->
+  forall (smemory_updater: smemory_updater_type) (sstorage_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (p : block) (ctx: ctx_t) (sst sst': sstate) (ops : stack_op_instr_map),
     valid_sstate sst ops ->
     smemory_updater_snd smemory_updater ->
     sstorage_updater_snd sstorage_updater ->
@@ -3362,17 +3350,17 @@ Theorem symbolic_exec_snd:
     evm_exec_block_s smemory_updater sstorage_updater mload_solver sload_solver p ctx sst ops = Some sst' ->
     valid_sstate sst' ops /\                                       
       forall (mem: memory) (strg: storage) (exts: externals) (st : state) (model: assignment),
-        is_model ctx model = true ->
+        is_model (ctx_cs ctx) model = true ->
         st_is_instance_of_sst mem strg exts st model sst ops ->
         exists (st': state),
           evm_exec_block_c p st ops = Some st' /\
             st_is_instance_of_sst mem strg exts  st' model sst' ops. (* st' is an instance of sst wrt the initial state st *)
 Proof.
   intros smemory_updater sstorage_updater mload_solver sload_solver p ctx sst sst' ops.
-  intros H_is_sat H_valid_sst H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd H_evm_sym_exec.  
+  intros H_valid_sst H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd H_evm_sym_exec.  
   pose proof (evm_exec_block_snd smemory_updater sstorage_updater mload_solver sload_solver p H_smemory_updater_snd H_sstorage_updater_snd H_mload_solver_snd H_sload_solver_snd) as H_exec_blk_snd.
   unfold snd_state_transformer in H_exec_blk_snd.
-  pose proof (H_exec_blk_snd ctx sst sst' ops H_is_sat H_valid_sst H_evm_sym_exec) as H_exec_blk_snd'.
+  pose proof (H_exec_blk_snd ctx sst sst' ops H_valid_sst H_evm_sym_exec) as H_exec_blk_snd'.
   destruct H_exec_blk_snd' as [H_exec_blk_snd'_0 H_exec_blk_snd'_1].
   split.
   + apply H_exec_blk_snd'_0.

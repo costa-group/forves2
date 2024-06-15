@@ -43,19 +43,22 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module SymbolicStateCmpImpl.
 
-Definition compare_sstack (sstack_val_cmp: sstack_val_cmp_t) (ctx: constraints)  (sstk1 sstk2: sstack) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+Definition compare_sstack (sstack_val_cmp: sstack_val_cmp_t) (ctx: ctx_t)  (sstk1 sstk2: sstack) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   fold_right_two_lists (fun e1 e2 => sstack_val_cmp ctx e1 e2 maxidx1 sb1 maxidx2 sb2 ops) sstk1 sstk2.
 
-Definition compare_smemory (smemory_cmp: smemory_cmp_t) (ctx: constraints)  (smem1 smem2: smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+Definition compare_smemory (smemory_cmp: smemory_cmp_t) (ctx: ctx_t)  (smem1 smem2: smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
   smemory_cmp ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops.
 
-Definition compare_sstorage (sstorage_cmp: sstorage_cmp_t) (ctx: constraints) (sstrg1 sstrg2: sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+Definition compare_sstorage (sstorage_cmp: sstorage_cmp_t) (ctx: ctx_t) (sstrg1 sstrg2: sstorage) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
       sstorage_cmp ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops.
 
 
-Definition sstate_cmp (sstack_val_cmp: sstack_val_cmp_t) (smemory_cmp: smemory_cmp_t) (sstorage_cmp: sstorage_cmp_t) (ctx: constraints) (sst1 sst2: sstate) (ops: stack_op_instr_map) : bool :=
+Definition sstate_cmp (sstack_val_cmp: sstack_val_cmp_t) (smemory_cmp: smemory_cmp_t) (sstorage_cmp: sstorage_cmp_t) (ctx: ctx_t) (sst1 sst2: sstate) (ops: stack_op_instr_map) : bool :=
   let sstk1 := get_stack_sst sst1 in
   let smem1 := get_memory_sst sst1 in 
   let sstrg1 := get_storage_sst sst1 in

@@ -230,6 +230,9 @@ Import Misc.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 From Coq Require Import Lists.List. Import ListNotations.
 
 Module BlockEquivChecker.
@@ -671,21 +674,22 @@ Definition evm_eq_block_chkr'
   (smemory_cmp_ext: smemory_cmp_ext_t)
   (sstorage_cmp_ext: sstorage_cmp_ext_t)
   (sha3_cmp_ext: sha3_cmp_ext_t)
+  (imp_chkr: imp_checker)
   (opt_pipeline: opt_pipeline)
   (opt_step_rep: nat)
   (opt_pipeline_rep: nat)
   (***)
-  (ctx : constraints)
+  (cs : constraints)
   (init_sst : sstate) 
   (opt_p p: block)
   : bool :=
-  if (chk_valid_sstate init_sst evm_stack_opm) && ((sat_checker_fun chk_is_sat) ctx) then
+  if (chk_valid_sstate init_sst evm_stack_opm) then
     let sstack_value_cmp_1 := sstack_value_cmp_ext smemory_cmp_ext sstorage_cmp_ext sha3_cmp_ext in
     let memory_updater' := memory_updater sstack_value_cmp_1 in
     let storage_updater' := storage_updater sstack_value_cmp_1 in
     let mload_solver' := mload_solver sstack_value_cmp_1 in
     let sload_solver' := sload_solver sstack_value_cmp_1 in
-    
+    let ctx := mk_ctx imp_chkr cs in
     match evm_exec_block_s memory_updater' storage_updater' mload_solver' sload_solver' opt_p ctx init_sst evm_stack_opm with
     | None => false
     | Some sst_opt => 
@@ -694,9 +698,7 @@ Definition evm_eq_block_chkr'
         | Some sst_p => (* Builds optimization *)
             let maxid := S (max (get_maxidx_smap (get_smap_sst sst_opt)) (get_maxidx_smap (get_smap_sst sst_p))) in
             let sstack_value_cmp := sstack_value_cmp_1 maxid in
-            let opt := apply_opt_n_times_pipeline_k opt_pipeline 
-                         sstack_value_cmp opt_step_rep 
-                         opt_pipeline_rep in
+            let opt := apply_opt_n_times_pipeline_k opt_pipeline sstack_value_cmp opt_step_rep opt_pipeline_rep in
             (* opt is sound if sstack_value_cmp is "safe_sstack_val_cmp" *)
             
             let (sst_opt', _) := opt ctx sst_opt in 
@@ -718,6 +720,7 @@ Definition evm_eq_block_chkr_lazy
   (memory_cmp_tag: available_memory_cmp)
   (storage_cmp_tag: available_storage_cmp)
   (sha3_cmp_tag: available_sha3_cmp)
+  (imp_chkr_tag: available_imp_chkr)
   
   (*(opt: optim)*)
   (optimization_steps: list_opt_steps)
@@ -742,8 +745,9 @@ Definition evm_eq_block_chkr_lazy
                                | SHA3Cmp sha3_cmp _ => 
                                    match get_pipeline optimization_steps with
                                    | opt_pipeline =>
-                                       fun (ctx : constraints) (init_sst : sstate) (opt_p p: block) =>
-                                         evm_eq_block_chkr' memory_updater storage_updater mload_solver sload_solver sstack_val_cmp memory_cmp storage_cmp sha3_cmp opt_pipeline opt_step_rep opt_pipeline_rep ctx init_sst opt_p p
+                                       fun (cs : constraints) (init_sst : sstate) (opt_p p: block) =>
+                                         let imp_chkr := get_impl_chkr imp_chkr_tag cs in
+                                         evm_eq_block_chkr' memory_updater storage_updater mload_solver sload_solver sstack_val_cmp memory_cmp storage_cmp sha3_cmp imp_chkr opt_pipeline opt_step_rep opt_pipeline_rep cs init_sst opt_p p
                                    end
                              end
                          end
@@ -765,7 +769,8 @@ Definition evm_eq_block_chkr
   (memory_cmp_tag: available_memory_cmp)
   (storage_cmp_tag: available_storage_cmp)
   (sha3_cmp_tag: available_sha3_cmp)
-  
+  (imp_chkr_tag: available_imp_chkr)
+
   (opt_pipeline: list_opt_steps)
   (opt_step_rep: nat)
   (opt_pipeline_rep: nat)
@@ -773,7 +778,7 @@ Definition evm_eq_block_chkr
   (ctx : constraints)
   (init_sst : sstate) 
   (opt_p p: block) :=
-  let chkr := evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag opt_pipeline opt_step_rep opt_pipeline_rep in
+  let chkr := evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag opt_pipeline opt_step_rep opt_pipeline_rep in
   chkr ctx init_sst opt_p p.
 
 
@@ -795,9 +800,9 @@ Definition gen_empty_sstate_from_stk (sstk: list sstack_val) : sstate :=
 (* Soundness *)
 
 
-Definition sem_eq_blocks (p1 p2: block) (ctx: constraints) (sst: sstate) : Prop :=
+Definition sem_eq_blocks (p1 p2: block) (cs: constraints) (sst: sstate) : Prop :=
   forall (mem: memory) (strg: storage) (exts: externals) (in_st: state) (model: assignment),
-    is_model ctx model = true ->
+    is_model cs model = true ->
     st_is_instance_of_sst mem strg exts in_st model sst evm_stack_opm ->
     exists (out_st1 out_st2 : state),
       evm_exec_block_c p1 in_st evm_stack_opm = Some out_st1 /\
@@ -805,9 +810,124 @@ Definition sem_eq_blocks (p1 p2: block) (ctx: constraints) (sst: sstate) : Prop 
         eq_execution_states out_st1 out_st2.
 
 Definition eq_block_chkr_snd (chkr : checker_type) : Prop :=
-forall (p1 p2: block) (ctx: constraints) (sst: sstate),
-  chkr ctx sst p1 p2 = true
-  -> sem_eq_blocks p1 p2 ctx sst.
+forall (p1 p2: block) (cs: constraints) (sst: sstate),
+  chkr cs sst p1 p2 = true
+  -> sem_eq_blocks p1 p2 cs sst.
+
+
+(* Record to encapsulate all comparators, solvers, updaters, etc. -- no used yet *)
+
+Record cmps_t : Type := 
+  {
+    (* stack value comparator -- recieves recursion depth and comparators for mem/strg/sha3 *)
+    sstack_val_cmp_ext_2 : sstack_val_cmp_ext_2_t;
+    H_sstack_val_cmp_ext_2_snd: safe_sstack_value_cmp_wrt_others sstack_val_cmp_ext_2;
+    H_sstack_val_cmp_ext_2_d0_snd: sstack_val_cmp_fail_for_d_eq_0 sstack_val_cmp_ext_2;
+
+    (* stack value comparator -- recieves recursion depth *)
+    sstack_val_cmp_ext_1 : sstack_val_cmp_ext_1_t;
+    H_sstack_val_cmp_ext_1_snd: safe_sstack_val_cmp_ext_1 sstack_val_cmp_ext_1;
+   
+    (* memory comparator -- recieves sstack_val_cmp_ext_1_t *)
+    smemory_cmp_ext : smemory_cmp_ext_t;
+    H_smemory_cmp_ext_snd: safe_smemory_cmp_ext_wrt_sstack_value_cmp smemory_cmp_ext;
+
+    (* memory comparator *)
+    smemory_cmp : smemory_cmp_t;
+    H_smemory_cmp_snd: safe_smemory_cmp smemory_cmp;
+
+    (* storage comparator -- recieves sstack_val_cmp_ext_1_t *)
+    sstorage_cmp_ext : sstorage_cmp_ext_t;
+    H_sstorage_cmp_ext_snd: safe_sstorage_cmp_ext_wrt_sstack_value_cmp sstorage_cmp_ext;
+
+    (* storage comparator *)
+    sstorage_cmp : sstorage_cmp_t;
+    H_sstorage_cmp_snd: safe_sstorage_cmp sstorage_cmp;
+
+    (* sha3 comparator -- recieves sstack_val_cmp_ext_1_t *)
+    sha3_cmp_ext : sha3_cmp_ext_t;
+    H_sha3_cmp_ext_snd: safe_sha3_cmp_ext_wrt_sstack_value_cmp sha3_cmp_ext;
+
+    (* sha3 comparator *)
+    sha3_cmp : sha3_cmp_t;
+    H_sha3_cmp_snd: safe_sha3_cmp sha3_cmp;
+
+  }.
+
+
+Program Definition mk_cmps
+  (sstack_value_cmp_tag: available_sstack_val_cmp)
+  (memory_cmp_tag: available_memory_cmp)
+  (storage_cmp_tag: available_storage_cmp)
+  (sha3_cmp_tag: available_sha3_cmp)
+  : cmps_t := {|
+                (* stack value comparator -- recieves recursion depth and comparators for mem/strg/sha3 *)
+                sstack_val_cmp_ext_2 :=
+                  match (get_sstack_val_cmp sstack_value_cmp_tag) with
+                  | SStackValCmp f_stk H_f_stk_snd H_f_stl_d0_snd =>
+                      f_stk
+                  end;
+                
+                (* stack value comparator -- recieves recursion depth *)
+                sstack_val_cmp_ext_1 :=
+                  match (get_sstack_val_cmp sstack_value_cmp_tag) with
+                  | SStackValCmp f_stk H_f_stk_snd H_f_stl_d0_snd =>
+                      match (get_memory_cmp memory_cmp_tag) with
+                      | SMemCmp f_mem H_f_mem_snd_cmp_snd =>
+                          match (get_storage_cmp storage_cmp_tag) with
+                          | SStrgCmp f_strg H_f_strg_snd_cmp_snd =>
+                              match (get_sha3_cmp sha3_cmp_tag) with
+                              | SHA3Cmp f_sha3 H_f_sha3_snd_cmp_snd =>
+                                  f_stk f_mem f_strg f_sha3
+                              end
+                          end
+                      end
+                  end
+              |}.
+Next Obligation.
+  destruct (get_sstack_val_cmp sstack_value_cmp_tag) as [f_stk H_f_stk_snd H_f_stl_d0_snd].
+  apply H_f_stk_snd.
+Qed.
+Next Obligation.
+  destruct (get_sstack_val_cmp sstack_value_cmp_tag) as [f_stk H_f_stk_snd H_f_stl_d0_snd].
+  apply H_f_stl_d0_snd.
+Qed.
+Next Obligation.
+  destruct (get_sstack_val_cmp sstack_value_cmp_tag) as [f_stk H_f_stk_snd H_f_stl_d0_snd].
+  destruct (get_memory_cmp memory_cmp_tag) as [f_mem H_f_mem_snd_cmp_snd].
+  destruct (get_storage_cmp storage_cmp_tag) as  [f_strg H_f_strg_snd_cmp_snd].
+  destruct (get_sha3_cmp sha3_cmp_tag) as [f_sha3 H_f_sha3_snd_cmp_snd].
+
+  pose proof (safe_all_cmp f_mem f_strg f_sha3 f_stk H_f_stl_d0_snd H_f_mem_snd_cmp_snd H_f_strg_snd_cmp_snd H_f_sha3_snd_cmp_snd H_f_stk_snd).
+  unfold safe_sstack_val_cmp_ext_1.
+  unfold safe_sstack_val_cmp_ext_1_d.
+  intros.
+  apply H.
+  Qed.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
+Next Obligation.
+Admitted.
 
 
 End BlockEquivChecker.

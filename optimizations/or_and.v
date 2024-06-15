@@ -55,6 +55,9 @@ Import Optimizations_Common.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Require Import List.
 Import ListNotations.
 
@@ -73,7 +76,7 @@ Module Opt_or_and.
  
 Definition is_and (x: sstack_val) (sv: sstack_val) (fcmp: sstack_val_cmp_t) 
   (maxid: nat) (sb: sbindings) (ops: stack_op_instr_map) 
-  (ctx: constraints):=
+  (ctx: ctx_t):=
 match follow_in_smap sv maxid sb with 
 | Some (FollowSmapVal (SymOp AND [arg1; arg2]) idx' sb') => 
       if fcmp ctx x arg1 maxid sb idx' sb'  ops then 
@@ -91,7 +94,7 @@ fun (val: smap_value) =>
 fun (fcmp: sstack_val_cmp_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
-fun (ctx: constraints) =>
+fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymOp OR [arg1;arg2] =>
@@ -157,7 +160,7 @@ opt_smapv_valid_snd optimize_or_and_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
 intros ctx n fcmp sb val val' flag.
-intros _ _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
+intros _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
 unfold optimize_or_and_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -294,7 +297,7 @@ opt_sbinding_snd optimize_or_and_sbinding.
 Proof.
 unfold opt_sbinding_snd.
 intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid Hissat Hoptm_sbinding.
+  Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_or_and_sbinding)
@@ -378,7 +381,7 @@ split.
 
       (* arg1v and arg21v are the same *)
       pose proof (Hsafe_sstack_val_cmp ctx arg1 arg21 idx sb idx' sb'  
-        evm_stack_opm Hissat Hvalid_arg1 Hvalid_arg21 Hvalid_sb Hvalid_sb'
+        evm_stack_opm Hvalid_arg1 Hvalid_arg21 Hvalid_sb Hvalid_sb'
         eq_fcmp_arg1_arg21 model mem strg ext Hismodel) as [vv [eval_arg1 
         eval_arg21]].
       unfold eval_sstack_val in eval_arg1.
@@ -453,7 +456,7 @@ split.
 
       (* arg1v and arg22v are the same *)
       pose proof (Hsafe_sstack_val_cmp ctx arg1 arg22 idx sb idx' sb'  
-        evm_stack_opm Hissat Hvalid_arg1 Hvalid_arg22 Hvalid_sb Hvalid_sb'
+        evm_stack_opm Hvalid_arg1 Hvalid_arg22 Hvalid_sb Hvalid_sb'
         eq_fcmp_arg1_arg22 model mem strg ext Hismodel) as [vv [eval_arg1 
         eval_arg22]].
       unfold eval_sstack_val in eval_arg1.
@@ -546,7 +549,7 @@ split.
 
       (* arg2v and arg11v are the same *)
       pose proof (Hsafe_sstack_val_cmp ctx arg2 arg11 idx sb idx' sb'  
-        evm_stack_opm Hissat Hvalid_arg2 Hvalid_arg11 Hvalid_sb Hvalid_sb'
+        evm_stack_opm Hvalid_arg2 Hvalid_arg11 Hvalid_sb Hvalid_sb'
         eq_fcmp_arg2_arg11 model mem strg ext Hismodel) as [vv [eval_arg2 
         eval_arg11]].
       unfold eval_sstack_val in eval_arg2.
@@ -622,7 +625,7 @@ split.
 
       (* arg2v and arg12v are the same *)
       pose proof (Hsafe_sstack_val_cmp ctx arg2 arg12 idx sb idx' sb'  
-        evm_stack_opm Hissat Hvalid_arg2 Hvalid_arg12 Hvalid_sb Hvalid_sb'
+        evm_stack_opm Hvalid_arg2 Hvalid_arg12 Hvalid_sb Hvalid_sb'
         eq_fcmp_arg2_arg12 model mem strg ext Hismodel) as [vv [eval_arg2 
         eval_arg12]].
       unfold eval_sstack_val in eval_arg2.

@@ -40,21 +40,23 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module SymbolicStateCmp.
 
 
-Definition symbolic_state_cmp := constraints -> sstate -> sstate -> stack_op_instr_map -> bool.
+Definition symbolic_state_cmp := ctx_t -> sstate -> sstate -> stack_op_instr_map -> bool.
 
 
 (* Enrique: version with eval_sstate *)
 Definition symbolic_state_cmp_snd (f_cmp : symbolic_state_cmp) :=
   forall ctx sst1 sst2 ops,
-    is_sat ctx ->
     valid_sstate sst1 ops ->
     valid_sstate sst2 ops ->
     f_cmp ctx sst1 sst2 ops = true ->
     forall mem strg exts model,
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       exists st',
         eval_sstate sst1 model mem strg exts ops = Some st' /\
           eval_sstate sst2 model mem strg exts ops = Some st'.
@@ -64,7 +66,7 @@ Definition symbolic_state_cmp_snd (f_cmp : symbolic_state_cmp) :=
 
 (* Trivially sound comparator that always returns false *)
 Definition dummy_symbolic_state_cmp : symbolic_state_cmp :=
-  fun (ctx: constraints) =>
+  fun (ctx: ctx_t) =>
   fun (sst1: sstate) =>
   fun (sst2: sstate) =>
   fun (ops: stack_op_instr_map) => 
@@ -81,20 +83,20 @@ Qed.
 
 
 (* ctx sv1 sv2 maxidx1 sb1 maxid2 sb2 ops -> bool *)
-Definition sstack_val_cmp_t := constraints -> sstack_val -> sstack_val -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
+Definition sstack_val_cmp_t := ctx_t -> sstack_val -> sstack_val -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
 
 (* ctx smem1 smem2 maxidx1 sb1 maxid2 sb2 ops -> bool *)
-Definition smemory_cmp_t := constraints -> smemory -> smemory -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
+Definition smemory_cmp_t := ctx_t -> smemory -> smemory -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
 (* sstack_val_cmp ctx smem1 smem2 maxidx1 sb1 maxid2 sb2 ops -> bool *)
 Definition smemory_cmp_ext_t := sstack_val_cmp_t -> smemory_cmp_t.
 
 (* ctx sstrg1 sstrg2 maxidx1 sb1 maxid2 sb2 ops -> bool *)
-Definition sstorage_cmp_t := constraints -> sstorage -> sstorage -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
+Definition sstorage_cmp_t := ctx_t -> sstorage -> sstorage -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
 (* sstack_val_cmp ctx sstrg1 sstrg2 maxidx1 sb1 maxid2 sb2 ops -> bool *)
 Definition sstorage_cmp_ext_t := sstack_val_cmp_t -> sstorage_cmp_t.
 
 (* ctx soffset1 ssize1 smem1 soffset2 ssize2 smem2 maxidx1 sb1 maxid2 sb2 ops -> bool *)
-Definition sha3_cmp_t := constraints -> sstack_val -> sstack_val -> smemory -> sstack_val -> sstack_val -> smemory -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
+Definition sha3_cmp_t := ctx_t -> sstack_val -> sstack_val -> smemory -> sstack_val -> sstack_val -> smemory -> nat -> sbindings -> nat -> sbindings -> stack_op_instr_map -> bool.
 (* sstack_val_cmp ctx soffset1 ssize1 smem1 soffset2 ssize2 smem2 maxidx1 sb1 maxid2 sb2 instk_height ops -> bool *)
 Definition sha3_cmp_ext_t  := sstack_val_cmp_t -> sha3_cmp_t.
 
@@ -114,35 +116,32 @@ Definition sstack_val_cmp_fail_for_d_eq_0 (sstack_value_cmp: sstack_val_cmp_ext_
 
 Definition safe_smemory_cmp (smemory_cmp: smemory_cmp_t) :=
   forall ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops,
-    is_sat ctx ->
     valid_bindings maxidx1 sb1 ops ->
     valid_bindings maxidx2 sb2 ops ->
     valid_smemory  maxidx1 smem1 ->
     valid_smemory  maxidx2 smem2 ->
     smemory_cmp ctx smem1 smem2 maxidx1 sb1 maxidx2 sb2 ops = true ->
     forall model mem strg exts,
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       exists mem',
            eval_smemory smem1 maxidx1 sb1 model mem strg exts ops = Some mem' /\
              eval_smemory smem2 maxidx2 sb2 model mem strg exts ops = Some mem'.
 
 Definition safe_sstorage_cmp (sstorage_cmp: sstorage_cmp_t) :=
   forall ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops,
-    is_sat ctx ->
     valid_bindings maxidx1 sb1 ops ->
     valid_bindings maxidx2 sb2 ops ->
     valid_sstorage maxidx1 sstrg1 ->
     valid_sstorage maxidx2 sstrg2 ->
     sstorage_cmp ctx sstrg1 sstrg2 maxidx1 sb1 maxidx2 sb2 ops = true ->
     forall model mem strg exts,
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       exists strg',
         eval_sstorage sstrg1 maxidx1 sb1 model mem strg exts ops = Some strg' /\
           eval_sstorage sstrg2 maxidx2 sb2 model mem strg exts ops = Some strg'.
 
 Definition safe_sha3_cmp (sha3_cmp: sha3_cmp_t) :=
   forall ctx soffset1 ssize1 smem1 soffset2 ssize2 smem2 maxidx1 sb1 maxidx2 sb2 ops,
-    is_sat ctx ->
     valid_sstack_value maxidx1 soffset1 ->
     valid_sstack_value maxidx1 ssize1 ->
     valid_sstack_value maxidx2 soffset2 ->
@@ -153,7 +152,7 @@ Definition safe_sha3_cmp (sha3_cmp: sha3_cmp_t) :=
     valid_smemory maxidx2 smem2 ->
     sha3_cmp ctx soffset1 ssize1 smem1 soffset2 ssize2 smem2 maxidx1 sb1 maxidx2 sb2 ops = true ->
     forall model mem strg exts,
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       exists offset1 size1 mem1 offset2 size2 mem2 v,
       eval_smemory smem1 maxidx1 sb1 model mem strg exts ops = Some mem1 /\
       eval_smemory smem2 maxidx2 sb2 model mem strg exts ops = Some mem2 /\
@@ -166,14 +165,13 @@ Definition safe_sha3_cmp (sha3_cmp: sha3_cmp_t) :=
 
 Definition safe_sstack_val_cmp (f_cmp : sstack_val_cmp_t) :=
   forall ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops,
-    is_sat ctx ->
     valid_sstack_value maxidx1 sv1 ->
     valid_sstack_value maxidx2 sv2 ->
     valid_bindings maxidx1 sb1 ops ->
     valid_bindings maxidx2 sb2 ops ->
     f_cmp ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops = true ->
     forall model mem strg exts,
-      is_model ctx model = true ->
+      is_model (ctx_cs ctx) model = true ->
       exists v,
         eval_sstack_val sv1 model mem strg exts maxidx1 sb1 ops = Some v /\
           eval_sstack_val sv2 model mem strg exts maxidx2 sb2 ops = Some v.
@@ -294,8 +292,8 @@ Proof.
       destruct d'; try discriminate.
       unfold sstack_val_cmp_fail_for_d_eq_0 in H_d0.
       pose proof (H_d0 smemory_cmp sstorage_cmp sha3_cmp ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops).
-      rewrite H6 in H4.
-      discriminate H4.
+      rewrite H5 in H3.
+      discriminate H3.
     + split.
       * apply H_s_strg.
         unfold safe_sstack_val_cmp_ext_1_d.
@@ -306,7 +304,7 @@ Proof.
         destruct d'; try discriminate.
         unfold sstack_val_cmp_fail_for_d_eq_0 in H_d0.
         pose proof (H_d0 smemory_cmp sstorage_cmp sha3_cmp ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops).
-        rewrite H6 in H4.
+        rewrite H5 in H3.
         discriminate.
       * apply H_s_sha3.
         unfold safe_sstack_val_cmp_ext_1_d.
@@ -317,7 +315,7 @@ Proof.
         destruct d'; try discriminate.
         unfold sstack_val_cmp_fail_for_d_eq_0 in H_d0.
         pose proof (H_d0 smemory_cmp sstorage_cmp sha3_cmp ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops).
-        rewrite H6 in H4.
+        rewrite H5 in H3.
         discriminate.
   - destruct IHd' as [IHd'_mem [IHd'_strg IHd'_sha3]].
     pose proof (H_s_ssval d' smemory_cmp sstorage_cmp sha3_cmp IHd'_mem IHd'_strg IHd'_sha3) as H_s_ssval_Sd'.
@@ -353,7 +351,7 @@ Proof.
     intros d' H_d'_le_0.
     apply Nat.leb_le in H_d'_le_0 as H_d'_le_0_leb.
     unfold safe_sstack_val_cmp.
-    intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_is_sat H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_sstack_val_cmp_fail_for_d_eq_0.
+    intros ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops H_valid_sv1 H_valid_sv2 H_valid_sb1 H_valid_sb2 H_sstack_val_cmp_fail_for_d_eq_0.
     destruct d'; try discriminate.
     unfold sstack_val_cmp_fail_for_d_eq_0 in H_d0.
     pose proof (H_d0 smemory_cmp sstorage_cmp sha3_cmp ctx sv1 sv2 maxidx1 sb1 maxidx2 sb2 ops) as H_d0.

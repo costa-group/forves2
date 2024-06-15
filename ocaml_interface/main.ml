@@ -35,6 +35,7 @@ let sstack_value_cmp = ref "basic"
 let memory_cmp = ref "trivial"
 let storage_cmp = ref "trivial"
 let sha3_cmp = ref "trivial"
+let imp_chkr = ref "oct"
 let opt_step_rep = ref "1"
 let opt_pipeline_rep = ref "1"
 let in_filename_rep= ref ""
@@ -52,6 +53,7 @@ let process_sstack_value_cmp s = sstack_value_cmp := s
 let process_memory_cmp s = memory_cmp := s
 let process_storage_cmp s = storage_cmp := s
 let process_sha3_cmp s = sha3_cmp := s
+let process_imp_chkr s = imp_chkr := s
 let process_opt_step_rep s = opt_step_rep := s
 let process_opt_pipeline_rep s = opt_pipeline_rep := s
 let process_in_filename s = in_filename_rep := s
@@ -79,6 +81,7 @@ let speclist =
     ("-mem_c", Arg.String process_memory_cmp, "memory comparator");
     ("-strg_c", Arg.String process_storage_cmp, "storage comparator");
     ("-sha3_c",  Arg.String process_sha3_cmp, "sha3 comparator");
+    ("-imp_chkr",  Arg.String process_imp_chkr, "implication checker");
     ("-opt_rep",  Arg.String process_opt_step_rep, "repetitions of each optimization");
     ("-pipeline_rep",  Arg.String process_opt_pipeline_rep, "optimization pipeline repetitions");
     ("-i", Arg.String process_in_filename, "Input file (standard input if not provided)");
@@ -89,7 +92,7 @@ let speclist =
 
 let main () =
 
-  let chkr_lazy = Checker.Parser.block_eq (charlist_of_string !memory_updater) (charlist_of_string !storage_updater) (charlist_of_string !mload_solver) (charlist_of_string !sload_solver) (charlist_of_string !sstack_value_cmp) (charlist_of_string !memory_cmp) (charlist_of_string !storage_cmp) (charlist_of_string !sha3_cmp) (charlist_of_string !opt_step_rep) (charlist_of_string !opt_pipeline_rep) !opts_to_apply in
+  let chkr_lazy = Checker.Parser.block_eq (charlist_of_string !memory_updater) (charlist_of_string !storage_updater) (charlist_of_string !mload_solver) (charlist_of_string !sload_solver) (charlist_of_string !sstack_value_cmp) (charlist_of_string !memory_cmp) (charlist_of_string !storage_cmp) (charlist_of_string !sha3_cmp) (charlist_of_string !imp_chkr) (charlist_of_string !opt_step_rep) (charlist_of_string !opt_pipeline_rep) !opts_to_apply in
   match chkr_lazy with 
   | None -> Printf.printf "Invalid configuration\n";
   | Some chkr ->

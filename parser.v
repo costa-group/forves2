@@ -24,6 +24,9 @@ Import Constants.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Require Import bbv.Word.
 
 
@@ -456,6 +459,13 @@ Definition parse_sha3_cmp (s: string) :=
   | _ => None
   end.
 
+Definition parse_imp_chkr (s: string) :=
+  match s with
+  | "trivial"%string => Some ImpChkr_Trivial
+  | "oct"%string => Some ImpChkr_Oct
+  | _ => None
+  end.
+
 
 Definition parse_num_or_invar (s : string) :=
   match (parseHexNumber s) with
@@ -497,7 +507,7 @@ Definition parse_init_state (init_state: string) : option (constraints * sstate)
             end
   end.
   
-Definition block_eq (memory_updater storage_updater mload_solver sload_solver sstack_value_cmp memory_cmp storage_cmp sha3_cmp opt_step_rep opt_pipeline_rep: string) (opts_to_apply : list string) :
+Definition block_eq (memory_updater storage_updater mload_solver sload_solver sstack_value_cmp memory_cmp storage_cmp sha3_cmp imp_chkr opt_step_rep opt_pipeline_rep: string) (opts_to_apply : list string) :
   option (string -> string -> string -> option bool) :=
   match (parse_memory_updater memory_updater) with
   | None => None
@@ -523,30 +533,34 @@ Definition block_eq (memory_updater storage_updater mload_solver sload_solver ss
                               match (parse_sha3_cmp sha3_cmp) with
                               | None => None
                               | Some sha3_cmp_tag =>
-                                  match (parseDecNumber opt_step_rep) with
+                                  match (parse_imp_chkr imp_chkr) with
                                   | None => None
-                                  | Some opt_step_rep_nat =>
-                                      match (parseDecNumber opt_pipeline_rep) with
+                                  | Some imp_chkr_tag =>
+                                      match (parseDecNumber opt_step_rep) with
                                       | None => None
-                                      | Some opt_pipeline_rep_nat =>
-                                          match (parse_opts_arg opts_to_apply) with
+                                      | Some opt_step_rep_nat =>
+                                          match (parseDecNumber opt_pipeline_rep) with
                                           | None => None
-                                          | Some optimization_steps =>
-                                              let chkr_lazy :=
-                                                evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag optimization_steps opt_step_rep_nat opt_pipeline_rep_nat in
-                                              Some (fun (p_opt p init_state : string) => 
-                                                      match (parse_block p_opt) with
-                                                      | None => None
-                                                      | Some b1 => 
-                                                          match (parse_block p) with
+                                          | Some opt_pipeline_rep_nat =>
+                                              match (parse_opts_arg opts_to_apply) with
+                                              | None => None
+                                              | Some optimization_steps =>
+                                                  let chkr_lazy :=
+                                                    evm_eq_block_chkr_lazy memory_updater_tag storage_updater_tag mload_solver_tag sload_solver_tag sstack_value_cmp_tag memory_cmp_tag storage_cmp_tag sha3_cmp_tag imp_chkr_tag optimization_steps opt_step_rep_nat opt_pipeline_rep_nat in
+                                                  Some (fun (p_opt p init_state : string) => 
+                                                          match (parse_block p_opt) with
                                                           | None => None
-                                                          | Some b2 =>
-                                                              match parse_init_state init_state with
+                                                          | Some b1 => 
+                                                              match (parse_block p) with
                                                               | None => None
-                                                              | Some (ctx,sst) => Some (chkr_lazy ctx sst b1 b2)
+                                                              | Some b2 =>
+                                                                  match parse_init_state init_state with
+                                                                  | None => None
+                                                                  | Some (cs,sst) => Some (chkr_lazy cs sst b1 b2)
+                                                                  end
                                                               end
-                                                          end
-                                                      end)
+                                                          end)
+                                              end
                                           end
                                       end
                                   end

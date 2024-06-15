@@ -43,18 +43,21 @@ Import EvalCommon.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Module MemoryCmpImpl.
 
 
   (* just handles the case of empty memory updates *)
-  Definition trivial_memory_cmp (sstack_val_cmp: sstack_val_cmp_t) (ctx: constraints) (smem1 smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Definition trivial_memory_cmp (sstack_val_cmp: sstack_val_cmp_t) (ctx: ctx_t) (smem1 smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
     match smem1,smem2 with
     | [], [] => true
     | _, _ => false
     end.
 
   (* identical memory updates *)
-  Fixpoint basic_memory_cmp (sstack_val_cmp: sstack_val_cmp_t) (ctx: constraints) (smem1 smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Fixpoint basic_memory_cmp (sstack_val_cmp: sstack_val_cmp_t) (ctx: ctx_t) (smem1 smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
     match smem1,smem2 with
     | [], [] => true
     | (U_MSTORE _ soffset1 svalue1)::sstrg1', (U_MSTORE _ soffset2 svalue2)::sstrg2' =>
@@ -78,7 +81,7 @@ Module MemoryCmpImpl.
     end.
 
   
-  Definition swap_memory_update (ctx: constraints) (u1 u2 : memory_update sstack_val) (maxid: nat) (sb: sbindings) : bool :=
+  Definition swap_memory_update (ctx: ctx_t) (u1 u2 : memory_update sstack_val) (maxid: nat) (sb: sbindings) : bool :=
     match u1, u2 with
     | U_MSTORE _ offset1 _, U_MSTORE _ offset2 _ =>
         match follow_in_smap offset1 maxid sb, follow_in_smap offset2 maxid sb with
@@ -106,7 +109,7 @@ Module MemoryCmpImpl.
         end
     end.
 
-  Fixpoint reorder_updates' (d : nat) (ctx: constraints) (smem :smemory) (maxidx: nat) (sb: sbindings) : bool * smemory :=
+  Fixpoint reorder_updates' (d : nat) (ctx: ctx_t) (smem :smemory) (maxidx: nat) (sb: sbindings) : bool * smemory :=
     match d with
     | O => (false,smem)
     | S d' =>
@@ -126,7 +129,7 @@ Module MemoryCmpImpl.
 
   (* n is basically the length of smem, we pass it as a parameter to
   avoid computing *)
-  Fixpoint reorder_memory_updates (d n: nat) (ctx: constraints) (smem :smemory) (maxidx: nat) (sb: sbindings) : smemory :=
+  Fixpoint reorder_memory_updates (d n: nat) (ctx: ctx_t) (smem :smemory) (maxidx: nat) (sb: sbindings) : smemory :=
     match d with
     | O => smem
     | S d' =>
@@ -140,7 +143,7 @@ Module MemoryCmpImpl.
     end.
 
 
-  Definition po_memory_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: constraints) (smem1 smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
+  Definition po_memory_cmp (sstack_val_cmp : sstack_val_cmp_t) (ctx: ctx_t) (smem1 smem2 :smemory) (maxidx1: nat) (sb1: sbindings) (maxidx2: nat) (sb2: sbindings) (ops: stack_op_instr_map) : bool :=
     let n1 := length smem1 in
     let n2 := length smem2 in
     if (n1 =? n2) then 

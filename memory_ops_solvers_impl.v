@@ -40,22 +40,25 @@ Import SymbolicStateCmp.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 
 Module MemoryOpsSolversImpl.
 
 (* Doesn't check the memory for the value, just returns an abstract load *)
-  Definition trivial_mload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (soffset: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
+  Definition trivial_mload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     SymMLOAD soffset smem.
 
 (* Doesn't check the memory, just appends the abstract store *)
-  Definition trivial_smemory_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (update: memory_update sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
+  Definition trivial_smemory_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (update: memory_update sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
       (update::smem).
 
 
   
   (* [soffset,soffset+size] does not overlap with [soffset',soffset'+size'] --- closed intervals *)
   (* We will mainly use it with size=31 or size=0 *)
-  Definition memory_slots_do_not_overlap  (ctx: constraints) (soffset soffset': sstack_val) (size size':N) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
+  Definition memory_slots_do_not_overlap  (ctx: ctx_t) (soffset soffset': sstack_val) (size size':N) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
     match follow_in_smap soffset maxidx sb, follow_in_smap soffset' maxidx sb with
     | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) => 
         let addr := (wordToN v1) in
@@ -65,7 +68,7 @@ Module MemoryOpsSolversImpl.
     end.
   
  
-  Fixpoint basic_mload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (soffset: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
+  Fixpoint basic_mload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     match smem with
     | [] => SymMLOAD soffset []
     | (U_MSTORE _ soffset' svalue)::smem' =>
@@ -84,7 +87,7 @@ Module MemoryOpsSolversImpl.
     end.
 
   (* mstore8 soffset_mstore8 is includes in soffset_mstore *)
-  Definition mstore8_is_included_in_mstore (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (soffset_mstore8 soffset_mstore: sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
+  Definition mstore8_is_included_in_mstore (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset_mstore8 soffset_mstore: sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
     match follow_in_smap soffset_mstore8 maxidx sb, follow_in_smap soffset_mstore maxidx sb with
     | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) => 
         let addr_mstore8 := (wordToN v1) in
@@ -93,7 +96,7 @@ Module MemoryOpsSolversImpl.
     | _, _ => false
     end.
 
-  Fixpoint basic_smemory_updater_remove_mstore_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (soffset_mstore: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
+  Fixpoint basic_smemory_updater_remove_mstore_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset_mstore: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     match smem with
     | [] => []
     | (U_MSTORE _ soffset' svalue)::smem' =>
@@ -108,7 +111,7 @@ Module MemoryOpsSolversImpl.
           (U_MSTORE8 sstack_val soffset' svalue)::(basic_smemory_updater_remove_mstore_dups sstack_val_cmp ctx soffset_mstore smem' m ops)
     end.
   
-  Fixpoint basic_smemory_updater_remove_mstore8_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (soffset_mstore8: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
+  Fixpoint basic_smemory_updater_remove_mstore8_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset_mstore8: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     match smem with
     | [] => []
     | (U_MSTORE8 _ soffset' svalue)::smem' =>
@@ -120,7 +123,7 @@ Module MemoryOpsSolversImpl.
         (U_MSTORE sstack_val soffset' svalue)::(basic_smemory_updater_remove_mstore8_dups sstack_val_cmp ctx soffset_mstore8 smem' m ops)          
     end.
 
-  Definition basic_smemory_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: constraints) (update: memory_update sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
+  Definition basic_smemory_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (update: memory_update sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     match update with
     | U_MSTORE _ soffset _ =>
         update::(basic_smemory_updater_remove_mstore_dups sstack_val_cmp ctx soffset smem m ops)

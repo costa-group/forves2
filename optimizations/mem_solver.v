@@ -65,6 +65,10 @@ Import MemoryOpsSolversImplSoundness.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+
+Require Import FORVES2.context.
+Import Context.
+
 Require Import List.
 Import ListNotations.
 
@@ -90,7 +94,7 @@ fun (val: smap_value) =>
 fun (fcmp: sstack_val_cmp_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
-fun (ctx: constraints) =>
+fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) => 
 match val with
 | SymMLOAD offset smem => 
@@ -107,7 +111,7 @@ opt_smapv_valid_snd optimize_mem_solver_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
 intros ctx n fcmp sb val val' flag.
-intros Hsafe_sstack_val_cmp His_sat Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+intros Hsafe_sstack_val_cmp Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
 unfold optimize_mem_solver_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; try (
@@ -126,7 +130,7 @@ simpl in Hsolver_valid.
 unfold valid_smap_value in Hvalid_smapv_val.
 destruct Hvalid_smapv_val as [Hvalid_sstack_val Hvalid_smemory].
 injection Hoptm_sbinding as eq_basic_mload_solver _.
-pose proof (Hsolver_valid His_sat Hvalid_smemory Hvalid_sstack_val 
+pose proof (Hsolver_valid Hvalid_smemory Hvalid_sstack_val 
   eq_basic_mload_solver).
 assumption.
 Qed.
@@ -137,7 +141,7 @@ opt_sbinding_snd optimize_mem_solver_sbinding.
 Proof.
 unfold opt_sbinding_snd.
 intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid His_sat  Hoptm_sbinding.
+  Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_mem_solver_sbinding)
@@ -166,7 +170,7 @@ split.
   unfold valid_smap in Hsolver_correct.
   simpl in Hsolver_correct.
 
-  pose proof (Hsolver_correct His_sat eq_valid_bindings) as Hsolver_correct.
+  pose proof (Hsolver_correct eq_valid_bindings) as Hsolver_correct.
   unfold valid_smap_value in eq_valid_smapv.
   destruct eq_valid_smapv as [eq_valid_offset eq_valid_smem].
   rewrite -> eq_maxidx_idx in Hsolver_correct.

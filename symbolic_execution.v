@@ -26,6 +26,9 @@ Import StorageOpsSolvers.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
 Require Import List.
 Import ListNotations.
 
@@ -33,7 +36,7 @@ Import ListNotations.
 Module SymbolicExecution.
 
 
-Definition push_s (value : EVMWord) (ctx: constraints) :=
+Definition push_s (value : EVMWord) (ctx: ctx_t) :=
   fun (sst : sstate) (ops: stack_op_instr_map) =>
     let sstk := get_stack_sst sst in
     match push (Val value) sstk with
@@ -42,7 +45,7 @@ Definition push_s (value : EVMWord) (ctx: constraints) :=
     end.
 
 Definition metapush_s (cat value : N) :=
-  fun (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) =>
+  fun (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) =>
     let sstk := get_stack_sst sst in
     let sm : smap := get_smap_sst sst in
     let v : smap_value := SymMETAPUSH cat value in
@@ -57,28 +60,28 @@ Definition metapush_s (cat value : N) :=
         end
     end.
 
-Definition pop_s (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition pop_s (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   let sstk := get_stack_sst sst in
   match pop sstk with
   | None => None
   | Some sstk' => Some (set_stack_sst sst sstk')
   end.
 
-Definition dup_s (k : nat) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition dup_s (k : nat) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   let sstk := get_stack_sst sst in
   match dup k sstk with
   | None => None
   | Some sstk' => Some (set_stack_sst sst sstk')
   end.
 
-Definition swap_s (k : nat) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition swap_s (k : nat) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   let sstk := get_stack_sst sst in
   match swap k sstk with
   | None => None
   | Some sstk' => Some (set_stack_sst sst sstk')
   end.
 
-Definition mload_s (mload_solver: mload_solver_type) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition mload_s (mload_solver: mload_solver_type) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   let sm : smap := get_smap_sst sst in
   let smem : smemory := get_memory_sst sst in
   match get_stack_sst sst with
@@ -94,7 +97,7 @@ Definition mload_s (mload_solver: mload_solver_type) (ctx: constraints) (sst : s
   | _ => None
   end.
 
-Definition sload_s (sload_solver: sload_solver_type) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition sload_s (sload_solver: sload_solver_type) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   let sm : smap := get_smap_sst sst in
   let sstrg : sstorage := get_storage_sst sst in
   match get_stack_sst sst with
@@ -110,7 +113,7 @@ Definition sload_s (sload_solver: sload_solver_type) (ctx: constraints) (sst : s
   | _ => None
   end.
 
-Definition sha3_s (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition sha3_s (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   let sm : smap := get_smap_sst sst in
   let smem : smemory := get_memory_sst sst in
   match get_stack_sst sst with
@@ -126,7 +129,7 @@ Definition sha3_s (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : 
 
                                       
   
-Definition mstore8_s (smem_updater: smemory_updater_type) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition mstore8_s (smem_updater: smemory_updater_type) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   match get_stack_sst sst with
   | soffset::svalue::sstk =>
       let smem := get_memory_sst sst in
@@ -138,7 +141,7 @@ Definition mstore8_s (smem_updater: smemory_updater_type) (ctx: constraints) (ss
   | _ => None
   end.
       
-Definition mstore_s (smem_updater: smemory_updater_type) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition mstore_s (smem_updater: smemory_updater_type) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   match get_stack_sst sst with
   | soffset::svalue::sstk =>
       let smem := get_memory_sst sst in
@@ -150,7 +153,7 @@ Definition mstore_s (smem_updater: smemory_updater_type) (ctx: constraints) (sst
   | _ => None
   end.
 
-Definition sstore_s (sstrg_updater: sstorage_updater_type) (ctx: constraints) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
+Definition sstore_s (sstrg_updater: sstorage_updater_type) (ctx: ctx_t) (sst : sstate) (ops: stack_op_instr_map) : option sstate :=
   match get_stack_sst sst with
   | skey::svalue::sstk =>
       let sstrg := get_storage_sst sst in
@@ -162,7 +165,7 @@ Definition sstore_s (sstrg_updater: sstorage_updater_type) (ctx: constraints) (s
   | _ => None
   end.
 
-Definition exec_stack_op_intsr_s (label : stack_op_instr) (ctx: constraints) (sst : sstate) (ops : stack_op_instr_map) : option sstate :=
+Definition exec_stack_op_intsr_s (label : stack_op_instr) (ctx: ctx_t) (sst : sstate) (ops : stack_op_instr_map) : option sstate :=
   match (ops label) with
   | OpImp nb_args _ _ _ =>
       let sstk := get_stack_sst sst in
@@ -180,7 +183,7 @@ Definition exec_stack_op_intsr_s (label : stack_op_instr) (ctx: constraints) (ss
       end
   end.
 
-Definition evm_exec_instr_s (smem_updater: smemory_updater_type) (sstrg_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (inst: instr) (ctx: constraints) (sst: sstate) (ops: stack_op_instr_map): option sstate :=
+Definition evm_exec_instr_s (smem_updater: smemory_updater_type) (sstrg_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (inst: instr) (ctx: ctx_t) (sst: sstate) (ops: stack_op_instr_map): option sstate :=
   match inst with
   | PUSH size w => (push_s (NToWord EVMWordSize w)) ctx sst ops
   | METAPUSH cat v => (metapush_s cat v) ctx sst ops
@@ -197,7 +200,7 @@ Definition evm_exec_instr_s (smem_updater: smemory_updater_type) (sstrg_updater:
   | OpInstr label => exec_stack_op_intsr_s label ctx sst ops 
   end.
 
-Fixpoint evm_exec_block_s (smem_updater: smemory_updater_type) (sstrg_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (p : block) (ctx: constraints) (sst : sstate) (ops : stack_op_instr_map): option sstate :=
+Fixpoint evm_exec_block_s (smem_updater: smemory_updater_type) (sstrg_updater: sstorage_updater_type) (mload_solver: mload_solver_type) (sload_solver: sload_solver_type) (p : block) (ctx: ctx_t) (sst : sstate) (ops : stack_op_instr_map): option sstate :=
   match p with
   | [] => Some sst
   | instr::instrs' =>
