@@ -123,6 +123,7 @@ optimizations/jumpi_eval.v
 
 opt_pipelines.v
 
+tools_types.v
 block_equiv_checker.v
 block_equiv_checker_soundness.v
 
