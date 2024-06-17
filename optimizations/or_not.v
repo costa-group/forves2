@@ -58,6 +58,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -84,21 +87,22 @@ end.
  
 Definition optimize_or_not_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
-fun (ops: stack_op_instr_map) => 
-match val with
-| SymOp OR [arg1;arg2] =>
-  if is_not arg1 arg2 fcmp maxid  sb ops ctx then
-    (SymBasicVal (Val (wones EVMWordSize)), true)
-  else if is_not arg2 arg1 fcmp maxid  sb ops ctx then
-    (SymBasicVal (Val (wones EVMWordSize)), true)
-  else 
-    (val, false)
-| _ => (val, false)
-end.
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymOp OR [arg1;arg2] =>
+      if is_not arg1 arg2 fcmp maxid  sb ops ctx then
+        (SymBasicVal (Val (wones EVMWordSize)), true)
+      else if is_not arg2 arg1 fcmp maxid  sb ops ctx then
+             (SymBasicVal (Val (wones EVMWordSize)), true)
+           else 
+             (val, false)
+  | _ => (val, false)
+  end.
 
 
 
@@ -133,8 +137,8 @@ Lemma optimize_or_not_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_or_not_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid Hoptm_sbinding.
 unfold optimize_or_not_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -143,6 +147,12 @@ destruct label eqn: eq_label; try try inject_rw Hoptm_sbinding eq_val'.
 destruct args as [|arg1 r1]; try inject_rw Hoptm_sbinding eq_val'.
 destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
 destruct r2 as [|arg3 r3]; try inject_rw Hoptm_sbinding eq_val'.
+
+destruct tools.
+unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+remember sstack_val_cmp as fcmp.
+assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
 destruct (is_not arg1 arg2 fcmp n  sb evm_stack_opm) 
   eqn: eq_is_not.
 - unfold is_not in eq_is_not.
@@ -189,12 +199,12 @@ Lemma optimize_or_not_sbinding_snd:
 opt_sbinding_snd optimize_or_not_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_or_not_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_or_not_sbinding_smapv_valid. 
 
 - (* evaluation is preserved *) 
@@ -208,6 +218,12 @@ split.
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
   destruct r2; try inject_rw Hoptm_sbinding eq_val'.
+
+  destruct tools.
+  unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+  remember sstack_val_cmp as fcmp.
+  assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
   destruct (is_not arg1 arg2 fcmp idx  sb evm_stack_opm) 
     eqn: eq_is_not.
     

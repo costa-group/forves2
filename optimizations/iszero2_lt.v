@@ -57,6 +57,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -67,24 +70,25 @@ Module Opt_iszero2_lt.
 (* ISZERO(ISZERO(LT(X,Y)) = LT(X,Y) *)
 Definition optimize_iszero2_lt_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
-fun (ops: stack_op_instr_map) => 
-match val with
-| SymOp ISZERO [arg1] => 
-  match follow_in_smap arg1 maxid sb with
-  | Some (FollowSmapVal (SymOp ISZERO [arg2]) idx' sb') => 
-      match follow_in_smap arg2 idx' sb' with
-      | Some (FollowSmapVal (SymOp LT [x;y]) idx'' sb'') => 
-          (SymOp LT [x;y], true)
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymOp ISZERO [arg1] => 
+      match follow_in_smap arg1 maxid sb with
+      | Some (FollowSmapVal (SymOp ISZERO [arg2]) idx' sb') => 
+          match follow_in_smap arg2 idx' sb' with
+          | Some (FollowSmapVal (SymOp LT [x;y]) idx'' sb'') => 
+              (SymOp LT [x;y], true)
+          | _ => (val, false)
+          end
       | _ => (val, false)
       end
   | _ => (val, false)
-  end
-| _ => (val, false)
-end.
+  end.
 
 
 Lemma evm_iszero2_lt_snd: forall ctx x y,
@@ -100,8 +104,8 @@ Lemma optimize_iszero2_lt_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_iszero2_lt_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid Hoptm_sbinding.
 unfold optimize_iszero2_lt_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -161,12 +165,12 @@ Lemma optimize_iszero2_lt_sbinding_snd:
 opt_sbinding_snd optimize_iszero2_lt_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_iszero2_lt_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_iszero2_lt_sbinding_smapv_valid. 
 
 - (* evaluation is preserved *) 

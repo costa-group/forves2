@@ -62,6 +62,28 @@ Import ListNotations.
 
 Module Optimizations_Common.
 
+(*
+
+This is what we need to adapt all rule from taking a single comparator to
+taking a record of tools:
+
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
+fun (val: smap_value) =>
+fun (tools: Tools_1.tools_1_t) =>
+fun (sb: sbindings) =>
+fun (maxid: nat) =>
+fun (ctx: ctx_t) =>
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+
+destruct tools.
+unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+remember sstack_val_cmp as fcmp.
+assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+ *)
+
 
 Definition follow_to_val (sv: sstack_val) (maxidx: nat) (sb: sbindings) 
   : option EVMWord :=

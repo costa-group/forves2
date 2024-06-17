@@ -57,6 +57,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -77,19 +80,20 @@ end.
 (* ISZERO(XOR(X, Y)) = EQ(X, Y) *)
 Definition optimize_iszero_xor_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
-fun (ops: stack_op_instr_map) => 
-match val with
-| SymOp ISZERO [arg1] => 
-  match is_xor arg1 fcmp maxid  sb ops with
-  | Some args => (SymOp EQ args, true)
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymOp ISZERO [arg1] => 
+      match is_xor arg1 fcmp maxid  sb ops with
+      | Some args => (SymOp EQ args, true)
+      | _ => (val, false)
+      end
   | _ => (val, false)
-  end
-| _ => (val, false)
-end.
+  end.
 
 
 Lemma wxor_weqb_true: forall (size: nat) (a b: word size), 
@@ -189,8 +193,8 @@ Lemma optimize_iszero_xor_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_iszero_xor_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ Hvalid_smapv_val Hvalid Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid Hoptm_sbinding.
 unfold optimize_iszero_xor_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; 
@@ -198,6 +202,12 @@ destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
 destruct label eqn: eq_label; try try inject_rw Hoptm_sbinding eq_val'.
 destruct args as [|arg1 r1]; try inject_rw Hoptm_sbinding eq_val'.
 destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
+
+destruct tools.
+unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+remember sstack_val_cmp as fcmp.
+assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
 destruct (is_xor arg1 fcmp n  sb evm_stack_opm) as [args|] 
   eqn: is_xor_arg1; try inject_rw Hoptm_sbinding eq_val'.
 injection Hoptm_sbinding as eq_val' _.
@@ -238,12 +248,12 @@ Lemma optimize_iszero_xor_sbinding_snd:
 opt_sbinding_snd optimize_iszero_xor_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_iszero_xor_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_iszero_xor_sbinding_smapv_valid. 
 
 - (* evaluation is preserved *) 
@@ -256,6 +266,12 @@ split.
   destruct args as [|arg1 r1] eqn: eq_args; 
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2]; try inject_rw Hoptm_sbinding eq_val'.
+
+  destruct tools.
+  unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+  remember sstack_val_cmp as fcmp.
+  assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
   destruct (is_xor arg1 fcmp idx  sb evm_stack_opm) 
     as [largs|] eqn: is_xor_arg1; try inject_rw Hoptm_sbinding eq_val'.
   

@@ -67,6 +67,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -87,19 +90,20 @@ end.
 *)
 Definition optimize_strg_solver_sbinding : opt_smap_value_type :=
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
-fun (ops: stack_op_instr_map) => 
-match val with
-| SymSLOAD skey sstrg => 
-     let val' := (basic_sload_solver (fun _:nat => fcmp) ctx skey sstrg  
-                   (SymMap maxid sb) ops) in
-     let flag := strg_solver_applied val val' in
-     (val', flag)
-| _ => (val, false)
-end.
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymSLOAD skey sstrg => 
+      let val' := (basic_sload_solver (fun _:nat => fcmp) ctx skey sstrg  
+                     (SymMap maxid sb) ops) in
+      let flag := strg_solver_applied val val' in
+      (val', flag)
+  | _ => (val, false)
+  end.
 (* TODO:
 - CHECK if is better to pass the whole smap ==> adapt 60 files
 - CHECK if maxid is correctly computed
@@ -113,9 +117,15 @@ Lemma optimize_strg_solver_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_strg_solver_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros Hsafe_sstack_val_cmp Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
 unfold optimize_strg_solver_sbinding in Hoptm_sbinding.
+
+destruct tools.
+unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+remember sstack_val_cmp as fcmp.
+assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
 destruct (val) as [basicv|pushtagv|label args|offset smem|skey sstrg|
   offset size smem] eqn: eq_val; try (
     injection Hoptm_sbinding as eq_val' _;
@@ -143,12 +153,12 @@ Lemma optimize_strg_solver_sbinding_snd:
 opt_sbinding_snd optimize_strg_solver_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_strg_solver_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_strg_solver_sbinding_smapv_valid. 
 
 - (* evaluation is preserved *) 
@@ -156,8 +166,16 @@ split.
   unfold optimize_strg_solver_sbinding in Hoptm_sbinding.
   destruct val as [vv|vv|label args|offset smem|skey sstrg|offset size smem]
     eqn: eq_val; try inject_rw Hoptm_sbinding eq_val'.
+
+  destruct tools.
+  unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+  remember sstack_val_cmp as fcmp.
+  assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
   (* SymSLOAD skey sstrg *)
   injection Hoptm_sbinding as eq_basic_solver eq_flag.
+
+
   pose proof (basic_sload_solver_snd (fun _ : nat => fcmp)
       (safe_fcm_ext_1 fcmp Hsafe_sstack_val_cmp)).
   unfold sload_solver_snd in H.

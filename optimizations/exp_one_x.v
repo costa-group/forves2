@@ -57,6 +57,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -67,19 +70,20 @@ Module Opt_exp_one_x.
 (* EXP(1,X) = 1 *)
 Definition optimize_exp_one_x_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
-fun (ops: stack_op_instr_map) => 
-match val with
-| SymOp EXP [arg1; arg2] => 
-  if fcmp ctx arg1 (Val WOne) maxid sb maxid sb  ops then
-    (SymBasicVal (Val WOne), true)
-  else
-    (val, false)
-| _ => (val, false)
-end.
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymOp EXP [arg1; arg2] => 
+      if fcmp ctx arg1 (Val WOne) maxid sb maxid sb  ops then
+        (SymBasicVal (Val WOne), true)
+      else
+        (val, false)
+  | _ => (val, false)
+  end.
 
 
 
@@ -90,8 +94,8 @@ Lemma optimize_exp_one_x_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_exp_one_x_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
 unfold optimize_exp_one_x_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; try inject_rw Hoptm_sbinding eq_val'.
@@ -100,6 +104,12 @@ destruct label eqn: eq_label; try inject_rw Hoptm_sbinding eq_val'.
 destruct args as [|arg1 r1] eqn: eq_args; try inject_rw Hoptm_sbinding eq_val'.
 destruct r1 as [|arg2 r2] eqn: eq_r1; try inject_rw Hoptm_sbinding eq_val'.
 destruct r2 as [|arg3 r3] eqn: eq_r2; try inject_rw Hoptm_sbinding eq_val'.
+
+destruct tools.
+unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+remember sstack_val_cmp as fcmp.
+assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
 destruct (fcmp ctx arg1 (Val WOne) n sb n sb  evm_stack_opm) 
     eqn: eq_fcmp_arg1; try inject_rw Hoptm_sbinding eq_val'.
 injection Hoptm_sbinding as eq_val' eq_flag.
@@ -119,12 +129,12 @@ Lemma optimize_exp_one_x_sbinding_snd:
 opt_sbinding_snd optimize_exp_one_x_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_exp_one_x_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_exp_one_x_sbinding_smapv_valid. 
     
 - (* evaluation is preserved *) 
@@ -142,6 +152,12 @@ split.
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3] eqn: eq_r2; 
     try inject_rw Hoptm_sbinding eq_val'.
+
+  destruct tools.
+  unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+  remember sstack_val_cmp as fcmp.
+  assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
   destruct (fcmp ctx arg1 (Val WOne) idx sb idx sb ) 
     eqn: fcmp_arg1; try inject_rw Hoptm_sbinding eq_val'.
   

@@ -56,6 +56,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -66,29 +69,30 @@ Module Opt_eval.
 (* EVAL *)
 Definition optimize_eval_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) =>
-match val with
-| SymOp op args => 
-  match follow_to_val_args args maxid sb with
-  | Some vargs => 
-    match ops op with
-    | OpImp nargs f Hcomm Hctx_indep => 
-      match Hctx_indep with
-      | Some _ => if (List.length args =? nargs) then
-                    (SymBasicVal (Val (f empty_externals vargs)), true)
-                  else 
-                    (val, false)
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymOp op args => 
+      match follow_to_val_args args maxid sb with
+      | Some vargs => 
+          match ops op with
+          | OpImp nargs f Hcomm Hctx_indep => 
+              match Hctx_indep with
+              | Some _ => if (List.length args =? nargs) then
+                            (SymBasicVal (Val (f empty_externals vargs)), true)
+                          else 
+                            (val, false)
+              | None => (val, false)
+              end
+          end
       | None => (val, false)
       end
-    end
-  | None => (val, false)
-  end
-| _ => (val, false)
-end.
+  | _ => (val, false)
+  end.
 
 
 
@@ -99,8 +103,8 @@ Lemma optimize_eval_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_eval_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
 unfold optimize_eval_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; try (
@@ -124,12 +128,12 @@ Lemma optimize_eval_sbinding_snd:
 opt_sbinding_snd optimize_eval_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_eval_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_eval_sbinding_smapv_valid. 
     
 - (* evaluation is preserved *) 

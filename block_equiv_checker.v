@@ -842,7 +842,7 @@ Definition evm_eq_block_chkr'
             let maxid := S (max (get_maxidx_smap (get_smap_sst sst_opt)) (get_maxidx_smap (get_smap_sst sst_p))) in
             let tools_1 := mk_tools_1 tools maxid in
             let sstack_value_cmp := Tools_1.sstack_val_cmp tools_1 in
-            let opt := apply_opt_n_times_pipeline_k opt_pipeline sstack_value_cmp opt_step_rep opt_pipeline_rep in            
+            let opt := apply_opt_n_times_pipeline_k opt_pipeline tools_1 opt_step_rep opt_pipeline_rep in            
             let (sst_opt', _) := opt ctx sst_opt in 
             let (sst_p',   _) := opt ctx sst_p in
             let smemory_cmp := Tools_1.smemory_cmp tools_1 in

@@ -56,6 +56,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -65,7 +68,7 @@ Module Optimizations_Def.
 Import Coq.Arith.EqNat.
 
 
-(* Definitions *)
+(* Definitions *) 
 
 Definition optim := ctx_t -> sstate -> sstate*bool.
 
@@ -111,7 +114,7 @@ forall (sv : sstack_val) (model : assignment) (mem: memory) (strg: storage)
 (* Type of a function that optimizes a single smap_value *)
 Definition opt_smap_value_type := 
   smap_value ->            (* val *)
-  sstack_val_cmp_t ->      (* fcmp *) 
+  Tools_1.tools_1_t ->     (* tools -- all kind of comparators *) 
   sbindings ->             (* sb *)
   nat ->                   (* maxid *) 
   (*nat ->                   (* instk_height *)*)
@@ -120,22 +123,20 @@ Definition opt_smap_value_type :=
   smap_value*bool.         (* (val', flag) *)
 
 Definition opt_smapv_valid_snd (opt: opt_smap_value_type) :=
-forall (ctx: ctx_t) (maxidx: nat) (fcmp: sstack_val_cmp_t) (sb: sbindings) 
+forall (ctx: ctx_t) (maxidx: nat) (tools: Tools_1.tools_1_t) (sb: sbindings) 
   (val val': smap_value) (flag: bool),
-safe_sstack_val_cmp fcmp ->
 valid_smap_value maxidx evm_stack_opm val ->
 valid_bindings maxidx sb evm_stack_opm ->
-opt val fcmp sb maxidx ctx evm_stack_opm = (val', flag) ->
+opt val tools sb maxidx ctx evm_stack_opm = (val', flag) ->
 valid_smap_value maxidx evm_stack_opm val'.
 
 (* 'opt' is sound if optimizing the head in a valid bindings (idx,val)::sb 
    results in a valid bindings (idx,val')::sb that preserves evaluations *)
 Definition opt_sbinding_snd (opt: opt_smap_value_type) :=
-forall (val val': smap_value) (fcmp: sstack_val_cmp_t) (sb: sbindings) 
+forall (val val': smap_value) (tools: Tools_1.tools_1_t) (sb: sbindings) 
   (maxidx: nat) (ctx: ctx_t) (idx: nat) (flag: bool),
-safe_sstack_val_cmp fcmp ->
 valid_bindings maxidx ((idx,val)::sb) evm_stack_opm ->
-opt val fcmp sb idx ctx evm_stack_opm = (val', flag) ->
+opt val tools sb idx ctx evm_stack_opm = (val', flag) ->
   valid_bindings maxidx ((idx,val')::sb) evm_stack_opm /\
   forall model mem strg ext v,
     is_model (ctx_cs ctx) model = true ->
@@ -146,26 +147,26 @@ opt val fcmp sb idx ctx evm_stack_opm = (val', flag) ->
 
 (* Applies smap value optimization to the first suitable entry in sbindings *)
 Fixpoint optimize_first_sbindings (opt_sbinding: opt_smap_value_type) 
-  (ctx: ctx_t) (fcmp: sstack_val_cmp_t) (sb: sbindings)
+  (ctx: ctx_t) (tools: Tools_1.tools_1_t) (sb: sbindings)
     : sbindings*bool :=
 match sb with
 | [] => (sb,false)
 | (n,val)::rs => 
-    match opt_sbinding val fcmp rs n ctx evm_stack_opm with
+    match opt_sbinding val tools rs n ctx evm_stack_opm with
     | (val', true) => ((n,val')::rs, true)
     | (val', false) => 
-        match (optimize_first_sbindings opt_sbinding ctx fcmp rs) with 
+        match (optimize_first_sbindings opt_sbinding ctx tools rs) with 
         | (rs', flag) => ((n,val)::rs', flag)
         end
     end
 end.
 
 Definition optimize_first_sstate (opt: opt_smap_value_type) 
-  (fcmp: sstack_val_cmp_t) (ctx: ctx_t) (sst: sstate)
+  (tools: Tools_1.tools_1_t) (ctx: ctx_t) (sst: sstate)
   : sstate*bool :=
 match sst with 
 | SymExState sstk smem sstg sctx (SymMap maxid bindings) =>
-    match optimize_first_sbindings opt ctx fcmp bindings with
+    match optimize_first_sbindings opt ctx tools bindings with
     | (bindings', flag) => 
         (SymExState sstk smem sstg sctx (SymMap maxid bindings'),
          flag)
@@ -537,18 +538,15 @@ Qed.
 
 (* Fixed to evm_stack_opm *)
 Lemma valid_smap_value_opt_sbinding_snd: forall (opt: opt_smap_value_type) ctx 
-  val fcmp sb idx val' flag maxidx,
-opt val fcmp sb idx ctx evm_stack_opm = (val', flag) ->
+  val tools sb idx val' flag maxidx,
+opt val tools sb idx ctx evm_stack_opm = (val', flag) ->
 opt_sbinding_snd opt ->
-safe_sstack_val_cmp fcmp ->
 valid_bindings maxidx ((idx, val) :: sb) evm_stack_opm ->
 valid_smap_value idx evm_stack_opm val'.
 Proof.
-intros opt ctx val fcmp sb idx val' flag maxidx Hopt Hopt_snd 
-  Hsafe_fcmp Hvalid.
+intros opt ctx val tools sb idx val' flag maxidx Hopt Hopt_snd Hvalid.
 unfold opt_sbinding_snd in Hopt_snd.
-pose proof (Hopt_snd val val' fcmp sb maxidx ctx idx flag
-  Hsafe_fcmp Hvalid Hopt) as Hopt'.
+pose proof (Hopt_snd val val' tools sb maxidx ctx idx flag Hvalid Hopt) as Hopt'.
 destruct Hopt' as [Hvalid' _].
 unfold valid_bindings in Hvalid'.
 destruct Hvalid' as [_ [Hvalid_smap _]].
@@ -558,23 +556,22 @@ Qed.
 
 (* Fixed to evm_stack_opm *)
 Lemma optimize_first_valid: forall (opt: opt_smap_value_type) (ctx: ctx_t)
-  (fcmp: sstack_val_cmp_t) (sb sb': sbindings) (maxid: nat) 
+  (tools: Tools_1.tools_1_t) (sb sb': sbindings) (maxid: nat) 
   (flag: bool),
-safe_sstack_val_cmp fcmp ->
-opt_sbinding_snd opt ->
+    opt_sbinding_snd opt ->
 valid_bindings maxid sb evm_stack_opm ->
-optimize_first_sbindings opt ctx fcmp sb = (sb', flag) ->
+optimize_first_sbindings opt ctx tools sb = (sb', flag) ->
 valid_bindings maxid sb' evm_stack_opm.
 Proof.
-intros opt ctx fcmp sb. revert opt ctx fcmp.
+intros opt ctx tools sb. revert opt ctx tools.
 induction sb as [| h rsb IH].
-- intros opt ctx fcmp sb' maxid flag Hsafe_fcmp Hopt_snd Hvalid_sb
+- intros opt ctx tools sb' maxid flag Hopt_snd Hvalid_sb
   Hoptimize_first.
   simpl in Hoptimize_first.
   injection Hoptimize_first as eq_sb' _.
   rewrite <- eq_sb'.
   intuition.
-- intros opt ctx fcmp sb' maxid flag Hsafe_fcmp Hopt_snd Hvalid_sb
+- intros opt ctx tools sb' maxid flag Hopt_snd Hvalid_sb
   Hoptimize_first.
   assert (Hvalid_sb_copy := Hvalid_sb).
   unfold valid_bindings in Hvalid_sb.
@@ -582,7 +579,7 @@ induction sb as [| h rsb IH].
   destruct Hvalid_sb as [Hmaxid [Hvalid_smap_value Hvalid_bindings_rsb]].
   fold valid_bindings in Hvalid_bindings_rsb.
   simpl in Hoptimize_first.
-  destruct (opt value fcmp rsb idx ctx evm_stack_opm) as [val' b]
+  destruct (opt value tools rsb idx ctx evm_stack_opm) as [val' b]
     eqn: eq_opt_value.
   destruct b eqn: eq_b.
   + injection Hoptimize_first as eq_sb' eq_flag.
@@ -590,59 +587,58 @@ induction sb as [| h rsb IH].
     split; try assumption.
     split.
     * unfold opt_sbinding_snd in Hopt_snd.
-      pose proof (Hopt_snd value val' fcmp rsb maxid ctx idx true
-      Hsafe_fcmp Hvalid_sb_copy eq_opt_value) as Hsnd_value.
+      pose proof (Hopt_snd value val' tools rsb maxid ctx idx true
+      Hvalid_sb_copy eq_opt_value) as Hsnd_value.
       destruct Hsnd_value as [Hvalid_value _].
       unfold valid_bindings in Hvalid_value.
       intuition.
     * unfold opt_sbinding_snd in Hopt_snd.
-      pose proof (Hopt_snd value val' fcmp rsb maxid ctx idx true
-      Hsafe_fcmp Hvalid_sb_copy eq_opt_value) as Hsnd_value.
+      pose proof (Hopt_snd value val' tools rsb maxid ctx idx true
+      Hvalid_sb_copy eq_opt_value) as Hsnd_value.
       destruct Hsnd_value as [Hvalid_value _].
       unfold valid_bindings in Hvalid_value.
       intuition.
-  + destruct (optimize_first_sbindings opt ctx fcmp rsb) 
+  + destruct (optimize_first_sbindings opt ctx tools rsb) 
       as [rs' flag'] eqn: eq_optimize_rsb.
     injection Hoptimize_first as eq_sb' eq_flag.
     rewrite <- eq_sb'. simpl.
     split; try assumption.
     split; try assumption.
-    apply IH with (opt:=opt)(fcmp:=fcmp)(flag:=flag')(ctx:=ctx); try assumption.
+    apply IH with (opt:=opt)(tools:=tools)(flag:=flag')(ctx:=ctx); try assumption.
 Qed.
 
 
 (* If opt is sound when optimizing the first entry in the bindings, then 
    the optimize_first_sbindings will preserve the bindings *)
 Lemma opt_sbinding_preserves: 
-forall (opt: opt_smap_value_type) (fcmp: sstack_val_cmp_t) (sb sb': sbindings) 
+forall (opt: opt_smap_value_type) (tools: Tools_1.tools_1_t) (sb sb': sbindings) 
   (maxid: nat) (ctx: ctx_t) (flag: bool),
-safe_sstack_val_cmp fcmp ->
 opt_sbinding_snd opt ->
 valid_bindings maxid sb evm_stack_opm ->
-optimize_first_sbindings opt ctx fcmp sb = (sb', flag) ->
+optimize_first_sbindings opt ctx tools sb = (sb', flag) ->
 preserv_sbindings sb sb' maxid evm_stack_opm ctx.
 Proof.
-intros opt fcmp sb. revert opt fcmp.
+intros opt tools sb. revert opt tools.
 induction sb as [|h rsb IH].
-- intros opt fcmp sb' maxid ctx flag Hfcmp_snd Hopt_sbinding_snd 
+- intros opt tools sb' maxid ctx flag Hopt_sbinding_snd 
     Hvalid Hoptimize_first_sbindings.
   simpl in Hoptimize_first_sbindings.
   injection Hoptimize_first_sbindings as eq_sb' _.
   rewrite <- eq_sb'.
   unfold preserv_sbindings. intuition.
-- intros opt fcmp sb' maxid ctx flag Hfcmp_snd Hopt_sbinding_snd 
+- intros opt tools sb' maxid ctx flag Hopt_sbinding_snd 
     Hvalid Hoptimize_first_sbindings.
   destruct h as [n smapv] eqn: eq_h.
   assert (Hoptimize_first_sbindings_copy := Hoptimize_first_sbindings).
   assert (Hvalid_copy := Hvalid).
   unfold optimize_first_sbindings in Hoptimize_first_sbindings.
-  destruct (opt smapv fcmp rsb n ctx evm_stack_opm) as [val' b] 
+  destruct (opt smapv tools rsb n ctx evm_stack_opm) as [val' b] 
     eqn: eq_opt_val.
   unfold preserv_sbindings.
   split; try assumption.
   split.
   * (* valid_bindings instk_height maxid sb' evm_stack_opm *)
-    apply optimize_first_valid with (opt:=opt)(fcmp:=fcmp)
+    apply optimize_first_valid with (opt:=opt)(tools:=tools)
       (sb:=h::rsb)(flag:=flag)(ctx:=ctx); try intuition.
     + rewrite -> eq_h. assumption.
     + rewrite -> eq_h. assumption.
@@ -660,8 +656,8 @@ induction sb as [|h rsb IH].
       -- apply Nat.eqb_eq in eq_n_fvar.
          rewrite <- eq_n_fvar in Heval_sb.
          unfold eval_sstack_val in Hopt_sbinding_snd.
-         pose proof (Hopt_sbinding_snd smapv val' fcmp rsb maxid ctx 
-           n true Hfcmp_snd Hvalid eq_opt_val) as Hopt_sbinding_snd'.
+         pose proof (Hopt_sbinding_snd smapv val' tools rsb maxid ctx 
+           n true Hvalid eq_opt_val) as Hopt_sbinding_snd'.
          destruct Hopt_sbinding_snd' as [_ Hpreserv_ext].
          pose proof (Hpreserv_ext model mem strg ext v Hlen Heval_sb).
          unfold eval_sstack_val. rewrite <- eq_n_fvar.
@@ -672,14 +668,14 @@ induction sb as [|h rsb IH].
            try assumption.
    + (* Optimized the tail of the sbindings *)
       fold optimize_first_sbindings in Hoptimize_first_sbindings.
-      destruct (optimize_first_sbindings opt ctx fcmp rsb) as
+      destruct (optimize_first_sbindings opt ctx tools rsb) as
         [rs' flag'] eqn: eq_optimize_first_rs.
       injection Hoptimize_first_sbindings as eq_sb' eq_flag.
       rewrite <- eq_sb'.
       unfold valid_bindings in Hvalid.
       destruct Hvalid as [eq_maxid_n [Hvalid_smap Hvalid_rsb]].
       fold valid_bindings in Hvalid_rsb.
-      pose proof (IH opt fcmp rs' n ctx flag' Hfcmp_snd
+      pose proof (IH opt tools rs' n ctx flag' 
         Hopt_sbinding_snd Hvalid_rsb eq_optimize_first_rs) 
         as Hpreserv_rs.
       apply preserv_sbindings_ext; try intuition.
@@ -688,39 +684,37 @@ Qed.
 
 (* Fixed to evm_stack_opm *)
 Lemma optimize_first_sstate_valid: forall (opt: opt_smap_value_type) 
-  (fcmp: sstack_val_cmp_t) (sst sst': sstate) (ctx: ctx_t)
+  (tools: Tools_1.tools_1_t) (sst sst': sstate) (ctx: ctx_t)
   (flag: bool),
 valid_sstate sst evm_stack_opm ->
 opt_sbinding_snd opt ->
-safe_sstack_val_cmp fcmp ->
-optimize_first_sstate opt fcmp ctx sst = (sst', flag) ->
+optimize_first_sstate opt tools ctx sst = (sst', flag) ->
 valid_sstate sst' evm_stack_opm.
 Proof.
-intros opt fcmp sst sst' ctx flag Hvalid Hopt Hsafe_cmp Hopt_first.
+intros opt tools sst sst' ctx flag Hvalid Hopt Hopt_first.
 unfold valid_sstate in Hvalid.
 destruct sst. destruct sm. simpl in Hvalid.
 destruct Hvalid as [Hvalid_smap [Hvalid_sstack [Hvalid_smemory Hvalid_sstorage]]].
 unfold optimize_first_sstate in Hopt_first.
-destruct (optimize_first_sbindings opt ctx fcmp bindings) as
+destruct (optimize_first_sbindings opt ctx tools bindings) as
   [bindings' flag'] eqn: eq_optim_first.
 injection Hopt_first as eq_sst' eq_flag'.
 rewrite <- eq_sst'.
 unfold valid_sstate. simpl.
 split.
 - unfold valid_smap in Hvalid_smap.
-  pose proof (optimize_first_valid opt ctx fcmp bindings bindings' maxid 
-    flag' Hsafe_cmp Hopt Hvalid_smap eq_optim_first).
+  pose proof (optimize_first_valid opt ctx tools bindings bindings' maxid 
+    flag' Hopt Hvalid_smap eq_optim_first).
   assumption.
 - split; try split; try assumption.
 Qed.
 
 Lemma optimize_first_sstate_preserv: forall (opt: opt_smap_value_type) 
-  (fcmp: sstack_val_cmp_t) (sst sst': sstate) (ctx: ctx_t) 
+  (tools: Tools_1.tools_1_t) (sst sst': sstate) (ctx: ctx_t) 
   (flag: bool),
 valid_sstate sst evm_stack_opm ->
 opt_sbinding_snd opt ->
-safe_sstack_val_cmp fcmp ->
-optimize_first_sstate opt fcmp ctx sst = (sst', flag) ->
+optimize_first_sstate opt tools ctx sst = (sst', flag) ->
  (*get_instk_height_sst sst = get_instk_height_sst sst' /\*)
  forall (model : assignment) (mem : memory) (strg : storage) 
      (exts : externals) (st': state), 
@@ -728,10 +722,10 @@ optimize_first_sstate opt fcmp ctx sst = (sst', flag) ->
    eval_sstate sst  model mem strg exts evm_stack_opm = Some st' ->
    eval_sstate sst' model mem strg exts evm_stack_opm = Some st'.
 Proof.
-intros opt fcmp sst sst' ctx flag Hvalid Hopt Hsafe_cmp Hopt_first.
+intros opt tools sst sst' ctx flag Hvalid Hopt Hopt_first.
 destruct sst. destruct sm. 
 unfold optimize_first_sstate in Hopt_first.
-destruct (optimize_first_sbindings opt ctx fcmp bindings)
+destruct (optimize_first_sbindings opt ctx tools bindings)
   as [bindings' flag'] eqn: eq_optim_first.
 injection Hopt_first as eq_sst' eq_flag.
 rewrite <- eq_sst'. simpl.
@@ -753,8 +747,8 @@ simpl in Hvalid.
 unfold valid_sstate in Hvalid. simpl in Hvalid.
 destruct Hvalid as [Hvalid_smap [Hvalid_sstack [Hvalid_smem Hvalid_strg]]].
 unfold valid_smap in Hvalid_smap.
-pose proof (opt_sbinding_preserves opt fcmp bindings bindings' maxid 
-  ctx flag' Hsafe_cmp Hopt Hvalid_smap eq_optim_first)
+pose proof (opt_sbinding_preserves opt tools bindings bindings' maxid 
+  ctx flag' Hopt Hvalid_smap eq_optim_first)
   as Hpreservs_bind_bind'.
 (*apply PeanoNat.Nat.eqb_eq in eq_instk.*)
 pose proof (preserv_sbindings_sstack bindings bindings' maxid evm_stack_opm
@@ -789,40 +783,38 @@ Qed.
 *)
 
 
-Lemma optimize_first_snd_opt_snd: forall opt fcmp,
-safe_sstack_val_cmp fcmp ->
+Lemma optimize_first_snd_opt_snd: forall opt tools,
 opt_sbinding_snd opt ->
-optim_snd (optimize_first_sstate opt fcmp).
+optim_snd (optimize_first_sstate opt tools).
 Proof.
-intros opt fcmp Hsafe_fcmp Hopt_snd.
+intros opt tools Hopt_snd.
 unfold optim_snd. intros ctx sst sst' b Hvalid_sst Hoptim.
 split.
 - apply optimize_first_sstate_valid with (opt:=opt)
-  (fcmp:=fcmp)(sst:=sst)(flag:=b)(ctx:=ctx); try assumption.
+  (tools:=tools)(sst:=sst)(flag:=b)(ctx:=ctx); try assumption.
 - intros model mem strg exts st' Hismodel Heval.
-  pose proof (optimize_first_sstate_preserv opt fcmp sst sst' ctx b Hvalid_sst
-      Hopt_snd Hsafe_fcmp Hoptim) as Hpreserv.
+  pose proof (optimize_first_sstate_preserv opt tools sst sst' ctx b Hvalid_sst
+      Hopt_snd Hoptim) as Hpreserv.
   apply Hpreserv; try assumption.
 Qed.
 
 
-Lemma valid_bindings_snd_opt: forall maxidx n ctx val sb opt fcmp 
+Lemma valid_bindings_snd_opt: forall maxidx n ctx val sb opt tools 
   val' flag,
 valid_bindings maxidx ((n, val) :: sb) evm_stack_opm ->
 opt_smapv_valid_snd opt ->
-safe_sstack_val_cmp fcmp ->
-opt val fcmp sb n ctx evm_stack_opm = (val', flag) ->
+opt val tools sb n ctx evm_stack_opm = (val', flag) ->
 valid_bindings maxidx ((n, val') :: sb) evm_stack_opm.
 Proof.
-intros maxidx n ctx val sb opt fcmp val' flag.
-intros Hvalid Hopt_smapv_snd Hfcmp Hopt.
+intros maxidx n ctx val sb opt tools val' flag.
+intros Hvalid Hopt_smapv_snd Hopt.
 unfold opt_smapv_valid_snd in Hopt_smapv_snd.
 unfold valid_bindings in Hvalid.
 unfold valid_bindings.
 destruct Hvalid as [Hmaxidx [Hvalid_smapv_val Hvalid_sb]].
 fold valid_bindings in Hvalid_sb.
-pose proof (Hopt_smapv_snd ctx n fcmp sb val val' flag
-  Hfcmp Hvalid_smapv_val Hvalid_sb Hopt) as Hvalid_smapv_val'.
+pose proof (Hopt_smapv_snd ctx n tools sb val val' flag
+  Hvalid_smapv_val Hvalid_sb Hopt) as Hvalid_smapv_val'.
 split; try split; try assumption.
 Qed.
 
@@ -848,11 +840,11 @@ Definition opt_pipeline := list opt_entry.
    the bindings
 *)
 Definition optimize_first_opt_entry_sbindings (opt_entry: opt_entry)
-  (ctx: ctx_t) (fcmp: sstack_val_cmp_t) (sb: sbindings)
+  (ctx: ctx_t) (tools: Tools_1.tools_1_t) (sb: sbindings)
     : sbindings*bool :=
 match opt_entry with
 | OpEntry opt_sbinding Hopt_snd => 
-    optimize_first_sbindings opt_sbinding ctx fcmp sb
+    optimize_first_sbindings opt_sbinding ctx tools sb
 end.
 
 
@@ -860,23 +852,23 @@ end.
    the bindings __of the sstate__
 *)
 Definition optimize_first_opt_entry_sstate (opt_e: opt_entry) 
-  (fcmp: sstack_val_cmp_t) (ctx: ctx_t) (sst: sstate) : sstate*bool :=
+  (tools: Tools_1.tools_1_t) (ctx: ctx_t) (sst: sstate) : sstate*bool :=
 match opt_e with
 | OpEntry opt Hopt_snd =>
-  optimize_first_sstate opt fcmp ctx sst
+  optimize_first_sstate opt tools ctx sst
 end.
 
 
 (* Applies the optimization at most n times in a sstate, stops as soon as it
    does not change the sstate *)
-Fixpoint apply_opt_n_times (opt_e: opt_entry) (fcmp: sstack_val_cmp_t) 
+Fixpoint apply_opt_n_times (opt_e: opt_entry) (tools: Tools_1.tools_1_t) 
   (n: nat) (ctx: ctx_t) (sst: sstate) : sstate*bool :=
 match n with
 | 0 => (sst, false) 
 | S n' => 
-    match optimize_first_opt_entry_sstate opt_e fcmp ctx sst with
+    match optimize_first_opt_entry_sstate opt_e tools ctx sst with
     | (sst', true) => 
-        match apply_opt_n_times opt_e fcmp n' ctx sst' with
+        match apply_opt_n_times opt_e tools n' ctx sst' with
         | (sst'', b) => (sst'', true) 
         end
     | (sst', false) => (sst', false)
@@ -889,13 +881,13 @@ end.
 (* Applies the pipeline in order in a sstate, applying n times each 
    optimization and continuing with the next one *)
 Fixpoint apply_opt_n_times_pipeline_once (pipe: opt_pipeline) 
-  (fcmp: sstack_val_cmp_t) (n: nat) (ctx: ctx_t) (sst: sstate) : sstate*bool :=
+  (tools: Tools_1.tools_1_t) (n: nat) (ctx: ctx_t) (sst: sstate) : sstate*bool :=
 match pipe with
 | [] => (sst, false) 
 | opt_e::rp => 
-    match apply_opt_n_times opt_e fcmp n ctx sst with
+    match apply_opt_n_times opt_e tools n ctx sst with
     | (sst', flag1) => 
-        match apply_opt_n_times_pipeline_once rp fcmp n ctx sst' with
+        match apply_opt_n_times_pipeline_once rp tools n ctx sst' with
         | (sst'', flag2) => (sst'', orb flag1 flag2)
         end
     end
@@ -905,14 +897,14 @@ end.
 (* Applies (apply_opt_n_times_pipeline n) at most k times in a sstate, stops 
    as soon as it does not change the sstate *)
 Fixpoint apply_opt_n_times_pipeline_k (pipe: opt_pipeline)
-  (fcmp: sstack_val_cmp_t) (n k: nat) (ctx: ctx_t) 
+  (tools: Tools_1.tools_1_t) (n k: nat) (ctx: ctx_t) 
   (sst: sstate) : sstate*bool :=
 match k with
 | 0 => (sst, false) 
 | S k' => 
-    match apply_opt_n_times_pipeline_once pipe fcmp n ctx sst with
+    match apply_opt_n_times_pipeline_once pipe tools n ctx sst with
     | (sst', true) => 
-        match apply_opt_n_times_pipeline_k pipe fcmp n k' ctx sst' with
+        match apply_opt_n_times_pipeline_k pipe tools n k' ctx sst' with
         | (sst'', b) => (sst'', true) 
         end
     | (sst', false) => (sst', false)
@@ -923,53 +915,51 @@ end.
 
 
 
-Lemma optimize_first_opt_entry_sstate_snd: forall opt_e fcmp,
-safe_sstack_val_cmp fcmp ->
-optim_snd (optimize_first_opt_entry_sstate opt_e fcmp).
+Lemma optimize_first_opt_entry_sstate_snd: forall opt_e tools,
+optim_snd (optimize_first_opt_entry_sstate opt_e tools).
 Proof.
-intros opt_e fcmp Hsafe_fcmp.
+intros opt_e tools.
 unfold optim_snd. intros ctx sst sst' b Hvalid Hoptim_first.
 unfold optimize_first_opt_entry_sstate in Hoptim_first.
 destruct opt_e as [opt Hopt_snd] eqn: eq_opt_e.
 split.
-- pose proof (optimize_first_sstate_valid opt fcmp sst sst' ctx b Hvalid
-    Hopt_snd Hsafe_fcmp Hoptim_first).
+- pose proof (optimize_first_sstate_valid opt tools sst sst' ctx b Hvalid
+    Hopt_snd Hoptim_first).
   assumption.
-- apply optimize_first_sstate_preserv with (opt:=opt)(fcmp:=fcmp)(flag:=b);
+- apply optimize_first_sstate_preserv with (opt:=opt)(tools:=tools)(flag:=b);
   try assumption.
 Qed.
 
 
-Lemma apply_opt_n_times_snd: forall opt_e fcmp n,
-safe_sstack_val_cmp fcmp ->
-optim_snd (apply_opt_n_times opt_e fcmp n).
+Lemma apply_opt_n_times_snd: forall opt_e tools n,
+optim_snd (apply_opt_n_times opt_e tools n).
 Proof.
-intros opt_e fcmp n. revert opt_e fcmp.
+intros opt_e tools n. revert opt_e tools.
 induction n as [| n' IH].
-- intros opt_e fcmp Hsafe_cmp.
+- intros opt_e tools.
   unfold optim_snd.
   intros ctx sst sst' b Hvalid Happly.
   simpl in Happly. injection Happly as eq_sst' _.
   rewrite <- eq_sst'.
   split; try assumption.
   intuition.
-- intros opt_e fcmp Hsafe_cmp.
+- intros opt_e tools.
   unfold optim_snd.
   intros ctx sst sst' b Hvalid Happly.
   simpl in Happly. 
-  destruct (optimize_first_opt_entry_sstate opt_e fcmp ctx sst) 
+  destruct (optimize_first_opt_entry_sstate opt_e tools ctx sst) 
     as [sst1 flag] eqn: eq_optim.
   destruct flag eqn: eq_flag.
-  + destruct (apply_opt_n_times opt_e fcmp n' ctx sst1) as [sst2 flag2] 
+  + destruct (apply_opt_n_times opt_e tools n' ctx sst1) as [sst2 flag2] 
       eqn: eq_apply_n'.
     injection Happly as eq_sst' _.
     rewrite <- eq_sst'.
-    pose proof (optimize_first_opt_entry_sstate_snd opt_e fcmp Hsafe_cmp)
+    pose proof (optimize_first_opt_entry_sstate_snd opt_e tools)
       as Hoptim_snd.
     unfold optim_snd in Hoptim_snd.
     pose proof (Hoptim_snd ctx sst sst1 true Hvalid eq_optim) as Hone.
     destruct Hone as [Hvalid1 Heval].
-    pose proof (IH opt_e fcmp Hsafe_cmp) as IHn'.
+    pose proof (IH opt_e tools) as IHn'.
     unfold optim_snd in IHn'.
     pose proof (IHn' ctx sst1 sst2 flag2 Hvalid1 eq_apply_n') as HIHn'.
     destruct HIHn' as [Hvalid' Heval'].
@@ -979,7 +969,7 @@ induction n as [| n' IH].
     intuition.
   + injection Happly as eq_sst' _.
     rewrite <- eq_sst'.
-    pose proof (optimize_first_opt_entry_sstate_snd opt_e fcmp Hsafe_cmp)
+    pose proof (optimize_first_opt_entry_sstate_snd opt_e tools)
       as Hoptim_snd.
     unfold optim_snd in Hoptim_snd.
     pose proof (Hoptim_snd ctx sst sst1 false Hvalid eq_optim) as Hone.
@@ -988,69 +978,67 @@ induction n as [| n' IH].
 Qed.
 
 
-Lemma apply_opt_n_times_pipeline_once_snd: forall pipe fcmp n,
-safe_sstack_val_cmp fcmp ->
-optim_snd (apply_opt_n_times_pipeline_once pipe fcmp n).
+Lemma apply_opt_n_times_pipeline_once_snd: forall pipe tools n,
+optim_snd (apply_opt_n_times_pipeline_once pipe tools n).
 Proof.
 induction pipe as [| opt_e rp IH].
-- intros fcmp n Hsafe_cmp.
+- intros tools n.
   unfold optim_snd.
   intros ctx sst sst' b Hvalid Happly.
   simpl in Happly. injection Happly as eq_sst' _.
   rewrite <- eq_sst'.
   split; try assumption.
   auto.
-- intros fcmp n Hsafe_cmp.
+- intros tools n.
   unfold optim_snd.
   intros ctx sst sst' b Hvalid Happly.
   simpl in Happly. 
-  destruct (apply_opt_n_times opt_e fcmp n ctx sst) 
+  destruct (apply_opt_n_times opt_e tools n ctx sst) 
     as [sst1 flag1] eqn: eq_optim_h.
-  destruct (apply_opt_n_times_pipeline_once rp fcmp n ctx sst1) as [sst2 flag2] 
+  destruct (apply_opt_n_times_pipeline_once rp tools n ctx sst1) as [sst2 flag2] 
     eqn: eq_optim_rp.
   injection Happly as eq_sst' _.
   rewrite <- eq_sst'.
-  pose proof (apply_opt_n_times_snd opt_e fcmp n Hsafe_cmp) as Hoptim_snd_h.
+  pose proof (apply_opt_n_times_snd opt_e tools n) as Hoptim_snd_h.
   unfold optim_snd in Hoptim_snd_h.
   pose proof (Hoptim_snd_h ctx sst sst1 flag1 Hvalid eq_optim_h) as Hoptim_snd_h.
   destruct Hoptim_snd_h as [Hvalid1 Heval1].
-  pose proof (IH fcmp n Hsafe_cmp) as IH.
+  pose proof (IH tools n) as IH.
   unfold optim_snd in IH.
   pose proof (IH ctx sst1 sst2 flag2 Hvalid1 eq_optim_rp) as IH.
   intuition.
 Qed.
 
 
-Lemma apply_opt_n_times_pipeline_k_snd: forall pipe fcmp n k,
-safe_sstack_val_cmp fcmp ->
-optim_snd (apply_opt_n_times_pipeline_k pipe fcmp n k).
+Lemma apply_opt_n_times_pipeline_k_snd: forall pipe tools n k,
+optim_snd (apply_opt_n_times_pipeline_k pipe tools n k).
 Proof.
-intros pipe fcmp n k. revert pipe fcmp n.
+intros pipe tools n k. revert pipe tools n.
 induction k as [| k' IH].
-- intros pipe fcmp Hsafe_cmp n.
+- intros pipe tools n.
   unfold optim_snd.
   intros ctx sst sst' b Hvalid Happly.
   simpl in Happly. injection Happly as eq_sst' _.
   rewrite <- eq_sst'.
   split; try assumption.
   auto.
-- intros pipe fcmp n Hsafe_cmp.
+- intros pipe tools n.
   unfold optim_snd.
   intros ctx sst sst' b Hvalid Happly.
   simpl in Happly. 
-  destruct (apply_opt_n_times_pipeline_once pipe fcmp n ctx sst) 
+  destruct (apply_opt_n_times_pipeline_once pipe tools n ctx sst) 
     as [sst1 flag1] eqn: eq_optim.
   destruct flag1 eqn: eq_flag1.
-  + destruct (apply_opt_n_times_pipeline_k pipe fcmp n k' ctx sst1) as [sst2 flag2] 
+  + destruct (apply_opt_n_times_pipeline_k pipe tools n k' ctx sst1) as [sst2 flag2] 
       eqn: eq_apply_n'.
     injection Happly as eq_sst' _.
     rewrite <- eq_sst'.
-    pose proof (apply_opt_n_times_pipeline_once_snd pipe fcmp n Hsafe_cmp)
+    pose proof (apply_opt_n_times_pipeline_once_snd pipe tools n)
       as Hoptim_snd.
     unfold optim_snd in Hoptim_snd.
     pose proof (Hoptim_snd ctx sst sst1 true Hvalid eq_optim) as Hone.
     destruct Hone as [Hvalid1 Heval1].
-    pose proof (IH pipe fcmp n Hsafe_cmp) as IH.
+    pose proof (IH pipe tools n) as IH.
     unfold optim_snd in IH.
     pose proof (IH ctx sst1 sst2 flag2 Hvalid1 eq_apply_n') as IH.
     destruct IH as [Hvalid' Heval'].
@@ -1058,7 +1046,7 @@ induction k as [| k' IH].
     auto.
   + injection Happly as eq_sst' _.
     rewrite <- eq_sst'.
-    pose proof (apply_opt_n_times_pipeline_once_snd pipe fcmp n Hsafe_cmp)
+    pose proof (apply_opt_n_times_pipeline_once_snd pipe tools n)
       as Hoptim_snd.
     unfold optim_snd in Hoptim_snd.
     pose proof (Hoptim_snd ctx sst sst1 false Hvalid eq_optim) as Hone.

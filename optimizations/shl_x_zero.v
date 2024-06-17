@@ -57,6 +57,9 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
 Require Import List.
 Import ListNotations.
 
@@ -67,19 +70,20 @@ Module Opt_shl_x_zero.
 (* SHL(X,0) = 0 *)
 Definition optimize_shl_x_zero_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
-fun (ops: stack_op_instr_map) => 
-match val with
-| SymOp SHL [arg1; arg2] => 
-  if fcmp ctx arg2 (Val WZero) maxid sb maxid sb  ops then
-    (SymBasicVal (Val WZero), true)
-  else
-    (val, false)
-| _ => (val, false)
-end.
+fun (ops: stack_op_instr_map) =>
+  let fcmp := Tools_1.sstack_val_cmp tools in
+  match val with
+  | SymOp SHL [arg1; arg2] => 
+      if fcmp ctx arg2 (Val WZero) maxid sb maxid sb  ops then
+        (SymBasicVal (Val WZero), true)
+      else
+        (val, false)
+  | _ => (val, false)
+  end.
 
 
 
@@ -90,8 +94,8 @@ Lemma optimize_shl_x_zero_sbinding_smapv_valid:
 opt_smapv_valid_snd optimize_shl_x_zero_sbinding.
 Proof.
 unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+intros ctx n tools sb val val' flag.
+intros Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
 unfold optimize_shl_x_zero_sbinding in Hoptm_sbinding.
 destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
   offset size smem] eqn: eq_val; try try inject_rw Hoptm_sbinding eq_val'.
@@ -102,6 +106,12 @@ destruct args as [|arg1 r1] eqn: eq_args;
 destruct r1 as [|arg2 r2] eqn: eq_r1; 
   try try inject_rw Hoptm_sbinding eq_val'.
 destruct r2 eqn: eq_r2; try try inject_rw Hoptm_sbinding eq_val'.
+
+destruct tools.
+unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+remember sstack_val_cmp as fcmp.
+assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
 destruct (fcmp ctx arg2 (Val WZero) n sb n sb  evm_stack_opm)
   eqn: eq_fcmp_arg1.
 * injection Hoptm_sbinding as eq_val' eq_flag.
@@ -125,12 +135,12 @@ Lemma optimize_shl_x_zero_sbinding_snd:
 opt_sbinding_snd optimize_shl_x_zero_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
+intros val val' tools sb maxidx ctx idx flag 
   Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
   apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_shl_x_zero_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
+    (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
   apply optimize_shl_x_zero_sbinding_smapv_valid. 
 
 - (* evaluation is preserved *) 
@@ -147,6 +157,12 @@ split.
   destruct r1 as [|arg2 r2] eqn: eq_r1; 
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r2; try inject_rw Hoptm_sbinding eq_val'.
+
+  destruct tools.
+  unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+  remember sstack_val_cmp as fcmp.
+  assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
+
   destruct (fcmp ctx arg2 (Val WZero) idx sb idx sb ) 
     eqn: fcmp_arg2_zero.
   + (* arg2 ~ WZero *)
