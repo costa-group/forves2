@@ -65,7 +65,6 @@ Import MemoryOpsSolversImplSoundness.
 Require Import FORVES2.constraints.
 Import Constraints.
 
-
 Require Import FORVES2.context.
 Import Context.
 
@@ -87,7 +86,6 @@ match val1, val2 with
 | _, _ => true
 end.
 
-
 (* Memory solver 
   SymMLOAD offset smem --> smapv
      if basic_mload_solver (SymMLOAD offset smem) = smapv
@@ -100,10 +98,10 @@ fun (maxid: nat) =>
 fun (ctx: ctx_t) =>
 fun (ops: stack_op_instr_map) =>
   let fcmp := Tools_1.sstack_val_cmp tools in
+  let mload_solver := Tools.mload_solver (Tools_1.tools tools) in  
   match val with
   | SymMLOAD offset smem => 
-      let val' := basic_mload_solver (fun _:nat => fcmp) ctx offset smem 
-                    (SymMap maxid sb) ops in 
+      let val' := mload_solver ctx offset smem (SymMap maxid sb) ops in 
       let flag := mem_solver_applied val val' in 
       (val', flag)
   | _ => (val, false)
@@ -129,19 +127,19 @@ unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
 remember sstack_val_cmp as fcmp.
 assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
 
-pose proof (basic_mload_solver_snd (fun _ : nat => fcmp)
-      (safe_fcm_ext_1 fcmp Hsafe_sstack_val_cmp)).
-unfold mload_solver_snd in H.
-destruct H as [Hsolver_valid _].
+destruct tools.
+simpl in Hoptm_sbinding.
+unfold mload_solver_snd in H_mload_solver_snd.
+destruct H_mload_solver_snd as [Hsolver_valid _].
 unfold mload_solver_valid_res in Hsolver_valid.
 specialize Hsolver_valid with (m:=SymMap n sb)(smem:=smem)(soffset:=offset)
   (ctx:=ctx)(smv:=val')(ops:=evm_stack_opm).
 simpl in Hsolver_valid.
 unfold valid_smap_value in Hvalid_smapv_val.
 destruct Hvalid_smapv_val as [Hvalid_sstack_val Hvalid_smemory].
-injection Hoptm_sbinding as eq_basic_mload_solver _.
+injection Hoptm_sbinding as eq_mload_solver _.
 pose proof (Hsolver_valid Hvalid_smemory Hvalid_sstack_val 
-  eq_basic_mload_solver).
+  eq_mload_solver).
 assumption.
 Qed.
 
@@ -167,14 +165,15 @@ split.
 
   destruct tools.
   unfold Tools_1.sstack_val_cmp in Hoptm_sbinding.
+  simpl in Hoptm_sbinding.
+  destruct tools.
+  simpl in Hoptm_sbinding.
   remember sstack_val_cmp as fcmp.
   assert(Hsafe_sstack_val_cmp:=H_sstack_val_cmp_snd).
   
   injection Hoptm_sbinding as eq_basic_solver eq_flag.
-  pose proof (basic_mload_solver_snd (fun _ : nat => fcmp)
-      (safe_fcm_ext_1 fcmp Hsafe_sstack_val_cmp)).
-  unfold mload_solver_snd in H.
-  destruct H as [Hsolver_valid Hsolver_correct].
+  unfold mload_solver_snd in H_mload_solver_snd.
+  destruct H_mload_solver_snd as [Hsolver_valid Hsolver_correct].
   unfold mload_solver_correct_res in Hsolver_correct.
   specialize Hsolver_correct with (m := SymMap idx sb)(smem:=smem)
     (soffset:=offset)(ctx:=ctx)(smv:=val')
