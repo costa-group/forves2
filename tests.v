@@ -79,4 +79,32 @@ Compute
   | None => false
   end.
 
+Compute 
+  let b1 := str2block "ADD" in
+  let b2 := str2block "POP" in
+  let init_state := (parse_init_state "2") in
+  let cs := [[C_EQ (C_VAR 0) (C_VAL 0)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_Basic SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+Compute 
+  let b1 := str2block "ADD" in
+  let b2 := str2block "SWAP1 POP" in
+  let init_state := (parse_init_state "2") in
+  let cs := [[C_EQ (C_VAR 1) (C_VAL 0)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_Basic SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
 End Tests.
