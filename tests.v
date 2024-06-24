@@ -121,7 +121,6 @@ Compute
   | None => false
   end.
 
-(* this does not work for some reason, but I think it should *)
 Compute 
   let b1 := str2block "MUL" in
   let b2 := str2block "POP POP PUSH1 0x0" in
