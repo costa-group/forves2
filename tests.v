@@ -124,7 +124,7 @@ Compute
 (* this does not work for some reason, but I think it should *)
 Compute 
   let b1 := str2block "MUL" in
-  let b2 := str2block "POP POP PUSH 0x0" in
+  let b2 := str2block "POP POP PUSH1 0x0" in
   let init_state := (parse_init_state "2") in
   let cs := [[C_EQ (C_VAR 1) (C_VAL 0)]] in
   match init_state with
