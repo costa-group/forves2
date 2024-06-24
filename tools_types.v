@@ -24,6 +24,7 @@ Record tools_t : Type :=
     (* memory comparator -- recieves sstack_val_cmp_ext_1_t *)
     smemory_cmp_ext : smemory_cmp_ext_t;
     H_smemory_cmp_ext_snd: safe_smemory_cmp_ext_wrt_sstack_value_cmp smemory_cmp_ext;
+
     (* storage comparator -- recieves sstack_val_cmp_ext_1_t *)
     sstorage_cmp_ext : sstorage_cmp_ext_t;
     H_sstorage_cmp_ext_snd: safe_sstorage_cmp_ext_wrt_sstack_value_cmp sstorage_cmp_ext;
@@ -71,7 +72,7 @@ Record tools_t : Type :=
 
 
 End Tools.
-     
+
 Module Tools_1.
 Record tools_1_t : Type := 
   {
