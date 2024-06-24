@@ -54,6 +54,11 @@ Import SymbolicStateDec.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
+Require Import FORVES2.context_facts.
+Import ContextFacts.
 
 Module SStackValCmpImplSoundness.
 
@@ -178,10 +183,64 @@ Module SStackValCmpImplSoundness.
           rewrite H_cmp_sv1_sv2.
           exists val0.
           split; reflexivity.
-        * apply Nat.eqb_eq in H_cmp_sv1_sv2.
-          rewrite H_cmp_sv1_sv2.
-          exists (model var0).
+        * pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
           split; reflexivity.
+        * pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
+          split; reflexivity.
+        * apply orb_prop in H_cmp_sv1_sv2.
+          destruct H_cmp_sv1_sv2 as [H_cmp_sv1_sv2 | H_cmp_sv1_sv2].
+          ** apply Nat.eqb_eq in H_cmp_sv1_sv2.
+             rewrite H_cmp_sv1_sv2.
+             exists (model var0).
+             split; reflexivity.
+          ** pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+             pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+             destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+             destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx1 sb1 ops) as H_eval_var_1.
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_0_1.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx2 sb2 ops) as H_eval_var_1_1.
+
+             rewrite H_eval_var_1  in H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+             exists v1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_0.
+             split; reflexivity.
+
       + apply andb_prop in H_cmp_sv1_sv2 as [ H_cmp_sv1_sv2_0  H_cmp_sv1_sv2_1].
         apply N.eqb_eq in H_cmp_sv1_sv2_0.
         apply N.eqb_eq in H_cmp_sv1_sv2_1.
@@ -309,16 +368,70 @@ Module SStackValCmpImplSoundness.
       pose proof (valid_follow_in_smap sb2 sv2 maxidx2 ops smv2 maxidx2' sb2' H_valid_sv2 H_valid_sb2 H_follow_suc_sv2) as H_follow_valid_sv2.
  
       destruct smv1 eqn:E_smv1; destruct smv2 eqn:E_smv2; try discriminate.
-      
-      + destruct val; destruct val0; try discriminate.
+
+            + destruct val; destruct val0; try discriminate.
         * apply weqb_sound in H_cmp_sv1_sv2.
           rewrite H_cmp_sv1_sv2.
           exists val0.
           split; reflexivity.
-        * apply Nat.eqb_eq in H_cmp_sv1_sv2.
-          rewrite H_cmp_sv1_sv2.
-          exists (model var0).
+        * pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
           split; reflexivity.
+        * pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
+          split; reflexivity.
+        * apply orb_prop in H_cmp_sv1_sv2.
+          destruct H_cmp_sv1_sv2 as [H_cmp_sv1_sv2 | H_cmp_sv1_sv2].
+          ** apply Nat.eqb_eq in H_cmp_sv1_sv2.
+             rewrite H_cmp_sv1_sv2.
+             exists (model var0).
+             split; reflexivity.
+          ** pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+             pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+             destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+             destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx1 sb1 ops) as H_eval_var_1.
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_0_1.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx2 sb2 ops) as H_eval_var_1_1.
+
+             rewrite H_eval_var_1  in H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+             exists v1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_0.
+             split; reflexivity.
+
       + apply andb_prop in H_cmp_sv1_sv2 as [H_cmp_sv1_sv2_0 H_cmp_sv1_sv2_1].
         apply N.eqb_eq in H_cmp_sv1_sv2_0.
         apply N.eqb_eq in H_cmp_sv1_sv2_1.
@@ -831,10 +944,64 @@ Module SStackValCmpImplSoundness.
           rewrite H_cmp_sv1_sv2.
           exists val0.
           split; reflexivity.
-        * apply Nat.eqb_eq in H_cmp_sv1_sv2.
-          rewrite H_cmp_sv1_sv2.
-          exists (model var0).
+        * pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
           split; reflexivity.
+        * pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
+          split; reflexivity.
+        * apply orb_prop in H_cmp_sv1_sv2.
+          destruct H_cmp_sv1_sv2 as [H_cmp_sv1_sv2 | H_cmp_sv1_sv2].
+          ** apply Nat.eqb_eq in H_cmp_sv1_sv2.
+             rewrite H_cmp_sv1_sv2.
+             exists (model var0).
+             split; reflexivity.
+          ** pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+             pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+             destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+             destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx1 sb1 ops) as H_eval_var_1.
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_0_1.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx2 sb2 ops) as H_eval_var_1_1.
+
+             rewrite H_eval_var_1  in H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+             exists v1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_0.
+             split; reflexivity.
+             
       + apply andb_prop in H_cmp_sv1_sv2 as [ H_cmp_sv1_sv2_0  H_cmp_sv1_sv2_1].
         apply N.eqb_eq in H_cmp_sv1_sv2_0.
         apply N.eqb_eq in H_cmp_sv1_sv2_1.
@@ -1042,10 +1209,64 @@ Module SStackValCmpImplSoundness.
           rewrite H_cmp_sv1_sv2.
           exists val0.
           split; reflexivity.
-        * apply Nat.eqb_eq in H_cmp_sv1_sv2.
-          rewrite H_cmp_sv1_sv2.
-          exists (model var0).
+        * pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (Val val) (InVar var) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
           split; reflexivity.
+        * pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+          pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (Val val) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+          destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+          destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx1 sb1 ops) as H_eval_val_0.
+          pose proof (eval_sstack_val_Val val model mem strg exts maxidx2 sb2 ops) as H_eval_val_1.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+          pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_1.
+          rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+          rewrite H_eval_val_0 in H_ctx_sv1'_eq_sv2'_0_1.
+          injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+          injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+          exists v1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_1.
+          rewrite H_ctx_sv1'_eq_sv2'_0_0.
+          split; reflexivity.
+        * apply orb_prop in H_cmp_sv1_sv2.
+          destruct H_cmp_sv1_sv2 as [H_cmp_sv1_sv2 | H_cmp_sv1_sv2].
+          ** apply Nat.eqb_eq in H_cmp_sv1_sv2.
+             rewrite H_cmp_sv1_sv2.
+             exists (model var0).
+             split; reflexivity.
+          ** pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx1 sb1 ops H_is_model) as H_ctx_sv1'_eq_sv2'_0.
+             pose proof (chk_eq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_cmp_sv1_sv2 model mem strg exts maxidx2 sb2 ops H_is_model) as H_ctx_sv1'_eq_sv2'_1.
+             destruct H_ctx_sv1'_eq_sv2'_0 as [v1 [H_ctx_sv1'_eq_sv2'_0_0 H_ctx_sv1'_eq_sv2'_0_1]].
+             destruct H_ctx_sv1'_eq_sv2'_1 as [v2 [H_ctx_sv1'_eq_sv2'_1_0 H_ctx_sv1'_eq_sv2'_1_1]].
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx1 sb1 ops) as H_eval_var_0.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx1 sb1 ops) as H_eval_var_1.
+
+             pose proof (eval_sstack_val_InVar var model mem strg exts maxidx2 sb2 ops) as H_eval_var_0_1.
+             pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx2 sb2 ops) as H_eval_var_1_1.
+
+             rewrite H_eval_var_1  in H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_eval_var_0 in H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_0 as H_ctx_sv1'_eq_sv2'_0_0.
+             injection H_ctx_sv1'_eq_sv2'_0_1 as H_ctx_sv1'_eq_sv2'_0_1.
+             exists v1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_1.
+             rewrite H_ctx_sv1'_eq_sv2'_0_0.
+             split; reflexivity.
+             
       + apply andb_prop in H_cmp_sv1_sv2 as [H_cmp_sv1_sv2_0 H_cmp_sv1_sv2_1].
         apply N.eqb_eq in H_cmp_sv1_sv2_0.
         apply N.eqb_eq in H_cmp_sv1_sv2_1.
