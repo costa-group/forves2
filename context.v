@@ -80,13 +80,74 @@ Definition chk_lt_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
 Definition chk_neq_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
   chk_lt_wrt_ctx ctx sv1 sv2 ||   chk_lt_wrt_ctx ctx sv2 sv1.
 
-Definition chk_lt_wshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
+Definition chk_lt_lshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
   let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
   let cs := ctx_cs ctx in
   let ocl1 := sstack_val_to_cliteral_w_shift sv1 shift in
   let ocl2 := sstack_val_to_cliteral sv2 in
   match ocl1, ocl2 with
   | Some cl1, Some cl2 => imp_chkr cs (C_LT cl1 cl2)
+  | _, _ => false
+  end.
+
+Definition chk_lt_rshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral sv1 in
+  let ocl2 := sstack_val_to_cliteral_w_shift sv2 shift in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs (C_LT cl1 cl2)
+  | _, _ => false
+  end.
+
+Definition chk_lt_lrshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift1: N) (shift2: N) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral_w_shift sv1 shift1 in
+  let ocl2 := sstack_val_to_cliteral_w_shift sv2 shift2 in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs (C_LT cl1 cl2)
+  | _, _ => false
+  end.
+
+
+Definition chk_le_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral sv1 in
+  let ocl2 := sstack_val_to_cliteral sv2 in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs  (C_LE cl1 cl2)
+  | _, _ => false
+  end.
+
+Definition chk_le_lshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral_w_shift sv1 shift in
+  let ocl2 := sstack_val_to_cliteral sv2 in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs (C_LE cl1 cl2)
+  | _, _ => false
+  end.
+
+Definition chk_le_rshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral sv1 in
+  let ocl2 := sstack_val_to_cliteral_w_shift sv2 shift in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs (C_LE cl1 cl2)
+  | _, _ => false
+  end.
+
+Definition chk_le_lrshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift1: N) (shift2: N) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral_w_shift sv1 shift1 in
+  let ocl2 := sstack_val_to_cliteral_w_shift sv2 shift2 in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs (C_LE cl1 cl2)
   | _, _ => false
   end.
 

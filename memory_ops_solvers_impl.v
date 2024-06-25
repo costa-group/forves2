@@ -53,20 +53,33 @@ Module MemoryOpsSolversImpl.
 (* Doesn't check the memory, just appends the abstract store *)
   Definition trivial_smemory_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (update: memory_update sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
       (update::smem).
-
-
   
   (* [soffset,soffset+size] does not overlap with [soffset',soffset'+size'] --- closed intervals *)
   (* We will mainly use it with size=31 or size=0 *)
   Definition memory_slots_do_not_overlap  (ctx: ctx_t) (soffset soffset': sstack_val) (size size':N) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
-    match follow_in_smap soffset maxidx sb, follow_in_smap soffset' maxidx sb with
-    | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) => 
-        let addr := (wordToN v1) in
-        let addr' := (wordToN v2) in
-        orb (addr+size <? addr')%N (addr'+size' <? addr)%N
-    | _, _ => false
+    match follow_in_smap soffset maxidx sb with
+    | Some (FollowSmapVal smv1 _ _) =>
+        match smv1 with
+        | SymBasicVal sv1 => 
+            match follow_in_smap soffset' maxidx sb with
+            | Some (FollowSmapVal smv2 _ _) =>
+                match smv2 with
+                | SymBasicVal sv2 =>
+                    match sv1, sv2 with
+                    | Val v1, Val v2 => 
+                        let addr := (wordToN v1) in
+                        let addr' := (wordToN v2) in
+                        orb (addr+size <? addr')%N (addr'+size' <? addr)%N
+                    | _, _ => chk_lt_lshift_wrt_ctx ctx sv1 sv2 size || chk_lt_lshift_wrt_ctx ctx sv2 sv1 size'
+                    end
+                | _ => false
+                end
+            | _ => false
+            end
+        | _ => false
+        end
+    | _ => false
     end.
-  
  
   Fixpoint basic_mload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     match smem with
@@ -95,6 +108,7 @@ Module MemoryOpsSolversImpl.
         andb (addr_mstore <=? addr_mstore8 )%N (addr_mstore8 <=? addr_mstore+31)%N
     | _, _ => false
     end.
+
 
   Fixpoint basic_smemory_updater_remove_mstore_dups (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset_mstore: sstack_val) (smem: smemory) (m: smap) (ops: stack_op_instr_map) :=
     match smem with

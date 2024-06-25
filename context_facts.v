@@ -324,9 +324,9 @@ Qed.
 
 
   
-  Lemma chk_lt_wshift_wrt_ctx_snd:
+  Lemma chk_lt_lshift_wrt_ctx_snd:
     forall ctx sv1 sv2 shift,
-      chk_lt_wshift_wrt_ctx ctx sv1 sv2 shift = true ->
+      chk_lt_lshift_wrt_ctx ctx sv1 sv2 shift = true ->
       forall model mem strg exts maxidx sb ops,
         is_model (ctx_cs ctx) model = true ->
         exists v1 v2,
@@ -343,7 +343,7 @@ Qed.
       try discriminate.
 
     (* val1 = val2 *)
-    + unfold chk_lt_wshift_wrt_ctx in H_chkr.
+    + unfold chk_lt_lshift_wrt_ctx in H_chkr.
       unfold sstack_val_to_cliteral in H_chkr.
       unfold sstack_val_to_cliteral_w_shift in H_chkr.
       simpl in H_chkr.
@@ -369,7 +369,7 @@ Qed.
       apply H_chkr_snd.
       
     (* val = var *)
-    + unfold chk_lt_wshift_wrt_ctx in H_chkr.
+    + unfold chk_lt_lshift_wrt_ctx in H_chkr.
       unfold sstack_val_to_cliteral in H_chkr.
       unfold sstack_val_to_cliteral_w_shift in H_chkr.
       simpl in H_chkr.
@@ -395,7 +395,7 @@ Qed.
       apply H_chkr_snd.
       
     (* var = val *)
-    + unfold chk_lt_wshift_wrt_ctx in H_chkr.
+    + unfold chk_lt_lshift_wrt_ctx in H_chkr.
       unfold sstack_val_to_cliteral in H_chkr.
       unfold sstack_val_to_cliteral_w_shift in H_chkr.
       simpl in H_chkr.
@@ -421,7 +421,7 @@ Qed.
       apply H_chkr_snd.
 
     (* var = var *)
-    + unfold chk_lt_wshift_wrt_ctx in H_chkr.
+    + unfold chk_lt_lshift_wrt_ctx in H_chkr.
       unfold sstack_val_to_cliteral in H_chkr.
       unfold sstack_val_to_cliteral_w_shift in H_chkr.
       simpl in H_chkr.

@@ -58,6 +58,10 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+
+Require Import FORVES2.context_facts.
+Import ContextFacts.
+
 Module MemoryOpsSolversImplSoundness.
 
   Lemma trivial_mload_solver_snd: mload_solver_ext_snd trivial_mload_solver.
@@ -125,7 +129,8 @@ Module MemoryOpsSolversImplSoundness.
       repeat split; apply H_eval_smemory_u_smem.
   Qed.
 
-Lemma  H_memory_slots_do_not_overlap:
+
+  Lemma  H_memory_slots_do_not_overlap:
     forall ctx soffset soffset' size size' maxidx sbindings ops,
       valid_bindings maxidx sbindings ops ->
       valid_sstack_value maxidx soffset  ->
@@ -145,12 +150,11 @@ Lemma  H_memory_slots_do_not_overlap:
     destruct (follow_in_smap soffset maxidx sbindings) as [soffset_m|] eqn:E_follow_soffset; try discriminate.
     destruct soffset_m; try discriminate.
     destruct smv; try discriminate.
-    destruct val; try discriminate.
-
     destruct (follow_in_smap soffset' maxidx sbindings) as [soffset'_m|] eqn:E_follow_soffset'; try discriminate.
     destruct soffset'_m; try discriminate.
     destruct smv; try discriminate.
-    destruct val0; try discriminate.
+    
+    destruct val; destruct val0; try discriminate.
 
     intros modfe mem strg exts.
     intros H_is_model.
@@ -162,7 +166,182 @@ Lemma  H_memory_slots_do_not_overlap:
     exists val0.
     split; try split; try reflexivity.
     apply H_addr_nover.
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset model mem strg exts maxidx sbindings ops H_valid_offset H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset' model mem strg exts maxidx sbindings ops H_valid_offset' H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset'.
+    destruct H_eval_soffset as [v_soffset H_eval_soffset].
+    destruct H_eval_soffset' as [v_soffset' H_eval_soffset'].
+    exists v_soffset.
+    exists v_soffset'.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_soffset.
+    rewrite E_follow_soffset in H_eval_soffset.
+    injection H_eval_soffset as H_eval_soffset.
+    unfold eval_sstack_val' in H_eval_soffset'.
+    rewrite E_follow_soffset' in H_eval_soffset'.
+    injection H_eval_soffset' as H_eval_soffset'.
+
+    apply orb_prop in H_addr_nover.
+    destruct H_addr_nover as [H_addr_nover | H_addr_nover].
+   
+    
+    pose proof (chk_lt_lshift_wrt_ctx_snd ctx (Val val) (InVar var) size H_addr_nover model mem strg exts maxidx sbindings ops H_is_model) as H_chk_lt_wshit_wrt_ctx_snd.
+    destruct H_chk_lt_wshit_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+
+    rewrite <- H_eval_soffset.
+    rewrite <- H_eval_soffset'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    rewrite orb_true_iff.
+    left.
+    rewrite N.ltb_lt.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+    pose proof (chk_lt_lshift_wrt_ctx_snd ctx (InVar var) (Val val) size' H_addr_nover model mem strg exts maxidx sbindings ops H_is_model) as H_chk_lt_wshit_wrt_ctx_snd.
+    destruct H_chk_lt_wshit_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+
+    rewrite <- H_eval_soffset.
+    rewrite <- H_eval_soffset'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    rewrite orb_true_iff.
+    right.
+    rewrite N.ltb_lt.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset model mem strg exts maxidx sbindings ops H_valid_offset H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset' model mem strg exts maxidx sbindings ops H_valid_offset' H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset'.
+    destruct H_eval_soffset as [v_soffset H_eval_soffset].
+    destruct H_eval_soffset' as [v_soffset' H_eval_soffset'].
+    exists v_soffset.
+    exists v_soffset'.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_soffset.
+    rewrite E_follow_soffset in H_eval_soffset.
+    injection H_eval_soffset as H_eval_soffset.
+    unfold eval_sstack_val' in H_eval_soffset'.
+    rewrite E_follow_soffset' in H_eval_soffset'.
+    injection H_eval_soffset' as H_eval_soffset'.
+
+    apply orb_prop in H_addr_nover.
+    destruct H_addr_nover as [H_addr_nover | H_addr_nover].
+   
+    
+    pose proof (chk_lt_lshift_wrt_ctx_snd ctx (InVar var) (Val val) size H_addr_nover model mem strg exts maxidx sbindings ops H_is_model) as H_chk_lt_wshit_wrt_ctx_snd.
+    destruct H_chk_lt_wshit_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+
+    rewrite <- H_eval_soffset.
+    rewrite <- H_eval_soffset'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    rewrite orb_true_iff.
+    left.
+    rewrite N.ltb_lt.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+    pose proof (chk_lt_lshift_wrt_ctx_snd ctx (Val val) (InVar var) size' H_addr_nover model mem strg exts maxidx sbindings ops H_is_model) as H_chk_lt_wshit_wrt_ctx_snd.
+    destruct H_chk_lt_wshit_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+
+    rewrite <- H_eval_soffset.
+    rewrite <- H_eval_soffset'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    rewrite orb_true_iff.
+    right.
+    rewrite N.ltb_lt.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+    
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset model mem strg exts maxidx sbindings ops H_valid_offset H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset' model mem strg exts maxidx sbindings ops H_valid_offset' H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset'.
+    destruct H_eval_soffset as [v_soffset H_eval_soffset].
+    destruct H_eval_soffset' as [v_soffset' H_eval_soffset'].
+    exists v_soffset.
+    exists v_soffset'.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_soffset.
+    rewrite E_follow_soffset in H_eval_soffset.
+    injection H_eval_soffset as H_eval_soffset.
+    unfold eval_sstack_val' in H_eval_soffset'.
+    rewrite E_follow_soffset' in H_eval_soffset'.
+    injection H_eval_soffset' as H_eval_soffset'.
+
+    apply orb_prop in H_addr_nover.
+    destruct H_addr_nover as [H_addr_nover | H_addr_nover].
+   
+    
+    pose proof (chk_lt_lshift_wrt_ctx_snd ctx (InVar var) (InVar var0) size H_addr_nover model mem strg exts maxidx sbindings ops H_is_model) as H_chk_lt_wshit_wrt_ctx_snd.
+    destruct H_chk_lt_wshit_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sbindings ops) as H_eval_var0.
+    rewrite H_eval_var0 in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+
+    rewrite <- H_eval_soffset.
+    rewrite <- H_eval_soffset'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    rewrite orb_true_iff.
+    left.
+    rewrite N.ltb_lt.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+    pose proof (chk_lt_lshift_wrt_ctx_snd ctx (InVar var0) (InVar var) size' H_addr_nover model mem strg exts maxidx sbindings ops H_is_model) as H_chk_lt_wshit_wrt_ctx_snd.
+    destruct H_chk_lt_wshit_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sbindings ops) as H_eval_var0.
+    rewrite H_eval_var0 in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+
+    rewrite <- H_eval_soffset.
+    rewrite <- H_eval_soffset'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    rewrite orb_true_iff.
+    right.
+    rewrite N.ltb_lt.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
   Qed.
+
 
   Lemma  H_mstore8_is_included_in_mstore:
     forall sstack_val_cmp ctx soffset_mstore8 soffset_mstore maxidx sbindings ops,
