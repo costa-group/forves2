@@ -101,6 +101,32 @@ Module MemoryOpsSolversImpl.
 
   (* mstore8 soffset_mstore8 is includes in soffset_mstore *)
   Definition mstore8_is_included_in_mstore (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset_mstore8 soffset_mstore: sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
+    match follow_in_smap soffset_mstore8 maxidx sb with
+    | Some (FollowSmapVal smv1 _ _) =>
+        match smv1 with
+        | SymBasicVal sv1 => 
+            match follow_in_smap soffset_mstore maxidx sb with
+            | Some (FollowSmapVal smv2 _ _) =>
+                match smv2 with
+                | SymBasicVal sv2 =>
+                    match sv1, sv2 with
+                    | Val v1, Val v2 => 
+                        let addr_mstore8 := (wordToN v1) in
+                        let addr_mstore := (wordToN v2) in
+                        andb (addr_mstore <=? addr_mstore8)%N (addr_mstore8 <=? addr_mstore+31)%N
+                    | _, _ => chk_le_wrt_ctx ctx sv2 sv1  && chk_le_rshift_wrt_ctx ctx sv1 sv2 31%N
+                    end
+                | _ => false
+                end
+            | _ => false
+            end
+        | _ => false
+        end
+    | _ => false
+    end.
+
+    (* mstore8 soffset_mstore8 is includes in soffset_mstore *)
+  Definition mstore8_is_included_in_mstore' (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (soffset_mstore8 soffset_mstore: sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map): bool :=
     match follow_in_smap soffset_mstore8 maxidx sb, follow_in_smap soffset_mstore maxidx sb with
     | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) => 
         let addr_mstore8 := (wordToN v1) in

@@ -364,12 +364,11 @@ Module MemoryOpsSolversImplSoundness.
     destruct (follow_in_smap soffset_mstore8 maxidx sbindings) as [soffset_mstore8_m|] eqn:E_follow_soffset_mstore8; try discriminate.
     destruct soffset_mstore8_m; try discriminate.
     destruct smv; try discriminate.
-    destruct val; try discriminate.
-
     destruct (follow_in_smap soffset_mstore maxidx sbindings) as [soffset_mstore_m|] eqn:E_follow_soffset_mstore; try discriminate.
     destruct soffset_mstore_m; try discriminate.
     destruct smv; try discriminate.
-    destruct val0; try discriminate.
+
+    destruct val; destruct val0; try discriminate.
 
     intros model mem strg exts.
     intros H_is_model.
@@ -381,6 +380,174 @@ Module MemoryOpsSolversImplSoundness.
     exists val0.
     split; try split; try reflexivity.
     apply H_addr_not_inc.
+
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset_mstore8 model mem strg exts maxidx sbindings ops H_valid_offset_mstore8 H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset_mstore8.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset_mstore model mem strg exts maxidx sbindings ops H_valid_offset_mstore H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset_mstore.
+    destruct H_eval_soffset_mstore8 as [v_soffset_mstore8 H_eval_soffset_mstore8].
+    destruct H_eval_soffset_mstore as [v_soffset_mstore H_eval_soffset_mstore].
+    exists v_soffset_mstore8.
+    exists v_soffset_mstore.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_soffset_mstore8.
+    rewrite E_follow_soffset_mstore8 in H_eval_soffset_mstore8.
+    injection H_eval_soffset_mstore8 as H_eval_soffset_mstore8.
+    unfold eval_sstack_val' in H_eval_soffset_mstore.
+    rewrite E_follow_soffset_mstore in H_eval_soffset_mstore.
+    injection H_eval_soffset_mstore as H_eval_soffset_mstore.
+
+    apply andb_prop in H_addr_not_inc.
+    destruct H_addr_not_inc as [H_addr_not_inc_l H_addr_not_inc_r].
+  
+     
+    pose proof (chk_le_wrt_ctx_snd ctx (InVar var) (Val val) H_addr_not_inc_l model mem strg exts maxidx sbindings ops H_is_model) as H_chk_le_wrt_ctx_snd.
+    destruct H_chk_le_wrt_ctx_snd as [v1 [v2 [H_chk_le_wrt_ctx_snd_1 [H_chk_le_wrt_ctx_snd_2 H_chk_le_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_le_wrt_ctx_snd_2.
+    injection H_chk_le_wrt_ctx_snd_2 as H_chk_le_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_le_wrt_ctx_snd_1.
+    injection H_chk_le_wrt_ctx_snd_1 as H_chk_le_wrt_ctx_snd_1.
+
+    rewrite <- H_eval_soffset_mstore8.
+    rewrite <- H_eval_soffset_mstore.
+    rewrite  H_chk_le_wrt_ctx_snd_1.
+    rewrite  H_chk_le_wrt_ctx_snd_2.
+
+    pose proof (chk_le_rshift_wrt_ctx_snd ctx  (Val val) (InVar var) 31%N H_addr_not_inc_r model mem strg exts maxidx sbindings ops H_is_model) as H_chk_le_rshift_wrt_ctx_snd. 
+    destruct H_chk_le_rshift_wrt_ctx_snd as [v1' [v2' [H_chk_le_rshift_wrt_ctx_snd_1 [H_chk_le_rshift_wrt_ctx_snd_2 H_chk_le_rshift_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val_aux.
+    rewrite H_eval_val_aux in H_chk_le_rshift_wrt_ctx_snd_1.
+    injection H_chk_le_rshift_wrt_ctx_snd_1 as H_chk_le_rshift_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var_aux.
+    rewrite H_eval_var_aux in H_chk_le_rshift_wrt_ctx_snd_2.
+    injection H_chk_le_rshift_wrt_ctx_snd_2 as H_chk_le_rshift_wrt_ctx_snd_2.
+
+    rewrite <- H_chk_le_rshift_wrt_ctx_snd_1 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite <- H_chk_le_rshift_wrt_ctx_snd_2 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite  H_chk_le_wrt_ctx_snd_1 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite  H_chk_le_wrt_ctx_snd_2 in H_chk_le_rshift_wrt_ctx_snd_3.
+
+    rewrite andb_true_iff.
+    
+    apply N.leb_le in H_chk_le_wrt_ctx_snd_3.
+    apply N.leb_le in H_chk_le_rshift_wrt_ctx_snd_3.
+    split; try (apply H_chk_le_wrt_ctx_snd_3 || apply H_chk_le_rshift_wrt_ctx_snd_3).
+    
+    
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset_mstore8 model mem strg exts maxidx sbindings ops H_valid_offset_mstore8 H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset_mstore8.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset_mstore model mem strg exts maxidx sbindings ops H_valid_offset_mstore H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset_mstore.
+    destruct H_eval_soffset_mstore8 as [v_soffset_mstore8 H_eval_soffset_mstore8].
+    destruct H_eval_soffset_mstore as [v_soffset_mstore H_eval_soffset_mstore].
+    exists v_soffset_mstore8.
+    exists v_soffset_mstore.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_soffset_mstore8.
+    rewrite E_follow_soffset_mstore8 in H_eval_soffset_mstore8.
+    injection H_eval_soffset_mstore8 as H_eval_soffset_mstore8.
+    unfold eval_sstack_val' in H_eval_soffset_mstore.
+    rewrite E_follow_soffset_mstore in H_eval_soffset_mstore.
+    injection H_eval_soffset_mstore as H_eval_soffset_mstore.
+
+    apply andb_prop in H_addr_not_inc.
+    destruct H_addr_not_inc as [H_addr_not_inc_l H_addr_not_inc_r].
+  
+     
+    pose proof (chk_le_wrt_ctx_snd ctx (Val val) (InVar var)  H_addr_not_inc_l model mem strg exts maxidx sbindings ops H_is_model) as H_chk_le_wrt_ctx_snd.
+    destruct H_chk_le_wrt_ctx_snd as [v1 [v2 [H_chk_le_wrt_ctx_snd_1 [H_chk_le_wrt_ctx_snd_2 H_chk_le_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_le_wrt_ctx_snd_1.
+    injection H_chk_le_wrt_ctx_snd_1 as H_chk_le_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_le_wrt_ctx_snd_2.
+    injection H_chk_le_wrt_ctx_snd_2 as H_chk_le_wrt_ctx_snd_2.
+
+    rewrite <- H_eval_soffset_mstore8.
+    rewrite <- H_eval_soffset_mstore.
+    rewrite  H_chk_le_wrt_ctx_snd_1.
+    rewrite  H_chk_le_wrt_ctx_snd_2.
+
+    pose proof (chk_le_rshift_wrt_ctx_snd ctx  (InVar var) (Val val) 31%N H_addr_not_inc_r model mem strg exts maxidx sbindings ops H_is_model) as H_chk_le_rshift_wrt_ctx_snd. 
+    destruct H_chk_le_rshift_wrt_ctx_snd as [v1' [v2' [H_chk_le_rshift_wrt_ctx_snd_1 [H_chk_le_rshift_wrt_ctx_snd_2 H_chk_le_rshift_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val_aux.
+    rewrite H_eval_val_aux in H_chk_le_rshift_wrt_ctx_snd_2.
+    injection H_chk_le_rshift_wrt_ctx_snd_2 as H_chk_le_rshift_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var_aux.
+    rewrite H_eval_var_aux in H_chk_le_rshift_wrt_ctx_snd_1.
+    injection H_chk_le_rshift_wrt_ctx_snd_1 as H_chk_le_rshift_wrt_ctx_snd_1.
+
+    rewrite <- H_chk_le_rshift_wrt_ctx_snd_1 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite <- H_chk_le_rshift_wrt_ctx_snd_2 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite  H_chk_le_wrt_ctx_snd_1 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite  H_chk_le_wrt_ctx_snd_2 in H_chk_le_rshift_wrt_ctx_snd_3.
+
+    rewrite andb_true_iff.
+    
+    apply N.leb_le in H_chk_le_wrt_ctx_snd_3.
+    apply N.leb_le in H_chk_le_rshift_wrt_ctx_snd_3.
+    split; try (apply H_chk_le_wrt_ctx_snd_3 || apply H_chk_le_rshift_wrt_ctx_snd_3).
+    
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset_mstore8 model mem strg exts maxidx sbindings ops H_valid_offset_mstore8 H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset_mstore8.
+    pose proof (eval_sstack_val'_succ (S maxidx) soffset_mstore model mem strg exts maxidx sbindings ops H_valid_offset_mstore H_valid_sbindings (gt_Sn_n maxidx)) as H_eval_soffset_mstore.
+    destruct H_eval_soffset_mstore8 as [v_soffset_mstore8 H_eval_soffset_mstore8].
+    destruct H_eval_soffset_mstore as [v_soffset_mstore H_eval_soffset_mstore].
+    exists v_soffset_mstore8.
+    exists v_soffset_mstore.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_soffset_mstore8.
+    rewrite E_follow_soffset_mstore8 in H_eval_soffset_mstore8.
+    injection H_eval_soffset_mstore8 as H_eval_soffset_mstore8.
+    unfold eval_sstack_val' in H_eval_soffset_mstore.
+    rewrite E_follow_soffset_mstore in H_eval_soffset_mstore.
+    injection H_eval_soffset_mstore as H_eval_soffset_mstore.
+
+    apply andb_prop in H_addr_not_inc.
+    destruct H_addr_not_inc as [H_addr_not_inc_l H_addr_not_inc_r].
+  
+     
+    pose proof (chk_le_wrt_ctx_snd ctx (InVar var0) (InVar var)  H_addr_not_inc_l model mem strg exts maxidx sbindings ops H_is_model) as H_chk_le_wrt_ctx_snd.
+    destruct H_chk_le_wrt_ctx_snd as [v1 [v2 [H_chk_le_wrt_ctx_snd_1 [H_chk_le_wrt_ctx_snd_2 H_chk_le_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sbindings ops) as H_eval_var0.
+    rewrite H_eval_var0 in H_chk_le_wrt_ctx_snd_1.
+    injection H_chk_le_wrt_ctx_snd_1 as H_chk_le_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_le_wrt_ctx_snd_2.
+    injection H_chk_le_wrt_ctx_snd_2 as H_chk_le_wrt_ctx_snd_2.
+
+    rewrite <- H_eval_soffset_mstore8.
+    rewrite <- H_eval_soffset_mstore.
+    rewrite  H_chk_le_wrt_ctx_snd_1.
+    rewrite  H_chk_le_wrt_ctx_snd_2.
+
+    pose proof (chk_le_rshift_wrt_ctx_snd ctx  (InVar var) (InVar var0) 31%N H_addr_not_inc_r model mem strg exts maxidx sbindings ops H_is_model) as H_chk_le_rshift_wrt_ctx_snd. 
+    destruct H_chk_le_rshift_wrt_ctx_snd as [v1' [v2' [H_chk_le_rshift_wrt_ctx_snd_1 [H_chk_le_rshift_wrt_ctx_snd_2 H_chk_le_rshift_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sbindings ops) as H_eval_var0_aux.
+    rewrite H_eval_var0_aux in H_chk_le_rshift_wrt_ctx_snd_2.
+    injection H_chk_le_rshift_wrt_ctx_snd_2 as H_chk_le_rshift_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var_aux.
+    rewrite H_eval_var_aux in H_chk_le_rshift_wrt_ctx_snd_1.
+    injection H_chk_le_rshift_wrt_ctx_snd_1 as H_chk_le_rshift_wrt_ctx_snd_1.
+
+    rewrite <- H_chk_le_rshift_wrt_ctx_snd_1 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite <- H_chk_le_rshift_wrt_ctx_snd_2 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite  H_chk_le_wrt_ctx_snd_1 in H_chk_le_rshift_wrt_ctx_snd_3.
+    rewrite  H_chk_le_wrt_ctx_snd_2 in H_chk_le_rshift_wrt_ctx_snd_3.
+
+    rewrite andb_true_iff.
+    
+    apply N.leb_le in H_chk_le_wrt_ctx_snd_3.
+    apply N.leb_le in H_chk_le_rshift_wrt_ctx_snd_3.
+    split; try (apply H_chk_le_wrt_ctx_snd_3 || apply H_chk_le_rshift_wrt_ctx_snd_3).
   Qed.
 
   Lemma basic_mload_solver_valid:
