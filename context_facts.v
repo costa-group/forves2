@@ -446,6 +446,69 @@ Qed.
       repeat split; try reflexivity.
 
       apply H_chkr_snd.
-Qed.
+    Qed.
+
+    
+  Lemma chk_lt_rshift_wrt_ctx_snd:
+    forall ctx sv1 sv2 shift,
+      chk_lt_rshift_wrt_ctx ctx sv1 sv2 shift = true ->
+      forall model mem strg exts maxidx sb ops,
+        is_model (ctx_cs ctx) model = true ->
+        exists v1 v2,
+          eval_sstack_val sv1 model mem strg exts maxidx sb ops = Some v1 /\
+            eval_sstack_val sv2 model mem strg exts maxidx sb ops = Some v2 /\
+            ((wordToN v1) < (wordToN v2) +shift )%N.
+    Proof.
+    Admitted.
+
+      Lemma chk_lt_lrshift_wrt_ctx_snd:
+    forall ctx sv1 sv2 shift1 shift2,
+      chk_lt_lrshift_wrt_ctx ctx sv1 sv2 shift1 shift2 = true ->
+      forall model mem strg exts maxidx sb ops,
+        is_model (ctx_cs ctx) model = true ->
+        exists v1 v2,
+          eval_sstack_val sv1 model mem strg exts maxidx sb ops = Some v1 /\
+            eval_sstack_val sv2 model mem strg exts maxidx sb ops = Some v2 /\
+            ((wordToN v1) + shift1 < (wordToN v2) + shift2 )%N.
+    Proof.
+    Admitted.
+
+
+    Lemma chk_le_lshift_wrt_ctx_snd:
+    forall ctx sv1 sv2 shift,
+      chk_le_lshift_wrt_ctx ctx sv1 sv2 shift = true ->
+      forall model mem strg exts maxidx sb ops,
+        is_model (ctx_cs ctx) model = true ->
+        exists v1 v2,
+          eval_sstack_val sv1 model mem strg exts maxidx sb ops = Some v1 /\
+            eval_sstack_val sv2 model mem strg exts maxidx sb ops = Some v2 /\
+            ((wordToN v1) + shift <= (wordToN v2))%N.
+    Proof.
+    Admitted.
+
+  Lemma chk_le_rshift_wrt_ctx_snd:
+    forall ctx sv1 sv2 shift,
+      chk_le_rshift_wrt_ctx ctx sv1 sv2 shift = true ->
+      forall model mem strg exts maxidx sb ops,
+        is_model (ctx_cs ctx) model = true ->
+        exists v1 v2,
+          eval_sstack_val sv1 model mem strg exts maxidx sb ops = Some v1 /\
+            eval_sstack_val sv2 model mem strg exts maxidx sb ops = Some v2 /\
+            ((wordToN v1) <= (wordToN v2) + shift)%N.
+    Proof.
+    Admitted.
+
+      Lemma chk_le_lrshift_wrt_ctx_snd:
+    forall ctx sv1 sv2 shift1 shift2,
+      chk_le_lrshift_wrt_ctx ctx sv1 sv2 shift1 shift2 = true ->
+      forall model mem strg exts maxidx sb ops,
+        is_model (ctx_cs ctx) model = true ->
+        exists v1 v2,
+          eval_sstack_val sv1 model mem strg exts maxidx sb ops = Some v1 /\
+            eval_sstack_val sv2 model mem strg exts maxidx sb ops = Some v2 /\
+            ((wordToN v1) + shift1 <= (wordToN v2) + shift2 )%N.
+    Proof.
+    Admitted.
+
 
 End ContextFacts.
