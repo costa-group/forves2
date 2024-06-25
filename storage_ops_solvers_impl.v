@@ -61,7 +61,7 @@ Definition trivial_sstorage_updater (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ct
 Definition not_eq_keys (ctx: ctx_t) (skey skey': sstack_val) (maxidx: nat) (sb: sbindings) (ops: stack_op_instr_map) : bool :=
   match follow_in_smap skey maxidx sb, follow_in_smap skey' maxidx sb with
   | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) => negb (weqb v1 v2)
-  | _, _ => false
+  | _, _ => chk_neq_wrt_ctx ctx skey skey'
   end.
 
 Fixpoint basic_sload_solver (sstack_val_cmp: sstack_val_cmp_ext_1_t) (ctx: ctx_t) (skey: sstack_val) (sstrg: sstorage) (m: smap) (ops: stack_op_instr_map) :=
