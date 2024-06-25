@@ -65,6 +65,9 @@ Import Context.
 Require Import FORVES2.context_facts.
 Import ContextFacts.
 
+Require Import FORVES2.symbolic_execution_soundness.
+Import SymbolicExecutionSoundness.
+
 Module StorageOpsSolversImplSoundness.
 
   Lemma trivial_sload_solver_snd: sload_solver_ext_snd trivial_sload_solver.
@@ -146,23 +149,20 @@ Module StorageOpsSolversImplSoundness.
           eval_sstack_val' (S maxidx) skey' model mem strg exts maxidx sbindings ops = Some v2 /\
           weqb v1 v2 = false.
   Proof.
-
-    Ltac ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model :=
-      intros model mem strg exts H_is_model;
-      pose proof (chk_newq_wrt_ctx_snd ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model) as H;
-      apply H.
-
+ 
     intros ctx skey skey' maxidx sbindings ops.
     intros H_valid_bs H_valid_skey H_valid_skey' H_neq.
     unfold not_eq_keys in H_neq.
-    destruct (follow_in_smap skey maxidx sbindings) as [skey_m|] eqn:E_follow_skey; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct skey_m; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct smv; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct val; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct (follow_in_smap skey' maxidx sbindings) as [skey'_m|] eqn:E_follow_skey'; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct skey'_m; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct smv; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
-    destruct val0; try (ctx_tac ctx skey skey' H_neq model mem strg exts maxidx sbindings ops H_is_model).
+    destruct (follow_in_smap skey maxidx sbindings) as [skey_m|] eqn:E_follow_skey; try discriminate.
+    destruct skey_m; try discriminate.
+    destruct smv; try discriminate.
+
+
+    destruct (follow_in_smap skey' maxidx sbindings) as [skey'_m|] eqn:E_follow_skey'; try discriminate.
+    destruct skey'_m; try discriminate.
+    destruct smv; try discriminate.
+
+    destruct val; destruct val0; try discriminate.
     intros model mem strg exts.
     intros H_is_model.
     unfold eval_sstack_val' at 1.
@@ -175,6 +175,102 @@ Module StorageOpsSolversImplSoundness.
     rewrite negb_true_iff in H_neq.
     rewrite H_neq.
     reflexivity.
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) skey model mem strg exts maxidx sbindings ops H_valid_skey H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey.
+    pose proof (eval_sstack_val'_succ (S maxidx) skey' model mem strg exts maxidx sbindings ops H_valid_skey' H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey'.
+    destruct H_eval_skey as [v_skey H_eval_skey].
+    destruct H_eval_skey' as [v_skey' H_eval_skey'].
+    exists v_skey.
+    exists v_skey'.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_skey.
+    rewrite E_follow_skey in H_eval_skey.
+    injection H_eval_skey as H_eval_skey.
+    unfold eval_sstack_val' in H_eval_skey'.
+    rewrite E_follow_skey' in H_eval_skey'.
+    injection H_eval_skey' as H_eval_skey'.
+            
+    pose proof (chk_newq_wrt_ctx_snd ctx (Val val) (InVar var) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_newq_wrt_ctx_snd.
+    destruct H_chk_newq_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+
+    rewrite <- H_eval_skey.
+    rewrite <- H_eval_skey'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) skey model mem strg exts maxidx sbindings ops H_valid_skey H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey.
+    pose proof (eval_sstack_val'_succ (S maxidx) skey' model mem strg exts maxidx sbindings ops H_valid_skey' H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey'.
+    destruct H_eval_skey as [v_skey H_eval_skey].
+    destruct H_eval_skey' as [v_skey' H_eval_skey'].
+    exists v_skey.
+    exists v_skey'.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_skey.
+    rewrite E_follow_skey in H_eval_skey.
+    injection H_eval_skey as H_eval_skey.
+    unfold eval_sstack_val' in H_eval_skey'.
+    rewrite E_follow_skey' in H_eval_skey'.
+    injection H_eval_skey' as H_eval_skey'.
+            
+    pose proof (chk_newq_wrt_ctx_snd ctx (InVar var) (Val val) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_newq_wrt_ctx_snd.
+    destruct H_chk_newq_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
+    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+
+    rewrite <- H_eval_skey.
+    rewrite <- H_eval_skey'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
+
+    intros model mem strg exts H_is_model.
+    pose proof (eval_sstack_val'_succ (S maxidx) skey model mem strg exts maxidx sbindings ops H_valid_skey H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey.
+    pose proof (eval_sstack_val'_succ (S maxidx) skey' model mem strg exts maxidx sbindings ops H_valid_skey' H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey'.
+    destruct H_eval_skey as [v_skey H_eval_skey].
+    destruct H_eval_skey' as [v_skey' H_eval_skey'].
+    exists v_skey.
+    exists v_skey'.
+    repeat split; try auto.
+    unfold eval_sstack_val' in H_eval_skey.
+    rewrite E_follow_skey in H_eval_skey.
+    injection H_eval_skey as H_eval_skey.
+    unfold eval_sstack_val' in H_eval_skey'.
+    rewrite E_follow_skey' in H_eval_skey'.
+    injection H_eval_skey' as H_eval_skey'.
+            
+    pose proof (chk_newq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_newq_wrt_ctx_snd.
+    destruct H_chk_newq_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    
+    pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sbindings ops) as H_eval_var0.
+    rewrite H_eval_var0 in H_chk_newq_wrt_ctx_snd_2.
+    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
+    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+
+    rewrite <- H_eval_skey.
+    rewrite <- H_eval_skey'.
+    rewrite  H_chk_newq_wrt_ctx_snd_1.
+    rewrite  H_chk_newq_wrt_ctx_snd_2.
+    apply H_chk_newq_wrt_ctx_snd_3.
+
 Qed.      
 
 Lemma H_map_o_sstrg:
