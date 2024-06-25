@@ -50,6 +50,13 @@ Definition sstack_val_to_cliteral (sv : sstack_val) : option cliteral :=
   | _ => None
   end.
 
+Definition sstack_val_to_cliteral_w_shift (sv : sstack_val) (shift: N) : option cliteral :=
+  match sv with
+  | Val w => Some (C_VAL ((wordToN w) + shift))
+  | InVar n => Some (C_VAR_DELTA n shift)
+  | _ => None
+  end.
+
 Definition chk_eq_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
   let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
   let cs := ctx_cs ctx in
@@ -72,6 +79,16 @@ Definition chk_lt_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
 
 Definition chk_neq_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
   chk_lt_wrt_ctx ctx sv1 sv2 ||   chk_lt_wrt_ctx ctx sv2 sv1.
+
+Definition chk_lt_wshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
+  let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in
+  let cs := ctx_cs ctx in
+  let ocl1 := sstack_val_to_cliteral_w_shift sv1 shift in
+  let ocl2 := sstack_val_to_cliteral sv2 in
+  match ocl1, ocl2 with
+  | Some cl1, Some cl2 => imp_chkr cs (C_LT cl1 cl2)
+  | _, _ => false
+  end.
 
 
 End Context.
