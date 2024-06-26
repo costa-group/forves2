@@ -56,6 +56,11 @@ Import Constraints.
 Require Import FORVES2.context.
 Import Context.
 
+Require Import FORVES2.context_facts.
+Import ContextFacts.
+
+Require Import FORVES2.symbolic_execution_soundness.
+Import SymbolicExecutionSoundness.
 
 Module StorageCmpImplSoundness.
 
@@ -198,13 +203,18 @@ Module StorageCmpImplSoundness.
     destruct u1 as [skey1 svalue1] eqn:E_u1.
     destruct u2 as [skey2 svalue2] eqn:E_u2.
     unfold swap_storage_update in H_swap.
-    destruct (follow_in_smap skey1 maxidx sb) eqn:E_follow_skey1; try discriminate; destruct f; destruct smv; try discriminate; destruct val eqn:E_v1; try discriminate.
     
-    destruct (follow_in_smap skey2 maxidx sb) eqn:E_follow_skey2; try discriminate; destruct f; destruct smv; try discriminate; destruct val1 eqn:E_v2; try discriminate.
+    destruct (follow_in_smap skey1 maxidx sb) eqn:E_follow_skey1; try discriminate.
+    destruct f; destruct smv; try discriminate.
+    
+    destruct (follow_in_smap skey2 maxidx sb) eqn:E_follow_skey2; try discriminate.
+    destruct f; destruct smv; try discriminate.
  
+    destruct val eqn:E_v1; destruct val0 eqn:E_v2; try discriminate.
+    
     assert(H_swap' := H_swap).
     rewrite N.ltb_lt in H_swap'.
-    pose proof (N.lt_neq (wordToN val2) (wordToN val0) H_swap') as H_swap_neq.
+    pose proof (N.lt_neq (wordToN val2) (wordToN val1) H_swap') as H_swap_neq.
     apply N.neq_sym in H_swap_neq.
     rewrite <- N.eqb_neq in H_swap_neq.
     
@@ -295,7 +305,334 @@ Module StorageCmpImplSoundness.
 
     rewrite H_f_v1_v2_neq_fun.
     reflexivity.
-Qed.
+
+    
+    (* val = var *)
+
+    pose proof (chk_lt_wrt_ctx_snd ctx (Val val1) (InVar var) H_swap model mem strg exts maxidx sb ops H_is_model) as H_chk_lt_wrt_ctx_snd.
+    destruct H_chk_lt_wrt_ctx_snd as [v1 [v2 [H_chk_lt_wrt_ctx_snd_1 [H_chk_lt_wrt_ctx_snd_2 H_chk_lt_wrt_ctx_snd_3]]]].
+
+    pose proof (eval_sstack_val_Val val1 model mem strg exts maxidx sb ops) as H_eval_val1.
+    rewrite H_eval_val1 in H_chk_lt_wrt_ctx_snd_1.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sb ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_lt_wrt_ctx_snd_2.
+
+    injection H_chk_lt_wrt_ctx_snd_1 as H_chk_lt_wrt_ctx_snd_1.
+    injection H_chk_lt_wrt_ctx_snd_2 as H_chk_lt_wrt_ctx_snd_2.
+
+    rewrite <- H_chk_lt_wrt_ctx_snd_1 in H_chk_lt_wrt_ctx_snd_3.
+    rewrite <- H_chk_lt_wrt_ctx_snd_2 in H_chk_lt_wrt_ctx_snd_3.
+    
+    pose proof (N.lt_neq (wordToN val1) (wordToN (model var)) H_chk_lt_wrt_ctx_snd_3) as H_swap_neq.
+    apply N.neq_sym in H_swap_neq.
+    rewrite <- N.eqb_neq in H_swap_neq.
+    
+    
+    assert(H_valid_u1' := H_valid_u1).
+    simpl in H_valid_u1'.
+    destruct H_valid_u1' as [H_valid_skey1 H_valid_svalue1].
+
+    assert(H_valid_u2' := H_valid_u2).
+    simpl in H_valid_u2'.
+    destruct H_valid_u2' as [H_valid_skey2 H_valid_svalue2].
+
+    
+    pose proof (eval_sstack_val'_succ (S maxidx) skey1 model mem strg exts maxidx sb ops H_valid_skey1 H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey1.
+    destruct H_eval_skey1 as [skey1_v H_eval_skey1].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) svalue1 model mem strg exts maxidx sb ops H_valid_svalue1 H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue1.
+    destruct H_eval_svalue1 as [svalue1_v H_eval_svalue1].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) skey2 model mem strg exts maxidx sb ops H_valid_skey2 H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey2.
+    destruct H_eval_skey2 as [skey2_v H_eval_skey2].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) svalue2 model mem strg exts maxidx sb ops H_valid_svalue2 H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue2.
+    destruct H_eval_svalue2 as [svalue2_v H_eval_svalue2].
+ 
+    unfold eval_sstorage.
+    unfold map_option at 1.
+    rewrite <- map_option_ho.
+
+    unfold instantiate_storage_update at 1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_skey1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_svalue1.
+    
+    unfold instantiate_storage_update at 1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_skey2.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_svalue2.
+
+    unfold eval_sstorage.
+    unfold map_option at 2.
+    rewrite <- map_option_ho.
+
+    unfold instantiate_storage_update at 2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_skey2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_svalue2.
+
+    unfold instantiate_storage_update at 2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_skey1.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_svalue1.
+  
+    pose proof (eval_sstorage_succ maxidx sb model mem strg exts ops sstrg H_valid_sstrg H_valid_bs) as H_eval_sstrg.
+    destruct H_eval_sstrg as [strg' H_eval_sstrg].
+    unfold eval_sstorage in H_eval_sstrg.
+
+    destruct (map_option (instantiate_storage_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx sb ops)) sstrg) as [updates|] eqn:E_mo_eval_sstrg; try discriminate.
+
+    exists (fun key => if (key =? wordToN skey1_v)%N then svalue1_v else if (key =? wordToN skey2_v)%N then svalue2_v else strg' key).
+
+    simpl.
+
+    injection H_eval_sstrg as H_eval_sstrg.
+    rewrite H_eval_sstrg.
+ 
+    unfold sstore.
+    split; try reflexivity.
+   
+    unfold eval_sstack_val' in H_eval_skey1.
+    fold eval_sstack_val' in H_eval_skey1.
+    rewrite E_follow_skey1 in H_eval_skey1.
+    injection H_eval_skey1 as H_eval_skey1.
+
+    unfold eval_sstack_val' in H_eval_skey2.
+    fold eval_sstack_val' in H_eval_skey2.
+    rewrite E_follow_skey2 in H_eval_skey2.
+    injection H_eval_skey2 as H_eval_skey2.
+
+    rewrite H_eval_skey1 in H_swap_neq.
+    rewrite H_eval_skey2 in H_swap_neq.
+
+    pose proof (f_v1_v2_neq_fun strg'  (wordToN skey2_v) (wordToN skey1_v)  svalue2_v svalue1_v H_swap_neq) as H_f_v1_v2_neq_fun.
+
+    rewrite H_f_v1_v2_neq_fun.
+    reflexivity.
+
+
+    (* var = val *)
+
+    pose proof (chk_lt_wrt_ctx_snd ctx (InVar var) (Val val1) H_swap model mem strg exts maxidx sb ops H_is_model) as H_chk_lt_wrt_ctx_snd.
+    destruct H_chk_lt_wrt_ctx_snd as [v1 [v2 [H_chk_lt_wrt_ctx_snd_1 [H_chk_lt_wrt_ctx_snd_2 H_chk_lt_wrt_ctx_snd_3]]]].
+
+    pose proof (eval_sstack_val_Val val1 model mem strg exts maxidx sb ops) as H_eval_val1.
+    rewrite H_eval_val1 in H_chk_lt_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sb ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_lt_wrt_ctx_snd_1.
+
+    injection H_chk_lt_wrt_ctx_snd_1 as H_chk_lt_wrt_ctx_snd_1.
+    injection H_chk_lt_wrt_ctx_snd_2 as H_chk_lt_wrt_ctx_snd_2.
+
+    rewrite <- H_chk_lt_wrt_ctx_snd_1 in H_chk_lt_wrt_ctx_snd_3.
+    rewrite <- H_chk_lt_wrt_ctx_snd_2 in H_chk_lt_wrt_ctx_snd_3.
+    
+    pose proof (N.lt_neq (wordToN (model var)) (wordToN val1)  H_chk_lt_wrt_ctx_snd_3) as H_swap_neq.
+    apply N.neq_sym in H_swap_neq.
+    rewrite <- N.eqb_neq in H_swap_neq.
+    
+    
+    assert(H_valid_u1' := H_valid_u1).
+    simpl in H_valid_u1'.
+    destruct H_valid_u1' as [H_valid_skey1 H_valid_svalue1].
+
+    assert(H_valid_u2' := H_valid_u2).
+    simpl in H_valid_u2'.
+    destruct H_valid_u2' as [H_valid_skey2 H_valid_svalue2].
+
+    
+    pose proof (eval_sstack_val'_succ (S maxidx) skey1 model mem strg exts maxidx sb ops H_valid_skey1 H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey1.
+    destruct H_eval_skey1 as [skey1_v H_eval_skey1].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) svalue1 model mem strg exts maxidx sb ops H_valid_svalue1 H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue1.
+    destruct H_eval_svalue1 as [svalue1_v H_eval_svalue1].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) skey2 model mem strg exts maxidx sb ops H_valid_skey2 H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey2.
+    destruct H_eval_skey2 as [skey2_v H_eval_skey2].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) svalue2 model mem strg exts maxidx sb ops H_valid_svalue2 H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue2.
+    destruct H_eval_svalue2 as [svalue2_v H_eval_svalue2].
+ 
+    unfold eval_sstorage.
+    unfold map_option at 1.
+    rewrite <- map_option_ho.
+
+    unfold instantiate_storage_update at 1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_skey1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_svalue1.
+    
+    unfold instantiate_storage_update at 1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_skey2.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_svalue2.
+
+    unfold eval_sstorage.
+    unfold map_option at 2.
+    rewrite <- map_option_ho.
+
+    unfold instantiate_storage_update at 2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_skey2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_svalue2.
+
+    unfold instantiate_storage_update at 2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_skey1.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_svalue1.
+  
+    pose proof (eval_sstorage_succ maxidx sb model mem strg exts ops sstrg H_valid_sstrg H_valid_bs) as H_eval_sstrg.
+    destruct H_eval_sstrg as [strg' H_eval_sstrg].
+    unfold eval_sstorage in H_eval_sstrg.
+
+    destruct (map_option (instantiate_storage_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx sb ops)) sstrg) as [updates|] eqn:E_mo_eval_sstrg; try discriminate.
+
+    exists (fun key => if (key =? wordToN skey1_v)%N then svalue1_v else if (key =? wordToN skey2_v)%N then svalue2_v else strg' key).
+
+    simpl.
+
+    injection H_eval_sstrg as H_eval_sstrg.
+    rewrite H_eval_sstrg.
+ 
+    unfold sstore.
+    split; try reflexivity.
+   
+    unfold eval_sstack_val' in H_eval_skey1.
+    fold eval_sstack_val' in H_eval_skey1.
+    rewrite E_follow_skey1 in H_eval_skey1.
+    injection H_eval_skey1 as H_eval_skey1.
+
+    unfold eval_sstack_val' in H_eval_skey2.
+    fold eval_sstack_val' in H_eval_skey2.
+    rewrite E_follow_skey2 in H_eval_skey2.
+    injection H_eval_skey2 as H_eval_skey2.
+
+    rewrite H_eval_skey1 in H_swap_neq.
+    rewrite H_eval_skey2 in H_swap_neq.
+
+    pose proof (f_v1_v2_neq_fun strg'  (wordToN skey2_v) (wordToN skey1_v)  svalue2_v svalue1_v H_swap_neq) as H_f_v1_v2_neq_fun.
+
+    rewrite H_f_v1_v2_neq_fun.
+    reflexivity.
+
+
+    (* var = var *)
+
+    pose proof (chk_lt_wrt_ctx_snd ctx (InVar var) (InVar var0) H_swap model mem strg exts maxidx sb ops H_is_model) as H_chk_lt_wrt_ctx_snd.
+    destruct H_chk_lt_wrt_ctx_snd as [v1 [v2 [H_chk_lt_wrt_ctx_snd_1 [H_chk_lt_wrt_ctx_snd_2 H_chk_lt_wrt_ctx_snd_3]]]].
+
+    pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sb ops) as H_eval_var0.
+    rewrite H_eval_var0 in H_chk_lt_wrt_ctx_snd_2.
+    pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sb ops) as H_eval_var.
+    rewrite H_eval_var in H_chk_lt_wrt_ctx_snd_1.
+
+    injection H_chk_lt_wrt_ctx_snd_1 as H_chk_lt_wrt_ctx_snd_1.
+    injection H_chk_lt_wrt_ctx_snd_2 as H_chk_lt_wrt_ctx_snd_2.
+
+    rewrite <- H_chk_lt_wrt_ctx_snd_1 in H_chk_lt_wrt_ctx_snd_3.
+    rewrite <- H_chk_lt_wrt_ctx_snd_2 in H_chk_lt_wrt_ctx_snd_3.
+    
+    pose proof (N.lt_neq (wordToN (model var)) (wordToN (model var0))  H_chk_lt_wrt_ctx_snd_3) as H_swap_neq.
+    apply N.neq_sym in H_swap_neq.
+    rewrite <- N.eqb_neq in H_swap_neq.
+    
+    
+    assert(H_valid_u1' := H_valid_u1).
+    simpl in H_valid_u1'.
+    destruct H_valid_u1' as [H_valid_skey1 H_valid_svalue1].
+
+    assert(H_valid_u2' := H_valid_u2).
+    simpl in H_valid_u2'.
+    destruct H_valid_u2' as [H_valid_skey2 H_valid_svalue2].
+
+    
+    pose proof (eval_sstack_val'_succ (S maxidx) skey1 model mem strg exts maxidx sb ops H_valid_skey1 H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey1.
+    destruct H_eval_skey1 as [skey1_v H_eval_skey1].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) svalue1 model mem strg exts maxidx sb ops H_valid_svalue1 H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue1.
+    destruct H_eval_svalue1 as [svalue1_v H_eval_svalue1].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) skey2 model mem strg exts maxidx sb ops H_valid_skey2 H_valid_bs (gt_Sn_n maxidx)) as H_eval_skey2.
+    destruct H_eval_skey2 as [skey2_v H_eval_skey2].
+
+    pose proof (eval_sstack_val'_succ (S maxidx) svalue2 model mem strg exts maxidx sb ops H_valid_svalue2 H_valid_bs (gt_Sn_n maxidx)) as H_eval_svalue2.
+    destruct H_eval_svalue2 as [svalue2_v H_eval_svalue2].
+ 
+    unfold eval_sstorage.
+    unfold map_option at 1.
+    rewrite <- map_option_ho.
+
+    unfold instantiate_storage_update at 1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_skey1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_svalue1.
+    
+    unfold instantiate_storage_update at 1.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_skey2.
+    unfold eval_sstack_val at 1.
+    rewrite H_eval_svalue2.
+
+    unfold eval_sstorage.
+    unfold map_option at 2.
+    rewrite <- map_option_ho.
+
+    unfold instantiate_storage_update at 2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_skey2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_svalue2.
+
+    unfold instantiate_storage_update at 2.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_skey1.
+    unfold eval_sstack_val at 2.
+    rewrite H_eval_svalue1.
+  
+    pose proof (eval_sstorage_succ maxidx sb model mem strg exts ops sstrg H_valid_sstrg H_valid_bs) as H_eval_sstrg.
+    destruct H_eval_sstrg as [strg' H_eval_sstrg].
+    unfold eval_sstorage in H_eval_sstrg.
+
+    destruct (map_option (instantiate_storage_update (fun sv : sstack_val => eval_sstack_val sv model mem strg exts maxidx sb ops)) sstrg) as [updates|] eqn:E_mo_eval_sstrg; try discriminate.
+
+    exists (fun key => if (key =? wordToN skey1_v)%N then svalue1_v else if (key =? wordToN skey2_v)%N then svalue2_v else strg' key).
+
+    simpl.
+
+    injection H_eval_sstrg as H_eval_sstrg.
+    rewrite H_eval_sstrg.
+ 
+    unfold sstore.
+    split; try reflexivity.
+   
+    unfold eval_sstack_val' in H_eval_skey1.
+    fold eval_sstack_val' in H_eval_skey1.
+    rewrite E_follow_skey1 in H_eval_skey1.
+    injection H_eval_skey1 as H_eval_skey1.
+
+    unfold eval_sstack_val' in H_eval_skey2.
+    fold eval_sstack_val' in H_eval_skey2.
+    rewrite E_follow_skey2 in H_eval_skey2.
+    injection H_eval_skey2 as H_eval_skey2.
+
+    rewrite H_eval_skey1 in H_swap_neq.
+    rewrite H_eval_skey2 in H_swap_neq.
+
+    pose proof (f_v1_v2_neq_fun strg'  (wordToN skey2_v) (wordToN skey1_v)  svalue2_v svalue1_v H_swap_neq) as H_f_v1_v2_neq_fun.
+
+    rewrite H_f_v1_v2_neq_fun.
+    reflexivity.
+  Qed.
 
   Lemma reorder_updates'_valid:
     forall ctx maxidx sb ops,
