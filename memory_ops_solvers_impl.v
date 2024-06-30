@@ -70,7 +70,7 @@ Module MemoryOpsSolversImpl.
                         let addr := (wordToN v1) in
                         let addr' := (wordToN v2) in
                         orb (addr+size <? addr')%N (addr'+size' <? addr)%N
-                    | _, _ => chk_lt_lshift_wrt_ctx ctx sv1 sv2 size || chk_lt_lshift_wrt_ctx ctx sv2 sv1 size'
+                    | _, _ => if chk_lt_lshift_wrt_ctx ctx sv1 sv2 size then true else chk_lt_lshift_wrt_ctx ctx sv2 sv1 size'
                     end
                 | _ => false
                 end
@@ -114,7 +114,7 @@ Module MemoryOpsSolversImpl.
                         let addr_mstore8 := (wordToN v1) in
                         let addr_mstore := (wordToN v2) in
                         andb (addr_mstore <=? addr_mstore8)%N (addr_mstore8 <=? addr_mstore+31)%N
-                    | _, _ => chk_le_wrt_ctx ctx sv2 sv1  && chk_le_rshift_wrt_ctx ctx sv1 sv2 31%N
+                    | _, _ => if chk_le_wrt_ctx ctx sv2 sv1 then chk_le_rshift_wrt_ctx ctx sv1 sv2 31%N else false
                     end
                 | _ => false
                 end

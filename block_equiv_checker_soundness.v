@@ -58,7 +58,7 @@ Import SStackValCmpImpl.
 Require Import FORVES2.sstack_val_cmp_impl_soundness.
 Import SStackValCmpImplSoundness.
 
-Require Import FORVES2.sha3_cmp_impl.
+Require Import FORVES2.sha3_cmp_impl. 
 Import SHA3CmpImpl.
 
 Require Import FORVES2.sha3_cmp_impl_soundness.

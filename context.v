@@ -78,7 +78,7 @@ Definition chk_lt_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
   end.
 
 Definition chk_neq_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) :=
-  chk_lt_wrt_ctx ctx sv1 sv2 ||   chk_lt_wrt_ctx ctx sv2 sv1.
+  if chk_lt_wrt_ctx ctx sv1 sv2 then true else chk_lt_wrt_ctx ctx sv2 sv1.
 
 Definition chk_lt_lshift_wrt_ctx (ctx: ctx_t) (sv1 sv2: sstack_val) (shift: N) :=
   let imp_chkr := imp_checker_fun (ctx_imp_chkr ctx) in

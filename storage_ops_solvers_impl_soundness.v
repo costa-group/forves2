@@ -191,21 +191,21 @@ Module StorageOpsSolversImplSoundness.
     rewrite E_follow_skey' in H_eval_skey'.
     injection H_eval_skey' as H_eval_skey'.
             
-    pose proof (chk_newq_wrt_ctx_snd ctx (Val val) (InVar var) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_newq_wrt_ctx_snd.
-    destruct H_chk_newq_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    pose proof (chk_neq_wrt_ctx_snd ctx (Val val) (InVar var) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_neq_wrt_ctx_snd.
+    destruct H_chk_neq_wrt_ctx_snd as [v1 [v2 [H_chk_neq_wrt_ctx_snd_1 [H_chk_neq_wrt_ctx_snd_2 H_chk_neq_wrt_ctx_snd_3]]]].
     
     pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
-    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_1.
-    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    rewrite H_eval_val in H_chk_neq_wrt_ctx_snd_1.
+    injection H_chk_neq_wrt_ctx_snd_1 as H_chk_neq_wrt_ctx_snd_1.
     pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
-    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_2.
-    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    rewrite H_eval_var in H_chk_neq_wrt_ctx_snd_2.
+    injection H_chk_neq_wrt_ctx_snd_2 as H_chk_neq_wrt_ctx_snd_2.
 
     rewrite <- H_eval_skey.
     rewrite <- H_eval_skey'.
-    rewrite  H_chk_newq_wrt_ctx_snd_1.
-    rewrite  H_chk_newq_wrt_ctx_snd_2.
-    apply H_chk_newq_wrt_ctx_snd_3.
+    rewrite  H_chk_neq_wrt_ctx_snd_1.
+    rewrite  H_chk_neq_wrt_ctx_snd_2.
+    apply H_chk_neq_wrt_ctx_snd_3.
 
 
     intros model mem strg exts H_is_model.
@@ -223,21 +223,21 @@ Module StorageOpsSolversImplSoundness.
     rewrite E_follow_skey' in H_eval_skey'.
     injection H_eval_skey' as H_eval_skey'.
             
-    pose proof (chk_newq_wrt_ctx_snd ctx (InVar var) (Val val) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_newq_wrt_ctx_snd.
-    destruct H_chk_newq_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    pose proof (chk_neq_wrt_ctx_snd ctx (InVar var) (Val val) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_neq_wrt_ctx_snd.
+    destruct H_chk_neq_wrt_ctx_snd as [v1 [v2 [H_chk_neq_wrt_ctx_snd_1 [H_chk_neq_wrt_ctx_snd_2 H_chk_neq_wrt_ctx_snd_3]]]].
     
     pose proof (eval_sstack_val_Val val model mem strg exts maxidx sbindings ops) as H_eval_val.
-    rewrite H_eval_val in H_chk_newq_wrt_ctx_snd_2.
-    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    rewrite H_eval_val in H_chk_neq_wrt_ctx_snd_2.
+    injection H_chk_neq_wrt_ctx_snd_2 as H_chk_neq_wrt_ctx_snd_2.
     pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
-    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
-    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    rewrite H_eval_var in H_chk_neq_wrt_ctx_snd_1.
+    injection H_chk_neq_wrt_ctx_snd_1 as H_chk_neq_wrt_ctx_snd_1.
 
     rewrite <- H_eval_skey.
     rewrite <- H_eval_skey'.
-    rewrite  H_chk_newq_wrt_ctx_snd_1.
-    rewrite  H_chk_newq_wrt_ctx_snd_2.
-    apply H_chk_newq_wrt_ctx_snd_3.
+    rewrite  H_chk_neq_wrt_ctx_snd_1.
+    rewrite  H_chk_neq_wrt_ctx_snd_2.
+    apply H_chk_neq_wrt_ctx_snd_3.
 
 
     intros model mem strg exts H_is_model.
@@ -255,21 +255,21 @@ Module StorageOpsSolversImplSoundness.
     rewrite E_follow_skey' in H_eval_skey'.
     injection H_eval_skey' as H_eval_skey'.
             
-    pose proof (chk_newq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_newq_wrt_ctx_snd.
-    destruct H_chk_newq_wrt_ctx_snd as [v1 [v2 [H_chk_newq_wrt_ctx_snd_1 [H_chk_newq_wrt_ctx_snd_2 H_chk_newq_wrt_ctx_snd_3]]]].
+    pose proof (chk_neq_wrt_ctx_snd ctx (InVar var) (InVar var0) H_neq model mem strg exts maxidx sbindings ops H_is_model) as H_chk_neq_wrt_ctx_snd.
+    destruct H_chk_neq_wrt_ctx_snd as [v1 [v2 [H_chk_neq_wrt_ctx_snd_1 [H_chk_neq_wrt_ctx_snd_2 H_chk_neq_wrt_ctx_snd_3]]]].
     
     pose proof (eval_sstack_val_InVar var0 model mem strg exts maxidx sbindings ops) as H_eval_var0.
-    rewrite H_eval_var0 in H_chk_newq_wrt_ctx_snd_2.
-    injection H_chk_newq_wrt_ctx_snd_2 as H_chk_newq_wrt_ctx_snd_2.
+    rewrite H_eval_var0 in H_chk_neq_wrt_ctx_snd_2.
+    injection H_chk_neq_wrt_ctx_snd_2 as H_chk_neq_wrt_ctx_snd_2.
     pose proof (eval_sstack_val_InVar var model mem strg exts maxidx sbindings ops) as H_eval_var.
-    rewrite H_eval_var in H_chk_newq_wrt_ctx_snd_1.
-    injection H_chk_newq_wrt_ctx_snd_1 as H_chk_newq_wrt_ctx_snd_1.
+    rewrite H_eval_var in H_chk_neq_wrt_ctx_snd_1.
+    injection H_chk_neq_wrt_ctx_snd_1 as H_chk_neq_wrt_ctx_snd_1.
 
     rewrite <- H_eval_skey.
     rewrite <- H_eval_skey'.
-    rewrite  H_chk_newq_wrt_ctx_snd_1.
-    rewrite  H_chk_newq_wrt_ctx_snd_2.
-    apply H_chk_newq_wrt_ctx_snd_3.
+    rewrite  H_chk_neq_wrt_ctx_snd_1.
+    rewrite  H_chk_neq_wrt_ctx_snd_2.
+    apply H_chk_neq_wrt_ctx_snd_3.
 
 Qed.      
 

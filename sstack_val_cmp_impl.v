@@ -86,7 +86,7 @@ Fixpoint basic_compare_sstack_val (smemory_cmp: smemory_cmp_ext_t) (sstorage_cmp
               | SymBasicVal sv1', SymBasicVal sv2' =>
                   match sv1',sv2' with
                   | Val w1, Val w2 => weqb w1 w2
-                  | InVar n1, InVar n2 => (n1 =? n2) || chk_eq_wrt_ctx ctx sv1' sv2'
+                  | InVar n1, InVar n2 => if (n1 =? n2) then true else chk_eq_wrt_ctx ctx sv1' sv2'
                   | _, _ => chk_eq_wrt_ctx ctx sv1' sv2'
                   end
               | SymMETAPUSH cat1 v1, SymMETAPUSH cat2 v2 => andb (cat1 =? cat2)%N (v1 =? v2)%N
@@ -157,7 +157,7 @@ Fixpoint basic_compare_sstack_val_w_eq_chk (smemory_cmp: smemory_cmp_ext_t) (sst
               | SymBasicVal sv1', SymBasicVal sv2' =>
                   match sv1',sv2' with
                   | Val w1, Val w2 => weqb w1 w2
-                  | InVar n1, InVar n2 => (n1 =? n2) || chk_eq_wrt_ctx ctx sv1' sv2'
+                  | InVar n1, InVar n2 => if (n1 =? n2) then true else chk_eq_wrt_ctx ctx sv1' sv2'
                   | _, _ => chk_eq_wrt_ctx ctx sv1' sv2'
                   end
               | SymMETAPUSH cat1 v1, SymMETAPUSH cat2 v2 => andb (cat1 =? cat2)%N (v1 =? v2)%N

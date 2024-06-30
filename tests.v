@@ -135,11 +135,12 @@ Compute
   | None => false
   end.
 
+
 Compute 
   let b1 := str2block "DUP2 SWAP1 DUP1 SSTORE SSTORE" in
   let b2 := str2block "SWAP1 DUP2 SWAP1 DUP1 SSTORE SSTORE" in
   let init_state := (parse_init_state "2") in
-  let cs := [[C_LT (C_VAR 0) (C_VAR 1)]] in
+  let cs := [[C_LT (C_VAR 0) (C_VAR 2); C_LT (C_VAR 2) (C_VAR 1)];[C_LE (C_VAR_DELTA 0 1) (C_VAR 1)]] in
   match init_state with
   | Some (_,sst) =>
       (evm_eq_block_chkr_lazy

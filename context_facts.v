@@ -280,7 +280,7 @@ Module ContextFacts.
       apply H_chkr_snd.
   Qed.
 
-  Lemma chk_newq_wrt_ctx_snd:
+  Lemma chk_neq_wrt_ctx_snd:
     forall ctx sv1 sv2,
       chk_neq_wrt_ctx ctx sv1 sv2 = true ->
       forall model mem strg exts maxidx sb ops,
@@ -1188,6 +1188,5 @@ Module ContextFacts.
 
       apply H_chkr_snd.
   Qed.
-
 
 End ContextFacts.
