@@ -150,4 +150,36 @@ Compute
   | None => false
   end.
 
-End Tests.
+
+(* JUMPI with constant condition 1 <> 0 *)
+Eval cbv in 
+  let b1 := str2block "PUSH1 0x1 PUSH1 0x10 JUMPI" in
+  let b2 := str2block "PUSH1 0x10" in
+  let init_state := (parse_init_state "0") in
+  let cs := [] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+(* JUMPI with condition 0 < C_VAR 0 *)
+Compute
+  let b1 := str2block "PUSH1 0x10 JUMPI" in
+  let b2 := str2block "POP PUSH1 0x10" in
+  let init_state := (parse_init_state "1") in
+  let cs := [[C_LT (C_VAL 0) (C_VAR 0)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+  
+
+  End Tests.

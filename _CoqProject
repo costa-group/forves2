@@ -118,7 +118,7 @@ optimizations/slt_x_x.v
 optimizations/sgt_x_x.v
 optimizations/mem_solver.v
 optimizations/strg_solver.v
-optimizations/jumpi_eval.v
+optimizations/jumpi_neq.v
 
 # optimizations/lt_constraints.v
 
