@@ -86,8 +86,11 @@ fun (ops: stack_op_instr_map) =>
 match val with
 | SymOp LT [arg1; arg2] => 
   match chk_lt_wrt_ctx ctx arg1 arg2 with
-    | false => (val, false)
-    | true => (SymBasicVal (Val WOne), true)
+    | false => match chk_le_wrt_ctx ctx arg2 arg1 with
+               | false => (val, false)  (* don't know *)
+               | true => (SymBasicVal (Val WZero), true) (* arg1 >= arg2 *)
+               end
+    | true => (SymBasicVal (Val WOne), true)  (* arg1 < arg2 *)
   end
 | _ => (val, false)
 end.
@@ -107,54 +110,25 @@ Proof.
   destruct args as [|arg1 r1] eqn: eq_args; try inject_rw Hoptm_sbinding eq_val'.
   destruct r1 as [|arg2 r2] eqn: eq_r1; try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3] eqn: eq_r2; try inject_rw Hoptm_sbinding eq_val'.
-  destruct (chk_lt_wrt_ctx ctx arg1 arg2); try inject_rw Hoptm_sbinding eq_val'.
-  injection Hoptm_sbinding as eq_val' eq_flag.
-  rewrite <- eq_val'.
-  simpl. intuition.
+  destruct (chk_lt_wrt_ctx ctx arg1 arg2); 
+    try (injection Hoptm_sbinding as eq_val' eq_flag;
+    rewrite <- eq_val';
+    simpl; intuition).
+  destruct (chk_le_wrt_ctx ctx arg2 arg1); 
+    try (injection Hoptm_sbinding as eq_val' eq_flag;
+    rewrite <- eq_val';
+    simpl; intuition).
 Qed.
 
-(*
-(* arg1 and arg2 can only be Val or InVar, so "sb" could be omitted 
-   Probably the same with idx *)
-Theorem lt_constr_ok: forall arg1 arg2 c ctx idx sb,
-gen_lt_constr arg1 arg2 = Some c ->
-the_checker ctx c = true -> 
-forall model mem strg ext maxidx v,
-is_model ctx model = true -> 
-eval_sstack_val (FreshVar idx) model mem strg ext maxidx
-               ((idx, SymOp LT [arg1; arg2]) :: sb) evm_stack_opm = Some v ->
-v = WOne.
+Lemma le_impl_ltb_swap: forall (v1 v2: N),
+  (v2 <= v1)%N -> (v1 <? v2)%N = false.
 Proof.
-Admitted.
-
-(* arg1 and arg2 can only be Val or InVar, so "sb" could be omitted 
-   Probably the same with "idx", which is irrelevant for eval_sstack_val' 
-   "maxidx" can be anything > 0
-*)
-Theorem lt_constr_ok': forall (arg1 arg2: sstack_val) (c: constraint) 
-  (ctx: constraints) (idx: nat) (sb: sbindings),
-gen_lt_constr arg1 arg2 = Some c ->
-the_checker ctx c = true -> 
-forall (model: assignment) (mem: memory) (strg: storage) (ext: externals) 
-  (maxidx: nat) (arg1v arg2v: EVMWord),
-is_model ctx model = true -> 
-eval_sstack_val' maxidx arg1 model mem strg ext idx sb evm_stack_opm = Some arg1v ->
-eval_sstack_val' maxidx arg2 model mem strg ext idx sb evm_stack_opm = Some arg2v ->
-(N.ltb (wordToN arg1v) (wordToN arg2v)) = true.
-Proof.
-Admitted.
-
-Lemma evm_stack_opm_lt: 
-  evm_stack_opm LT = OpImp 2 evm_lt None (Some lt_exts_ind).
-Proof.
-intuition.
+  intros v1 v2 Hle.
+  unfold N.ltb. 
+  destruct (v1 ?= v2)%N eqn: eq_compare; try reflexivity.
+  apply N.compare_nge_iff in eq_compare.
+  intuition.
 Qed.
-
-
-*)
-
-
-
 
 
 Lemma optimize_lt_ctx_sbinding_snd:
@@ -183,47 +157,85 @@ split.
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3] eqn: eq_r2; 
     try inject_rw Hoptm_sbinding eq_val'.
-  destruct (chk_lt_wrt_ctx ctx arg1 arg2) 
-    eqn: eq_chk_lt; try inject_rw Hoptm_sbinding eq_val'.
-    
-  unfold eval_sstack_val in Heval_orig.
-  simpl in Heval_orig.
-  rewrite -> PeanoNat.Nat.eqb_refl in Heval_orig.
-  rewrite -> evm_stack_opm_LT in Heval_orig.
-  rewrite -> length_two in Heval_orig.
-  unfold map_option in Heval_orig.
-  destruct (eval_sstack_val' maxidx arg1 model mem strg exts idx sb evm_stack_opm)
-    as [arg1v|] eqn: eq_eval_arg1; try discriminate.
-  destruct (eval_sstack_val' maxidx arg2 model mem strg exts idx sb evm_stack_opm)
-    as [arg2v|] eqn: eq_eval_arg2; try discriminate.
+  destruct (chk_lt_wrt_ctx ctx arg1 arg2) eqn: eq_chk_lt.
+    + unfold eval_sstack_val in Heval_orig.
+      simpl in Heval_orig.
+      rewrite -> PeanoNat.Nat.eqb_refl in Heval_orig.
+      rewrite -> evm_stack_opm_LT in Heval_orig.
+      rewrite -> length_two in Heval_orig.
+      unfold map_option in Heval_orig.
+      destruct (eval_sstack_val' maxidx arg1 model mem strg exts idx sb evm_stack_opm)
+        as [arg1v|] eqn: eq_eval_arg1; try discriminate.
+      destruct (eval_sstack_val' maxidx arg2 model mem strg exts idx sb evm_stack_opm)
+        as [arg2v|] eqn: eq_eval_arg2; try discriminate.
 
-  apply chk_lt_wrt_ctx_snd with (model:=model)(mem:=mem)(strg:=strg)
-    (exts:=exts)(maxidx:=maxidx)(sb:=sb)(ops:=evm_stack_opm) in eq_chk_lt;
-    try assumption.
-  destruct eq_chk_lt as [v1 [v2 [Heval_arg1 [Heval_arg2 Hlt]]]].
-  unfold eval_sstack_val in Heval_arg1.
-  unfold eval_sstack_val in Heval_arg2.
-  apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg1.
-  rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg1.
-  apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg2.
-  rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg2.
-  rewrite -> Heval_arg1 in eq_eval_arg1.
-  rewrite -> Heval_arg2 in eq_eval_arg2.
-  injection eq_eval_arg1 as eq_v1_argv1.
-  injection eq_eval_arg2 as eq_v2_argv2.
-  rewrite <- eq_v1_argv1 in Heval_orig.
-  rewrite <- eq_v2_argv2 in Heval_orig.
+      apply chk_lt_wrt_ctx_snd with (model:=model)(mem:=mem)(strg:=strg)
+        (exts:=exts)(maxidx:=maxidx)(sb:=sb)(ops:=evm_stack_opm) in eq_chk_lt;
+        try assumption.
+      destruct eq_chk_lt as [v1 [v2 [Heval_arg1 [Heval_arg2 Hlt]]]].
+      unfold eval_sstack_val in Heval_arg1.
+      unfold eval_sstack_val in Heval_arg2.
+      apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg1.
+      rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg1.
+      apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg2.
+      rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg2.
+      rewrite -> Heval_arg1 in eq_eval_arg1.
+      rewrite -> Heval_arg2 in eq_eval_arg2.
+      injection eq_eval_arg1 as eq_v1_argv1.
+      injection eq_eval_arg2 as eq_v2_argv2.
+      rewrite <- eq_v1_argv1 in Heval_orig.
+      rewrite <- eq_v2_argv2 in Heval_orig.
 
-  simpl in Heval_orig.
-  rewrite <- N.ltb_lt in Hlt.
-  rewrite -> Hlt in Heval_orig.
-  rewrite <- Heval_orig.
-  injection Hoptm_sbinding as eq_val' _.
-  rewrite <- eq_val'.
-  unfold eval_sstack_val.
-  rewrite <- eval_sstack_val'_freshvar.
-  rewrite -> eval_sstack_val'_const.
-  reflexivity.
+      simpl in Heval_orig.
+      rewrite <- N.ltb_lt in Hlt.
+      rewrite -> Hlt in Heval_orig.
+      rewrite <- Heval_orig.
+      injection Hoptm_sbinding as eq_val' _.
+      rewrite <- eq_val'.
+      unfold eval_sstack_val.
+      rewrite <- eval_sstack_val'_freshvar.
+      rewrite -> eval_sstack_val'_const.
+      reflexivity.
+    + destruct (chk_le_wrt_ctx ctx arg2 arg1) eqn: eq_chk_le;
+        try inject_rw Hoptm_sbinding eq_val'.
+      unfold eval_sstack_val in Heval_orig.
+      simpl in Heval_orig.
+      rewrite -> PeanoNat.Nat.eqb_refl in Heval_orig.
+      rewrite -> evm_stack_opm_LT in Heval_orig.
+      rewrite -> length_two in Heval_orig.
+      unfold map_option in Heval_orig.
+      destruct (eval_sstack_val' maxidx arg1 model mem strg exts idx sb evm_stack_opm)
+        as [arg1v|] eqn: eq_eval_arg1; try discriminate.
+      destruct (eval_sstack_val' maxidx arg2 model mem strg exts idx sb evm_stack_opm)
+        as [arg2v|] eqn: eq_eval_arg2; try discriminate.
+
+      apply chk_le_wrt_ctx_snd with (model:=model)(mem:=mem)(strg:=strg)
+        (exts:=exts)(maxidx:=maxidx)(sb:=sb)(ops:=evm_stack_opm) in eq_chk_le;
+        try assumption.
+      destruct eq_chk_le as [v2 [v1 [Heval_arg2 [Heval_arg1 Hle]]]].
+      unfold eval_sstack_val in Heval_arg1.
+      unfold eval_sstack_val in Heval_arg2.
+      apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg1.
+      rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg1.
+      apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg2.
+      rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg2.
+      rewrite -> Heval_arg1 in eq_eval_arg1.
+      rewrite -> Heval_arg2 in eq_eval_arg2.
+      injection eq_eval_arg1 as eq_v1_argv1.
+      injection eq_eval_arg2 as eq_v2_argv2.
+      rewrite <- eq_v1_argv1 in Heval_orig.
+      rewrite <- eq_v2_argv2 in Heval_orig.
+
+      simpl in Heval_orig.
+      apply le_impl_ltb_swap in Hle.
+      rewrite -> Hle in Heval_orig.
+      rewrite <- Heval_orig.
+      injection Hoptm_sbinding as eq_val' _.
+      rewrite <- eq_val'.
+      unfold eval_sstack_val.
+      rewrite <- eval_sstack_val'_freshvar.
+      rewrite -> eval_sstack_val'_const.
+      reflexivity.
 Qed.
 
 
