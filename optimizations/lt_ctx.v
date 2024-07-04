@@ -1,11 +1,9 @@
-(*
-Draft of rule-based optimization that uses a constraint checker
-The concrete checker is assumed (dummy/invalid implementation).
-*)
-
 Require Import bbv.Word.
 Require Import Nat. 
+Require Import Bool.
 Require Import Coq.NArith.NArith.
+
+Require Import Coq.Logic.FunctionalExtensionality.
 
 Require Import FORVES2.constants.
 Import Constants.
@@ -58,81 +56,64 @@ Import Optimizations_Common.
 Require Import FORVES2.constraints.
 Import Constraints.
 
+Require Import FORVES2.context.
+Import Context.
+
+Require Import FORVES2.tools_types.
+Import ToolsTypes.
+
+Require Import FORVES2.context.
+Import Context.
+
+Require Import FORVES2.context_facts.
+Import ContextFacts.
+
 Require Import List.
 Import ListNotations.
 
 
-Module Opt_lt_constraints.
+Module Opt_lt_ctx.
 
 
-Definition the_checker : imp_checker :=
-fun (cs: constraints) => 
-  fun (c: constraint) => 
-    true.
-   
-Theorem the_checker_snd : imp_checker_snd the_checker.
-Admitted.
-
-Definition sstack_val_to_cliteral (sv: sstack_val) : option cliteral :=
-match sv with
-| Val val => Some (C_VAL (wordToNat val))
-| InVar var => Some (C_VAR var)
-| _ => None
-end.
-
-Definition gen_lt_constr (sv1 sv2: sstack_val) : option constraint :=
-match sstack_val_to_cliteral sv1 with
-| None => None
-| Some cl1 => match sstack_val_to_cliteral sv2 with
-              | None => None
-              | Some cl2 => Some (C_LT cl1 cl2)
-              end
-end.
-
-(* LT(X,Y) = 1   if constraints => X<Y *)
-Definition optimize_lt_constraints_sbinding : opt_smap_value_type := 
+(* LT(X,Y) = 1   if ctx |- X<Y *)
+Definition optimize_lt_ctx_sbinding : opt_smap_value_type := 
 fun (val: smap_value) =>
-fun (fcmp: sstack_val_cmp_t) =>
+fun (tools: Tools_1.tools_1_t) =>
 fun (sb: sbindings) =>
 fun (maxid: nat) =>
-fun (ctx: constraints) =>
-fun (ops: stack_op_instr_map) => 
+fun (ctx: ctx_t) =>
+fun (ops: stack_op_instr_map) =>
 match val with
 | SymOp LT [arg1; arg2] => 
-  match gen_lt_constr arg1 arg2 with
-  | None => (val, false)
-  | Some constr => match the_checker ctx constr with
-                   | false => (val, false)
-                   | true => (SymBasicVal (Val WOne), true)
-                   end
+  match chk_lt_wrt_ctx ctx arg1 arg2 with
+    | false => (val, false)
+    | true => (SymBasicVal (Val WOne), true)
   end
 | _ => (val, false)
 end.
 
 
-Lemma optimize_lt_constraints_sbinding_smapv_valid:
-opt_smapv_valid_snd optimize_lt_constraints_sbinding.
+Lemma optimize_lt_ctx_sbinding_smapv_valid:
+opt_smapv_valid_snd optimize_lt_ctx_sbinding.
 Proof.
-unfold opt_smapv_valid_snd.
-intros ctx n fcmp sb val val' flag.
-intros _ _ Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
-unfold optimize_lt_constraints_sbinding in Hoptm_sbinding.
-destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
-  offset size smem] eqn: eq_val; try inject_rw Hoptm_sbinding eq_val'.
-destruct label eqn: eq_label; try inject_rw Hoptm_sbinding eq_val'.
-(* LT *)
-destruct args as [|arg1 r1] eqn: eq_args; try inject_rw Hoptm_sbinding eq_val'.
-destruct r1 as [|arg2 r2] eqn: eq_r1; try inject_rw Hoptm_sbinding eq_val'.
-destruct r2 as [|arg3 r3] eqn: eq_r2; try inject_rw Hoptm_sbinding eq_val'.
-destruct (gen_lt_constr); try inject_rw Hoptm_sbinding eq_val'.
-destruct (the_checker ctx c) eqn: eq_the_checker.
-- injection Hoptm_sbinding as eq_val' eq_flag.
+  unfold opt_smapv_valid_snd.
+  intros ctx n fcmp sb val val' flag.
+  intros Hvalid_smapv_val Hvalid_sb Hoptm_sbinding.
+  unfold optimize_lt_ctx_sbinding in Hoptm_sbinding.
+  destruct (val) as [basicv|pushtagv|label args|offset smem|key sstrg|
+    offset size smem] eqn: eq_val; try inject_rw Hoptm_sbinding eq_val'.
+  destruct label eqn: eq_label; try inject_rw Hoptm_sbinding eq_val'.
+  (* LT *)
+  destruct args as [|arg1 r1] eqn: eq_args; try inject_rw Hoptm_sbinding eq_val'.
+  destruct r1 as [|arg2 r2] eqn: eq_r1; try inject_rw Hoptm_sbinding eq_val'.
+  destruct r2 as [|arg3 r3] eqn: eq_r2; try inject_rw Hoptm_sbinding eq_val'.
+  destruct (chk_lt_wrt_ctx ctx arg1 arg2); try inject_rw Hoptm_sbinding eq_val'.
+  injection Hoptm_sbinding as eq_val' eq_flag.
   rewrite <- eq_val'.
   simpl. intuition.
-- inject_rw Hoptm_sbinding eq_val'.
 Qed.
 
-
+(*
 (* arg1 and arg2 can only be Val or InVar, so "sb" could be omitted 
    Probably the same with idx *)
 Theorem lt_constr_ok: forall arg1 arg2 c ctx idx sb,
@@ -169,28 +150,27 @@ Proof.
 intuition.
 Qed.
 
-Lemma length_2:  forall {T} (x y: T), length [x; y] =? 2 = true.
-Proof.
-intuition.
-Qed.
+
+*)
 
 
 
-Lemma optimize_lt_constraints_sbinding_snd:
-opt_sbinding_snd optimize_lt_constraints_sbinding.
+
+
+Lemma optimize_lt_ctx_sbinding_snd:
+opt_sbinding_snd optimize_lt_ctx_sbinding.
 Proof.
 unfold opt_sbinding_snd.
-intros val val' fcmp sb maxidx ctx idx flag Hsafe_sstack_val_cmp
-  Hvalid Hissat Hoptm_sbinding.
+intros val val' tools sb maxidx ctx idx flag Hvalid Hoptm_sbinding.
 split.
 - (* valid_sbindings *)
-  apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_lt_constraints_sbinding)
-    (fcmp:=fcmp)(flag:=flag)(ctx:=ctx); try assumption.
-  apply optimize_lt_constraints_sbinding_smapv_valid.
+  apply valid_bindings_snd_opt with (val:=val)(opt:=optimize_lt_ctx_sbinding)
+  (tools:=tools)(flag:=flag)(ctx:=ctx); try assumption.
+  apply optimize_lt_ctx_sbinding_smapv_valid.
 
 - (* evaluation is preserved *) 
-  intros model mem strg ext v Hismodel Heval_orig.
-  unfold optimize_lt_constraints_sbinding in Hoptm_sbinding.
+  intros model mem strg exts v His_model Heval_orig.
+  unfold optimize_lt_ctx_sbinding in Hoptm_sbinding.
   pose proof (Hvalid_maxidx maxidx idx val sb evm_stack_opm
       Hvalid) as eq_maxidx_idx.
   destruct val as [vv|vv|label args|offset smem|key sstrg|offset seze smem]
@@ -203,37 +183,48 @@ split.
     try inject_rw Hoptm_sbinding eq_val'.
   destruct r2 as [|arg3 r3] eqn: eq_r2; 
     try inject_rw Hoptm_sbinding eq_val'.
-  destruct (gen_lt_constr arg1 arg2) 
-    eqn: eq_gen_lt; try inject_rw Hoptm_sbinding eq_val'.
-  destruct (the_checker ctx c) eqn: eq_the_checker; 
-    try inject_rw Hoptm_sbinding eq_val'.
-  
+  destruct (chk_lt_wrt_ctx ctx arg1 arg2) 
+    eqn: eq_chk_lt; try inject_rw Hoptm_sbinding eq_val'.
+    
   unfold eval_sstack_val in Heval_orig.
   simpl in Heval_orig.
   rewrite -> PeanoNat.Nat.eqb_refl in Heval_orig.
-  rewrite -> evm_stack_opm_lt in Heval_orig.
-  rewrite -> length_2 in Heval_orig.
+  rewrite -> evm_stack_opm_LT in Heval_orig.
+  rewrite -> length_two in Heval_orig.
   unfold map_option in Heval_orig.
-  destruct (eval_sstack_val' maxidx arg1 model mem strg ext idx sb evm_stack_opm)
+  destruct (eval_sstack_val' maxidx arg1 model mem strg exts idx sb evm_stack_opm)
     as [arg1v|] eqn: eq_eval_arg1; try discriminate.
-  destruct (eval_sstack_val' maxidx arg2 model mem strg ext idx sb evm_stack_opm)
+  destruct (eval_sstack_val' maxidx arg2 model mem strg exts idx sb evm_stack_opm)
     as [arg2v|] eqn: eq_eval_arg2; try discriminate.
-    
-  pose proof (lt_constr_ok' arg1 arg2 c ctx idx sb eq_gen_lt eq_the_checker
-    model mem strg ext maxidx arg1v arg2v Hismodel eq_eval_arg1 eq_eval_arg2)
-    as Hevm_lt.
+
+  apply chk_lt_wrt_ctx_snd with (model:=model)(mem:=mem)(strg:=strg)
+    (exts:=exts)(maxidx:=maxidx)(sb:=sb)(ops:=evm_stack_opm) in eq_chk_lt;
+    try assumption.
+  destruct eq_chk_lt as [v1 [v2 [Heval_arg1 [Heval_arg2 Hlt]]]].
+  unfold eval_sstack_val in Heval_arg1.
+  unfold eval_sstack_val in Heval_arg2.
+  apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg1.
+  rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg1.
+  apply eval_sstack_val'_preserved_when_depth_extended in eq_eval_arg2.
+  rewrite -> eval'_maxidx_indep_eq with (m:=maxidx) in eq_eval_arg2.
+  rewrite -> Heval_arg1 in eq_eval_arg1.
+  rewrite -> Heval_arg2 in eq_eval_arg2.
+  injection eq_eval_arg1 as eq_v1_argv1.
+  injection eq_eval_arg2 as eq_v2_argv2.
+  rewrite <- eq_v1_argv1 in Heval_orig.
+  rewrite <- eq_v2_argv2 in Heval_orig.
+
   simpl in Heval_orig.
-  rewrite -> Hevm_lt in Heval_orig.
-  injection Heval_orig as Hv.
-  
-  rewrite <- Hv.
-  injection Hoptm_sbinding as Hval' Hflag.
-  rewrite <- Hval'.
+  rewrite <- N.ltb_lt in Hlt.
+  rewrite -> Hlt in Heval_orig.
+  rewrite <- Heval_orig.
+  injection Hoptm_sbinding as eq_val' _.
+  rewrite <- eq_val'.
   unfold eval_sstack_val.
-  simpl. 
-  rewrite -> PeanoNat.Nat.eqb_refl.
+  rewrite <- eval_sstack_val'_freshvar.
+  rewrite -> eval_sstack_val'_const.
   reflexivity.
 Qed.
 
 
-End Opt_lt_constraints.
+End Opt_lt_ctx.

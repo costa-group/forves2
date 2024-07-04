@@ -120,7 +120,7 @@ optimizations/mem_solver.v
 optimizations/strg_solver.v
 optimizations/jumpi_neq.v
 
-# optimizations/lt_constraints.v
+optimizations/lt_ctx.v
 
 opt_pipelines.v
 

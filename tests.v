@@ -180,6 +180,53 @@ Compute
          cs sst b1 b2)
   | None => false
   end.
+
   
+(* LT(X, Y) with ctx *)
+Compute
+  let b1 := str2block "LT" in
+  let b2 := str2block "POP POP PUSH1 0x1" in
+  let init_state := (parse_init_state "2") in
+  let cs := [[C_LT (C_VAR 0) (C_VAR 1)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+(* LT(X, Y) with ctx. We know 10 < X and optimize the LT(5,X) *)
+Compute
+  let b1 := str2block "PUSH1 0x5 LT" in
+  let b2 := str2block "POP PUSH1 0x1" in
+  let init_state := (parse_init_state "1") in
+  let cs := [[C_LT (C_VAL 10) (C_VAR 0)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+(* LT(X, Y) with ctx. We know X < 10 and optimize the LT(X,20) *)
+Compute
+let b1 := str2block "PUSH1 0x20 SWAP1 LT" in
+let b2 := str2block "POP PUSH1 0x1" in
+let init_state := (parse_init_state "1") in
+let cs := [[C_LT (C_VAR 0) (C_VAL 10)]] in
+match init_state with
+| Some (_,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.  
+  
+
 
   End Tests.
