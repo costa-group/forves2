@@ -80,32 +80,100 @@ Module MemoryCmpImpl.
     | _, _ => false
     end.
 
-  
-  Definition swap_memory_update (ctx: ctx_t) (u1 u2 : memory_update sstack_val) (maxid: nat) (sb: sbindings) : bool :=
-    match u1, u2 with
-    | U_MSTORE _ offset1 _, U_MSTORE _ offset2 _ =>
-        match follow_in_smap offset1 maxid sb, follow_in_smap offset2 maxid sb with
+  (*        match follow_in_smap offset1 maxid sb, follow_in_smap offset2 maxid sb with
         | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _)=>
             ((wordToN v2)+31 <? (wordToN v1))%N
         | _, _ => false
+        end *)
+
+  Definition swap_memory_update (ctx: ctx_t) (u1 u2 : memory_update sstack_val) (maxid: nat) (sb: sbindings) : bool :=
+    match u1, u2 with
+    | U_MSTORE _ offset1 _, U_MSTORE _ offset2 _ =>
+        match follow_in_smap offset1 maxid sb with
+        | Some (FollowSmapVal smv1 _ _) =>
+            match smv1 with
+            | SymBasicVal sv1 => 
+                match follow_in_smap offset2 maxid sb with
+                | Some (FollowSmapVal smv2 _ _) =>
+                    match smv2 with
+                    | SymBasicVal sv2 =>
+                        match sv1, sv2 with
+                        | Val v1, Val v2 => ((wordToN v2)+31 <? (wordToN v1))%N
+                        | _, _ => chk_lt_lshift_wrt_ctx ctx sv2 sv1 31
+                        end
+                    | _ => false
+                    end
+                | _ => false
+                end
+            | _ => false
+            end
+        | _ => false
         end
+
     | U_MSTORE8 _ offset1 _, U_MSTORE8 _ offset2 _ =>
-        match follow_in_smap offset1 maxid sb, follow_in_smap offset2 maxid sb with
-        | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) =>
-            ((wordToN v2) <? (wordToN v1))%N
-        | _, _ => false
+        match follow_in_smap offset1 maxid sb with
+        | Some (FollowSmapVal smv1 _ _) =>
+            match smv1 with
+            | SymBasicVal sv1 => 
+                match follow_in_smap offset2 maxid sb with
+                | Some (FollowSmapVal smv2 _ _) =>
+                    match smv2 with
+                    | SymBasicVal sv2 =>
+                        match sv1, sv2 with
+                        | Val v1, Val v2 => ((wordToN v2) <? (wordToN v1))%N
+                        | _, _ => chk_lt_wrt_ctx ctx sv2 sv1
+                        end
+                    | _ => false
+                    end
+                | _ => false
+                end
+            | _ => false
+            end
+        | _ => false
         end
+
     | U_MSTORE _ offset1 _, U_MSTORE8 _ offset2 _ =>
-        match follow_in_smap offset1 maxid sb, follow_in_smap offset2 maxid sb with
-        | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some (FollowSmapVal (SymBasicVal (Val v2)) _ _) =>
-            ((wordToN v2) <? (wordToN v1))%N
-        | _, _ => false
+        match follow_in_smap offset1 maxid sb with
+        | Some (FollowSmapVal smv1 _ _) =>
+            match smv1 with
+            | SymBasicVal sv1 => 
+                match follow_in_smap offset2 maxid sb with
+                | Some (FollowSmapVal smv2 _ _) =>
+                    match smv2 with
+                    | SymBasicVal sv2 =>
+                        match sv1, sv2 with
+                        | Val v1, Val v2 => ((wordToN v2) <? (wordToN v1))%N
+                        | _, _ => chk_lt_wrt_ctx ctx sv2 sv1
+                        end
+                    | _ => false
+                    end
+                | _ => false
+                end
+            | _ => false
+            end
+        | _ => false
         end
+
     | U_MSTORE8 _ offset1 _, U_MSTORE _ offset2 _ =>
-        match follow_in_smap offset1 maxid sb, follow_in_smap offset2 maxid sb with
-        | Some (FollowSmapVal (SymBasicVal (Val v1)) _ _), Some ( FollowSmapVal (SymBasicVal (Val v2)) _ _) =>
-            ((wordToN v2)+31 <? (wordToN v1))%N
-        | _, _ => false
+        match follow_in_smap offset1 maxid sb with
+        | Some (FollowSmapVal smv1 _ _) =>
+            match smv1 with
+            | SymBasicVal sv1 => 
+                match follow_in_smap offset2 maxid sb with
+                | Some (FollowSmapVal smv2 _ _) =>
+                    match smv2 with
+                    | SymBasicVal sv2 =>
+                        match sv1, sv2 with
+                        | Val v1, Val v2 => ((wordToN v2)+31 <? (wordToN v1))%N
+                        | _, _ => chk_lt_lshift_wrt_ctx ctx sv2 sv1 31
+                        end
+                    | _ => false
+                    end
+                | _ => false
+                end
+            | _ => false
+            end
+        | _ => false
         end
     end.
 
