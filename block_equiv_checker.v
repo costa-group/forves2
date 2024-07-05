@@ -152,6 +152,10 @@ Require Import FORVES2.optimizations.jumpi_neq.
 Import Opt_jumpi_neq.
 Require Import FORVES2.optimizations.lt_ctx.
 Import Opt_lt_ctx.
+Require Import FORVES2.optimizations.gt_ctx.
+Import Opt_gt_ctx.
+Require Import FORVES2.optimizations.eq_ctx.
+Import Opt_eq_ctx.
 
 Require Import FORVES2.symbolic_execution.
 Import SymbolicExecution.
@@ -439,6 +443,8 @@ Inductive available_optimization_step :=
 | OPT_strg_solver
 | OPT_jumpi_neq
 | OPT_lt_ctx
+| OPT_gt_ctx
+| OPT_eq_ctx
 .
 
 
@@ -515,6 +521,8 @@ match tag with
 | OPT_strg_solver => OpEntry optimize_strg_solver_sbinding optimize_strg_solver_sbinding_snd
 | OPT_jumpi_neq => OpEntry optimize_jumpi_neq_sbinding optimize_jumpi_neq_sbinding_snd
 | OPT_lt_ctx => OpEntry optimize_lt_ctx_sbinding optimize_lt_ctx_sbinding_snd
+| OPT_gt_ctx => OpEntry optimize_gt_ctx_sbinding optimize_gt_ctx_sbinding_snd
+| OPT_eq_ctx => OpEntry optimize_eq_ctx_sbinding optimize_eq_ctx_sbinding_snd
 end.
 
 Definition all_optimization_steps := 
@@ -587,6 +595,8 @@ Definition all_optimization_steps :=
 
    ;OPT_jumpi_neq
    ;OPT_lt_ctx
+   ;OPT_gt_ctx
+   ;OPT_eq_ctx
    ;OPT_mem_solver
    ;OPT_strg_solver
 ].
@@ -661,6 +671,8 @@ Definition all_optimization_steps' :=
 
    ;OPT_jumpi_neq
    ;OPT_lt_ctx
+   ;OPT_gt_ctx
+   ;OPT_eq_ctx
    ;OPT_mem_solver
    ;OPT_strg_solver   
 ].

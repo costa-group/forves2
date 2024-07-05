@@ -259,4 +259,51 @@ match init_state with
 | None => false
 end.
 
+
+(* GT(X, Y) with ctx *)
+Compute
+  let b1 := str2block "GT" in
+  let b2 := str2block "POP POP PUSH1 0x1" in
+  let init_state := (parse_init_state "2") in
+  let cs := [[C_LT (C_VAR 1) (C_VAR 0)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+(* LT(X, Y) with ctx when we know Y <= X *)
+Compute
+  let b1 := str2block "GT" in
+  let b2 := str2block "POP POP PUSH1 0x0" in
+  let init_state := (parse_init_state "2") in
+  let cs := [[C_LE (C_VAR 0) (C_VAR 1)]] in
+  match init_state with
+  | Some (_,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+
+(* GT(X, Y) with ctx when we know X <= Y *)
+Compute
+let b1 := str2block "GT ISZERO" in
+let b2 := str2block "POP POP PUSH1 0x1" in
+let init_state := (parse_init_state "2") in
+let cs := [[C_LE (C_VAR 0) (C_VAR 1)]] in
+match init_state with
+| Some (_,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
 End Tests.
