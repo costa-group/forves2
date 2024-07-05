@@ -39,20 +39,29 @@ Module Parser.
 (* ================================================================= *)
 (** ** Lexical Analysis *)
 
+
+
+Definition white_chars := [32 (* space *); 9 (* tab *); 10 (* linefeed *); 13 (* Carriage return. *)]%N.
+
+Definition delim_chars := [28 (* ( *); 29 (* ) *); 91 (* [ *); 93 (* ]. *); 44 (* , *); 43 (* + *); 60 (* < *); 61 (* = *) ]%N.
+
 Definition isWhite (c : ascii) : bool :=
   let n := N_of_ascii c in
-  orb (orb (N.eqb n 32%N)   (* space *)
-           (N.eqb n 9%N))   (* tab *)
-      (orb (N.eqb n 10%N)   (* linefeed *)
-           (N.eqb n 13%N)). (* Carriage return. *)
+  existsb (fun m => (n =? m)%N) white_chars.
 
-Inductive chartype := white | other.
+Definition isDelimiter (c : ascii) : bool :=
+  let n := N_of_ascii c in
+  existsb (fun m => (n =? m)%N) delim_chars.
+
+Inductive chartype := white | other | delim.
 
 Definition classifyChar (c : ascii) : chartype :=
   if isWhite c then
     white
-  else 
-    other.
+  else if isDelimiter c then
+         delim
+       else
+         other.
 
 
 Fixpoint list_of_string (s : string) : list ascii :=
@@ -75,18 +84,22 @@ Fixpoint tokenize_helper (cls : chartype) (acc xs : list ascii)
   | (x::xs') =>
     match cls, classifyChar x, x with
     | _, white, _    =>
-      tk ++ (tokenize_helper white [] xs')
+        tk ++ (tokenize_helper white [] xs')
+
+    | _, delim, _    =>
+        tk ++ [[x]] ++ (tokenize_helper white [] xs')
+           
     | other,other,x  =>
-      tokenize_helper other (x::acc) xs'
+        tokenize_helper other (x::acc) xs'
+                        
     | _,tp,x         =>
-      tk ++ (tokenize_helper tp [x] xs')
+        tk ++ (tokenize_helper tp [x] xs')
+           
     end
   end %char.
 
 Definition tokenize (s : string) : list string :=
   map string_of_list (tokenize_helper white [] (list_of_string s)).
-
-
 
 Fixpoint uint_to_N (d:uint) : N :=
   match d with
@@ -148,21 +161,35 @@ Definition parseHexNumber (x : string) : option N :=
   | _ => None
   end.
 
-Fixpoint parseDecNumber' (x : list ascii) (acc : nat) :=
+
+Fixpoint parseDecNumber_N' (x : list ascii) (acc : N) :=
   match x with
   | [] => Some acc
-  | d::ds => let n := nat_of_ascii d in
-             if (andb (Nat.leb 48 n) (Nat.leb n 57)) then
-               parseDecNumber' ds (10*acc+(n-48))
+  | d::ds => let n := N_of_ascii d in
+             if (andb (N.leb 48%N n) (N.leb n 57%N)) then
+               parseDecNumber_N' ds (10*acc+(n-48)%N)
              else None
   end.
 
+Definition parseDecNumber_N (x : string) : option N :=
+  parseDecNumber_N' (list_of_string x) 0%N.
+
+
 Definition parseDecNumber (x : string) : option nat :=
-  parseDecNumber' (list_of_string x) 0.
+  match parseDecNumber_N x with
+  | Some n => Some (N.to_nat n)
+  | None => None
+  end.                        
+
+Definition parseDecNumber' (x : list ascii) : option nat :=
+  match parseDecNumber_N' x 0%N with
+  | Some n => Some (N.to_nat n)
+  | None => None
+  end.                        
 
 Definition is_push (s : string) : option nat :=
   match (list_of_string s) with
-  | "P"%char::"U"%char::"S"%char::"H"%char::xs => match (parseDecNumber' xs 0) with
+  | "P"%char::"U"%char::"S"%char::"H"%char::xs => match (parseDecNumber' xs) with
                                                   | None => None
                                                   | Some n => if (andb (Nat.leb 1 n) (Nat.leb n 32)) then Some n else None
                                                   end                                                 
@@ -177,7 +204,7 @@ Definition is_metapush (s : string) : bool :=
 
 Definition is_dup (s : string) : option nat :=
   match (list_of_string s) with
-  | "D"%char::"U"%char::"P"%char::xs => match (parseDecNumber' xs 0) with
+  | "D"%char::"U"%char::"P"%char::xs => match (parseDecNumber' xs) with
                                         | None => None
                                         | Some n => if (andb (Nat.leb 1 n) (Nat.leb n 16)) then Some n else None
                                         end                                                 
@@ -186,78 +213,95 @@ Definition is_dup (s : string) : option nat :=
 
 Definition is_swap (s : string) : option nat :=
   match (list_of_string s) with
-  | "S"%char::"W"%char::"A"%char::"P"%char::xs => match (parseDecNumber' xs 0) with
+  | "S"%char::"W"%char::"A"%char::"P"%char::xs => match (parseDecNumber' xs) with
                                                   | None => None
                                                   | Some n => if (andb (Nat.leb 1 n) (Nat.leb n 16)) then Some n else None
                                                   end                                                 
   | _ => None
   end.
 
+Definition parse_stack_op_instr (s : string) : option stack_op_instr :=
+  match s with
+  | "ADD"%string => Some ADD
+  | "MUL"%string => Some MUL
+  | "SUB"%string => Some SUB
+  | "DIV"%string => Some DIV
+  | "SDIV"%string => Some SDIV
+  | "MOD"%string => Some MOD
+  | "SMOD"%string => Some SMOD
+  | "ADDMOD"%string => Some ADDMOD
+  | "MULMOD"%string => Some MULMOD
+  | "EXP"%string => Some EXP
+  | "SIGNEXTEND"%string => Some SIGNEXTEND
+  | "LT"%string => Some LT
+  | "GT"%string => Some GT
+  | "SLT"%string => Some SLT
+  | "SGT"%string => Some SGT
+  | "EQ"%string => Some EQ
+  | "ISZERO"%string => Some ISZERO
+  | "AND"%string => Some AND
+  | "OR"%string => Some OR
+  | "XOR"%string => Some XOR
+  | "NOT"%string => Some NOT
+  | "BYTE"%string => Some BYTE
+  | "SHL"%string => Some SHL
+  | "SHR"%string => Some SHR
+  | "SAR"%string => Some SAR
+  | "ADDRESS"%string => Some ADDRESS
+  | "BALANCE"%string => Some BALANCE
+  | "ORIGIN"%string => Some ORIGIN
+  | "CALLER"%string => Some CALLER
+  | "CALLVALUE"%string => Some CALLVALUE
+  | "CALLDATALOAD"%string => Some CALLDATALOAD
+  | "CALLDATASIZE"%string => Some CALLDATASIZE
+  | "CODESIZE"%string => Some CODESIZE
+  | "GASPRICE"%string => Some GASPRICE
+  | "EXTCODESIZE"%string => Some EXTCODESIZE
+  | "RETURNDATASIZE"%string => Some RETURNDATASIZE
+  | "EXTCODEHASH"%string => Some EXTCODEHASH
+  | "BLOCKHASH"%string => Some BLOCKHASH
+  | "COINBASE"%string => Some COINBASE
+  | "TIMESTAMP"%string => Some TIMESTAMP
+  | "NUMBER"%string => Some NUMBER
+  | "DIFFICULTY"%string => Some DIFFICULTY
+  | "GASLIMIT"%string => Some GASLIMIT
+  | "CHAINID"%string => Some CHAINID
+  | "SELFBALANCE"%string => Some SELFBALANCE
+  | "BASEFEE"%string => Some BASEFEE
+  | "GAS"%string => Some GAS
+  | "JUMPI"%string => Some JUMPI
+  | _ => None
+  end.
+
+Definition parse_non_stack_op_instr (s : string) : option instr :=
+  match s with
+  | "POP"%string => Some POP
+  | "MLOAD"%string => Some MLOAD
+  | "MSTORE"%string => Some MSTORE
+  | "MSTORE8"%string => Some MSTORE8
+  | "SLOAD"%string => Some SLOAD
+  | "SSTORE"%string => Some SSTORE
+  | "SHA3"%string => Some SHA3
+  | "KECCAK256"%string => Some KECCAK256
+  | _ => None
+  end.
+
 Definition parse_non_push_instr (s : string) : option instr :=
   match (is_dup s) with
   | Some n => Some (DUP n)
-  | None =>  match (is_swap s) with
-             | Some n => Some (SWAP n)
-             | None => match s with
-                       | "ADD"%string => Some (OpInstr ADD)
-                       | "MUL"%string => Some (OpInstr MUL)
-                       | "SUB"%string => Some (OpInstr SUB)
-                       | "DIV"%string => Some (OpInstr DIV)
-                       | "SDIV"%string => Some (OpInstr SDIV)
-                       | "MOD"%string => Some (OpInstr MOD)
-                       | "SMOD"%string => Some (OpInstr SMOD)
-                       | "ADDMOD"%string => Some (OpInstr ADDMOD)
-                       | "MULMOD"%string => Some (OpInstr MULMOD)
-                       | "EXP"%string => Some (OpInstr EXP)
-                       | "SIGNEXTEND"%string => Some (OpInstr SIGNEXTEND)
-                       | "LT"%string => Some (OpInstr LT)
-                       | "GT"%string => Some (OpInstr GT)
-                       | "SLT"%string => Some (OpInstr SLT)
-                       | "SGT"%string => Some (OpInstr SGT)
-                       | "EQ"%string => Some (OpInstr EQ)
-                       | "ISZERO"%string => Some (OpInstr ISZERO)
-                       | "AND"%string => Some (OpInstr AND)
-                       | "OR"%string => Some (OpInstr OR)
-                       | "XOR"%string => Some (OpInstr XOR)
-                       | "NOT"%string => Some (OpInstr NOT)
-                       | "BYTE"%string => Some (OpInstr BYTE)
-                       | "SHL"%string => Some (OpInstr SHL)
-                       | "SHR"%string => Some (OpInstr SHR)
-                       | "SAR"%string => Some (OpInstr SAR)
-                       | "ADDRESS"%string => Some (OpInstr ADDRESS)
-                       | "BALANCE"%string => Some (OpInstr BALANCE)
-                       | "ORIGIN"%string => Some (OpInstr ORIGIN)
-                       | "CALLER"%string => Some (OpInstr CALLER)
-                       | "CALLVALUE"%string => Some (OpInstr CALLVALUE)
-                       | "CALLDATALOAD"%string => Some (OpInstr CALLDATALOAD)
-                       | "CALLDATASIZE"%string => Some (OpInstr CALLDATASIZE)
-                       | "CODESIZE"%string => Some (OpInstr CODESIZE)
-                       | "GASPRICE"%string => Some (OpInstr GASPRICE)
-                       | "EXTCODESIZE"%string => Some (OpInstr EXTCODESIZE)
-                       | "RETURNDATASIZE"%string => Some (OpInstr RETURNDATASIZE)
-                       | "EXTCODEHASH"%string => Some (OpInstr EXTCODEHASH)
-                       | "BLOCKHASH"%string => Some (OpInstr BLOCKHASH)
-                       | "COINBASE"%string => Some (OpInstr COINBASE)
-                       | "TIMESTAMP"%string => Some (OpInstr TIMESTAMP)
-                       | "NUMBER"%string => Some (OpInstr NUMBER)
-                       | "DIFFICULTY"%string => Some (OpInstr DIFFICULTY)
-                       | "GASLIMIT"%string => Some (OpInstr GASLIMIT)
-                       | "CHAINID"%string => Some (OpInstr CHAINID)
-                       | "SELFBALANCE"%string => Some (OpInstr SELFBALANCE)
-                       | "BASEFEE"%string => Some (OpInstr BASEFEE)
-                       | "GAS"%string => Some (OpInstr GAS)
-                       | "JUMPI"%string => Some (OpInstr JUMPI)
-                       | "POP"%string => Some POP
-                       | "MLOAD"%string => Some MLOAD
-                       | "MSTORE"%string => Some MSTORE
-                       | "MSTORE8"%string => Some MSTORE8
-                       | "SLOAD"%string => Some SLOAD
-                       | "SSTORE"%string => Some SSTORE
-                       | "SHA3"%string => Some SHA3
-                       | "KECCAK256"%string => Some KECCAK256
-                       | _ => None
-                       end
-             end
+  | None =>
+      match (is_swap s) with
+      | Some n => Some (SWAP n)
+      | None =>
+          match parse_non_stack_op_instr s with
+          | Some i => Some i
+          | None =>
+              match parse_stack_op_instr s with
+              | Some i => Some (OpInstr i)
+              | None => None
+              end
+          end
+      end
   end.
 
 Fixpoint parse_block' (l : list string) : option block :=
@@ -466,46 +510,430 @@ Definition parse_imp_chkr (s: string) :=
   | _ => None
   end.
 
+Definition parser_type (A : Type) : Type := option (A*(list string)).
 
-Definition parse_num_or_invar (s : string) :=
+
+Definition parse_sstack_val (s: string) : option sstack_val :=
   match (parseHexNumber s) with
   | None => match (list_of_string s) with
-            | "v"%char::cs => match (parseDecNumber' cs 0) with
+            | "v"%char::cs => match (parseDecNumber' cs) with
                               | None => None
                               | Some n => Some (InVar n)
+                              end
+            | "e"%char::cs => match (parseDecNumber' cs) with
+                              | None => None
+                              | Some n => Some (FreshVar n)
                               end
             | _ => None
             end
   | Some v => Some (Val (NToWord EVMWordSize v))
   end.
 
-Fixpoint parse_init_stack' (l: list string) :=
+Fixpoint parse_stack' (l: list string) : sstack * (list string) :=
   match l with
-  | nil => Some []
-  | x::xs =>      
-      match parse_num_or_invar x with
-      | None => None
-      | Some xv => match (parse_init_stack' xs) with
-                   | None => None
-                   | Some xsv => Some (xv::xsv)
-                   end
+  | x::xs =>
+      match parse_sstack_val x with
+      | None => ([],l)
+      | Some xv =>
+          match xs with
+          | ","%string::xs' =>
+              match parse_stack' xs' with
+              | (vl,xs'') => (xv::vl,xs'')
+              end
+          | _ => ([xv],xs)
+          end
       end
+  | _ => ([],l)
   end.
 
-Definition parse_init_stack (s: string) :=
-  match (tokenize s) with
-  | "stack:"%string::xs => parse_init_stack' xs
+Definition parse_stack (s: list string) : parser_type sstack:=
+  match s with
+  | "["%string::xs =>
+      match parse_stack' xs with
+      | (stk, xs') =>
+          match xs' with
+          | "]"%string::xs'' => Some (stk,xs'')
+          | _ => None
+          end
+      end
   | _ => None
   end.
 
-Definition parse_init_state (init_state: string) : option (constraints * sstate) :=
-  match (parseDecNumber init_state) with
-  | Some k_nat => Some ([], (gen_empty_sstate_from_stk_height k_nat))
-  | None => match (parse_init_stack init_state) with
-            | Some sstk => Some ([], (gen_empty_sstate_from_stk sstk))
+
+
+Fixpoint parse_memory' (l: list string) : smemory * (list string) :=
+  match l with
+  | store_type::offset::value::xs =>
+      match 
+        (match parse_sstack_val offset with
+        | None => None
+        | Some offsetv =>
+            match parse_sstack_val value with
             | None => None
+            | Some valuev =>
+                match store_type with
+                | "MSTORE"%string => Some (U_MSTORE sstack_val offsetv valuev)
+                | "MSTORE8"%string => Some (U_MSTORE8 sstack_val offsetv valuev)
+                | _ => None
+                end
             end
+        end)
+      with
+      | Some u =>
+          match xs with
+          | ","%string::xs' =>
+              match parse_memory' xs' with
+              |  (us,xs'') => (u::us,xs'')
+              end
+          | _ => ([u],xs)
+          end
+      | None => ([],l)
+      end
+  | _ => ([],l)
   end.
+
+Definition parse_memory (s: list string) : parser_type smemory :=
+  match s with
+  | "["%string::xs =>
+      match parse_memory' xs with
+      | (mem, xs') =>
+          match xs' with
+          | "]"%string::xs'' => Some (mem,xs'')
+          | _ => None
+          end
+      end
+  | _ => None
+  end.
+
+
+Fixpoint parse_storage' (l: list string) : sstorage * (list string) :=
+  match l with
+  | "SSTORE"%string::key::value::xs =>
+      match parse_sstack_val key with
+      | Some keyv =>
+          match parse_sstack_val value with
+          | Some valuev =>
+              let u := (U_SSTORE sstack_val keyv valuev) in
+              match xs with
+              | ","%string::xs' =>
+                  match parse_storage' xs' with
+                  | (us,xs'') => (u::us,xs'')
+                  end
+              | _ => ([u],xs)
+              end
+          | None => ([], l)
+          end
+      | None => ([], l)
+      end
+  | _ => ([],l)
+  end.
+
+Definition parse_storage (s: list string) : parser_type sstorage :=
+  match s with
+  | "["%string::xs =>
+      match parse_storage' xs with
+      | (strg, xs') =>
+          match xs' with
+          | "]"%string::xs'' => Some (strg,xs'')
+          | _ => None
+          end
+      end
+  | _ => None
+  end.
+
+Definition parse_sbinding (l: list string) : parser_type sbinding :=
+  match l with
+  | id::"="%string::l' =>
+      match parseDecNumber id with
+      | Some n =>
+          match l' with
+          | "BV"%string::val::xs =>
+              match parse_sstack_val val with
+              | None => None
+              | Some valv => Some ((n,SymBasicVal valv),xs)
+              end
+          | "MP"%string::cat::val::xs =>
+              match parseDecNumber_N cat with
+              | None => None
+              | Some catv =>
+                  match parseDecNumber_N val with
+                  | None => None
+                  | Some valv => Some ((n,SymMETAPUSH catv valv),xs)
+                  end
+              end
+          | "OP"%string::label::xs =>
+              match parse_stack_op_instr label with
+              | None => None
+              | Some labelv =>
+                  match parse_stack xs with
+                  | None => None
+                  | Some (args,xs') => Some ((n,SymOp labelv args),xs')
+                  end
+              end
+          | "ML"%string::offset::xs =>
+              match parse_sstack_val offset with
+              | None => None
+              | Some offsetv =>
+                  match parse_memory xs with
+                  | None => None
+                  | Some (mem,xs') => Some ((n,SymMLOAD offsetv mem),xs')
+                  end
+              end
+          | "SL"%string::key::xs =>
+              match parse_sstack_val key with
+              | None => None
+              | Some keyv =>
+                  match parse_storage xs with
+                  | None => None
+                  | Some (strg,xs') => Some ((n,SymSLOAD keyv strg),xs')
+                  end
+              end
+          | "SHA3"%string::offset::size::xs =>
+              match parse_sstack_val offset with
+              | None => None
+              | Some offsetv =>
+                  match parse_sstack_val size with
+                  | None => None
+                  | Some sizev =>
+                      match parse_memory xs with
+                      | None => None
+                      | Some (mem,xs') => Some ((n,SymSHA3 offsetv sizev mem),xs')
+                      end
+                  end
+              end
+          | _ => None
+          end
+      | _ => None
+      end
+  | _ => None
+  end.
+
+Fixpoint parse_sbindings' (d: nat) (l: list string) : sbindings*(list string) :=
+  match d with
+  | 0 => ([], l)
+  | S d' =>
+      match (parse_sbinding l) with
+      | Some (b,l') =>
+          match l' with
+          | ","%string::l'' =>
+              match parse_sbindings' d' l'' with
+              | (vl'',l''') => (b::vl'',l''')
+              end
+          | _ => ([b],l')
+          end
+      | None => ([], l)
+      end
+  end.
+    
+Definition parse_sbindings (d: nat) (l: list string) : parser_type sbindings :=
+  match l with
+  | "["%string::xs =>
+      match parse_sbindings' d xs with
+      | (bs, xs') =>
+          match xs' with
+          | "]"%string::xs'' => Some (bs,xs'')
+          | _ => None
+          end
+      end
+  | _ => None
+  end.
+
+Definition parse_smap (d: nat) (l: list string) : parser_type smap :=
+  match parse_sbindings d l with
+  | None => None
+  | Some (bs,l') => Some ((SymMap (length bs) bs), l')
+  end.
+
+
+Definition parse_literal (l: list string) : parser_type cliteral :=
+  match l with
+  | a::"+"%string::b::xs =>
+      let al := list_of_string a in
+      match al with
+      | "v"%char::cs =>
+          match (parseDecNumber' cs) with
+          | Some n =>
+              match parseDecNumber_N b with
+              | Some d => Some ((C_VAR_DELTA n d),xs)
+              | None => None
+              end
+          | None => None
+          end
+      | _ => None
+      end
+  | a::xs =>
+      let al := list_of_string a in
+      match al with
+      | "v"%char::cs =>
+          match (parseDecNumber' cs) with
+          | Some n => Some ((C_VAR n),xs)
+          | None => None
+          end
+      | _ =>
+          match parseDecNumber_N a with
+          | Some n => Some ((C_VAL n),xs)
+          | None => None
+          end
+      end
+  | _ => None
+  end.
+
+Definition parse_constraint (l: list string) : parser_type constraint :=
+  match parse_literal l with
+  | Some (a,l') =>
+      match
+        (match l' with
+              | "<"%string::"="%string::xs  => Some ("<="%string,xs)
+              | "<"%string::xs =>Some ("<"%string,xs)
+              | "="%string::xs  => Some ("="%string,xs)
+         | _ => None
+         end)
+      with
+      | Some (op,l'') =>
+          match parse_literal l'' with
+          | Some (b,l''') =>
+              match op with
+              | "<="%string  => Some ((C_LE a b),l''')
+              | "<"%string => Some ((C_LT a b),l''')
+              | "="%string  => Some ((C_EQ a b),l''')
+              | _ => None
+              end
+          | None => None
+          end
+      | None => None
+      end
+  | None => None
+  end.
+
+Fixpoint parse_conjunction' (d: nat) (l: list string) : conjunction*(list string) :=
+  match d with
+  | 0 => ([],l)
+  | S d' =>
+      match (parse_constraint l) with
+      | Some (c,l') =>
+          match l' with
+          | ","%string::l'' =>
+              match  parse_conjunction' d' l'' with
+              | (vl'',l''') => (c::vl'',l''')
+              end
+          | _ => ([c],l')
+          end
+      | None => ([],l)
+      end
+  end.
+
+Definition parse_conjunction (d: nat) (l: list string) : parser_type conjunction :=
+  match l with
+  | "["%string::xs =>
+      match parse_conjunction' d xs with
+      | (cs, xs') =>
+          match xs' with
+          | "]"%string::xs'' => Some (cs,xs'')
+          | _ => None
+          end
+      end
+  | _ => None
+  end.
+
+Fixpoint parse_disjunction' (d: nat) (l: list string) : disjuntion*(list string) :=
+  match d with
+  | 0 => ([],l)
+  | S d' =>
+      match (parse_conjunction d l) with
+      | Some (c,l') =>
+          match l' with
+          | ","%string::l'' =>
+              match  parse_disjunction' d' l'' with
+              | (vl'',l''') => (c::vl'',l''')
+              end
+          | _ => ([c],l')
+          end
+      | None => ([],l)
+      end
+  end.
+
+Definition parse_disjunction (d: nat) (l: list string) : parser_type disjuntion :=
+  match l with
+  | "["%string::xs =>
+      match parse_disjunction' d xs with
+      | (ds, xs') =>
+          match xs' with
+          | "]"%string::xs'' => Some (ds,xs'')
+          | _ => None
+          end
+      end
+  | _ => None
+  end.
+
+
+Definition parse_init_state_type_1 (d: nat) (l: list string) : option (constraints * sstate) :=
+  match l with
+  | [] => None
+  | x::xs =>
+      match (parseDecNumber x) with
+      | Some k_nat =>
+          let sst := gen_empty_sstate_from_stk_height k_nat in
+          match xs with
+          | [] => Some ([], sst)
+          | _::_ =>
+              match parse_disjunction d xs with
+              | Some (ds, xs') =>
+                  match xs' with
+                  | [] => Some (ds,sst)
+                  | _ => None
+                  end
+              | None => None
+              end
+          end
+      | _ => None
+      end
+  end.
+
+Definition parse_init_state_type_2 (d: nat) (l: list string) : option (constraints * sstate) :=
+  match parse_stack l with
+    | None => None
+    | Some (sstk, l') =>
+        match parse_memory l' with
+        | None => None
+        | Some (smem, l'') =>
+            match parse_storage l'' with
+            | None => None
+            | Some (sstrg, l''') =>
+                match parse_smap d l''' with
+                | None => None
+                | Some (smap, l'''') =>
+                    let sst := make_sst sstk smem sstrg empty_sexternals smap in
+                    match l'''' with 
+                    | [] => Some ([], sst)
+                    | _::_ =>
+                        match parse_disjunction d l'''' with
+                        | None => None
+                        | Some (ds, l''''') =>
+                            match l''''' with 
+                            | [] => Some (ds, sst)
+                            | _::_ => None
+                            end
+                        end
+                    end
+                end
+            end
+        end
+  end.
+    
+                            
+                
+Definition parse_init_state (init_state: string) : option (constraints * sstate) :=
+  let l := tokenize init_state in
+  let d := length l in
+  match parse_init_state_type_1 d l with
+  | Some (cs,sst) => Some (cs,sst)
+  | None =>
+      match parse_init_state_type_2 d l with
+      | Some (cs,sst) => Some (cs,sst)
+      | None => None
+      end
+  end.
+    
   
 Definition block_eq (memory_updater storage_updater mload_solver sload_solver sstack_value_cmp memory_cmp storage_cmp sha3_cmp imp_chkr opt_step_rep opt_pipeline_rep: string) (opts_to_apply : list string) :
   option (string -> string -> string -> option bool) :=
