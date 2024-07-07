@@ -675,9 +675,9 @@ Proof.
 Qed.
 
 
-Print Z.
-Print positive.
-Search (nat -> Z).
+(* Print Z. *)
+(* Print positive. *)
+(* Search (nat -> Z). *)
 
 Lemma scale_monotonous(x y: Z)(k: nat): 
   x <= y -> (Z.of_nat k * x <= Z.of_nat k*y).
@@ -1023,38 +1023,38 @@ Local Definition cs :=
   ; Octagon.mkadd_nn 3 5  3 (* -d + -f <= 3 *)
 ].
 
-Compute Octagon.church_numeral 1 Octagon.iterate cs.
-Compute length (Octagon.church_numeral 1 Octagon.iterate cs).
-Compute length (Octagon.church_numeral 2 Octagon.iterate cs).
-Compute length (Octagon.church_numeral 3 Octagon.iterate cs).
-Compute length (Octagon.church_numeral 4 Octagon.iterate cs).
+(* Compute Octagon.church_numeral 1 Octagon.iterate cs. *)
+(* Compute length (Octagon.church_numeral 1 Octagon.iterate cs). *)
+(* Compute length (Octagon.church_numeral 2 Octagon.iterate cs). *)
+(* Compute length (Octagon.church_numeral 3 Octagon.iterate cs). *)
+(* Compute length (Octagon.church_numeral 4 Octagon.iterate cs). *)
 
-Compute Octagon.combine (Octagon.mkadd_pp 1 2 10) (Octagon.mkadd_pn 3 2 10).
+(* Compute Octagon.combine (Octagon.mkadd_pp 1 2 10) (Octagon.mkadd_pn 3 2 10). *)
 
 Import Octagon.ImplChecker.
 Local Definition checker' := conj_imp_checker_fun (conj_trans_closure_checker (2 * length cs)) cs.
 
-Compute checker' (Octagon.mkadd_pn 3 5 26).
-Compute checker' (Octagon.mkadd_pn 3 5 25).
-Compute negb (checker' (Octagon.mkadd_pn 3 5 24)).
+(* Compute checker' (Octagon.mkadd_pn 3 5 26). *)
+(* Compute checker' (Octagon.mkadd_pn 3 5 25). *)
+(* Compute negb (checker' (Octagon.mkadd_pn 3 5 24)). *)
 
-Compute checker' (Octagon.mkadd_nn 5 4 24).
-Compute checker' (Octagon.mkadd_nn 4 5 24).
-Compute checker' (Octagon.mkadd_pn 3 5 25).
-Compute checker' (Octagon.mkadd_pn 2 5 16).
-Compute checker' (Octagon.mkadd_pn 2 4 12).
-Compute checker' (Octagon.mkadd_pp 2 3 13).
-Compute checker' (Octagon.mkadd_pn 3 4 21).
-Compute checker' (Octagon.mkadd_pp 3 2 13).
-Compute checker' (Octagon.mkbnd_n 5 14).
-Compute checker' (Octagon.mkadd_pn 4 5 4).
-Compute checker' (Octagon.mkbnd_p 3 11).
-Compute checker' (Octagon.mkbnd_p 2 2).
-Compute checker' (Octagon.mkadd_pp 1 2 3).
-Compute checker' (Octagon.mkadd_pn 2 1 2).
-Compute checker' (Octagon.mkadd_pp 3 4 1).
-Compute checker' (Octagon.mkbnd_n 4 10).
-Compute checker' (Octagon.mkadd_nn 3 5 3).
+(* Compute checker' (Octagon.mkadd_nn 5 4 24). *)
+(* Compute checker' (Octagon.mkadd_nn 4 5 24). *)
+(* Compute checker' (Octagon.mkadd_pn 3 5 25). *)
+(* Compute checker' (Octagon.mkadd_pn 2 5 16). *)
+(* Compute checker' (Octagon.mkadd_pn 2 4 12). *)
+(* Compute checker' (Octagon.mkadd_pp 2 3 13). *)
+(* Compute checker' (Octagon.mkadd_pn 3 4 21). *)
+(* Compute checker' (Octagon.mkadd_pp 3 2 13). *)
+(* Compute checker' (Octagon.mkbnd_n 5 14). *)
+(* Compute checker' (Octagon.mkadd_pn 4 5 4). *)
+(* Compute checker' (Octagon.mkbnd_p 3 11). *)
+(* Compute checker' (Octagon.mkbnd_p 2 2). *)
+(* Compute checker' (Octagon.mkadd_pp 1 2 3). *)
+(* Compute checker' (Octagon.mkadd_pn 2 1 2). *)
+(* Compute checker' (Octagon.mkadd_pp 3 4 1). *)
+(* Compute checker' (Octagon.mkbnd_n 4 10). *)
+(* Compute checker' (Octagon.mkadd_nn 3 5 3). *)
 
 Local Definition C := 
   (* Obtained from [x4 = x5] *)
@@ -1070,12 +1070,12 @@ Local Definition checker: Octagon.Constraint -> bool :=
   conj_imp_checker_fun (conj_trans_closure_checker (2 * length C)) C.
 
 (* x4 = 0 *)
-Compute checker (Octagon.mkbnd_p 4 0) && checker (Octagon.mkbnd_n 4 0).
+(* Compute checker (Octagon.mkbnd_p 4 0) && checker (Octagon.mkbnd_n 4 0). *)
 (* x0 >= x2 + 32 *)
-Compute checker (Octagon.mkadd_pn 2 0 (-32)).
+(* Compute checker (Octagon.mkadd_pn 2 0 (-32)). *)
 
-Check (1 + 1)%N.
-Check (1 + 1)%nat.
+(* Check (1 + 1)%N. *)
+(* Check (1 + 1)%nat. *)
 
 
 End OctagonExamples.
@@ -1269,7 +1269,7 @@ Proof.
   apply translate_constraint_preserves_information.
 Qed.
 
-Check forallb.
+(* Check forallb. *)
 
 Program Definition translate_conj_imp_checker
   (oct_checker: Octagon.ImplChecker.conj_imp_checker)

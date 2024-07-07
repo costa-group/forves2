@@ -279,7 +279,7 @@ Program Definition chk_is_sat : sat_checker := {|
 Next Obligation.
   Admitted.
 
-Compute sat_checker_fun chk_is_sat.
+(* Compute sat_checker_fun chk_is_sat. *)
 
 End Constraints.
 
