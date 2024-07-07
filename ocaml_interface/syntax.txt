@@ -1,0 +1,40 @@
+
+-- X* means a list separated with comma, and can be empty
+-- N and i are a natural number (including 0)
+-- HEX is a hex number, representing a 256bit word: 0x...
+-- Anythin in inside "" is a non-terminal symbol
+
+
+OP => "<" | "<=" | "="
+LIT => N | "V"i | "V"i "+" N
+
+CONS => LIT OP LIT
+CONJ => "[" CONS* "]"
+DISJ => "[" CONJ* "]"
+CTX  => DISJ
+
+STKVAR => HEX | Vi | Ei
+
+STK => "[" STKVAR* "]"
+
+MEM_U => "MSTORE" STKVAR STKVAR | "MSTORE8" STKVAR STKVAR
+MEM => "[" MEM_U* "]"
+
+STRG_U => "SSTORE" STKVAR STKVAR
+STRG => "[" STRG_U* "]"
+
+SMAP_VAL =>   "BV" STKVAR
+            | "MP" N N
+	    | "OP" LABEL STK
+	    | "ML" STKVAR MEM
+	    | "SL" STKVAR STRG
+	    | "SHA3" STKVAR STKVAR MEM
+
+
+BIND => N "=" SMAP_VAL
+SMAP => N "[" BIND* "]"
+
+SSTATE => STK MEM STRG SMAP
+
+INIT_STATE => (N | SSTATE) [CTX]
+
