@@ -835,7 +835,7 @@ Definition parse_conjunction (d: nat) (l: list string) : parser_type conjunction
   | _ => None
   end.
 
-Fixpoint parse_disjunction' (d: nat) (l: list string) : disjuntion*(list string) :=
+Fixpoint parse_disjunction' (d: nat) (l: list string) : disjunction*(list string) :=
   match d with
   | 0 => ([],l)
   | S d' =>
@@ -852,7 +852,7 @@ Fixpoint parse_disjunction' (d: nat) (l: list string) : disjuntion*(list string)
       end
   end.
 
-Definition parse_disjunction (d: nat) (l: list string) : parser_type disjuntion :=
+Definition parse_disjunction (d: nat) (l: list string) : parser_type disjunction :=
   match l with
   | "["%string::xs =>
       match parse_disjunction' d xs with

@@ -849,7 +849,7 @@ Program Definition mkbnd_n(x: nat)(d: Z) :=
 
 Module ImplChecker.
 
-Definition satisfies_constraint_disjuntion (m: model) (C: list (list Constraint)): bool :=
+Definition satisfies_constraint_disjunction (m: model) (C: list (list Constraint)): bool :=
   existsb (satisfies_constraints m) C.
 
 
@@ -857,7 +857,7 @@ Record imp_checker: Type :=
   { imp_checker_fun: list (list Constraint) -> Constraint -> bool
   ; imp_checker_snd: forall (cs: list (list Constraint)) (c: Constraint),
      imp_checker_fun cs c = true -> forall model,
-     satisfies_constraint_disjuntion model cs = true -> satisfies_single_constraint model c = true
+     satisfies_constraint_disjunction model cs = true -> satisfies_single_constraint model c = true
   }.
 
 Record conj_imp_checker: Type := 

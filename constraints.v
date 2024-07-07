@@ -139,8 +139,8 @@ Proof.
 Qed. 
 
 Notation conjunction := (list constraint).
-Notation disjuntion := (list conjunction).
-Definition constraints : Type := disjuntion.
+Notation disjunction := (list conjunction).
+Definition constraints : Type := disjunction.
 (** A [constraints] is a disjunctive normal form representation of hypothesis. *)
 
 (*}}} end Constraints *)
