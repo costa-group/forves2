@@ -182,6 +182,32 @@ Compute
   | None => false
   end.
 
+Compute 
+  let b1 := str2block "DUP1 SLOAD PUSH1 0x1 ADD SWAP1 SSTORE" in
+  let b2 := str2block "PUSH1 0x11 SWAP1 SSTORE" in
+  let init_state := (parse_init_state "[v1] [] [SSTORE v2 0x10] [] [[v2=v1]]") in
+  match init_state with
+  | Some (cs,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+Compute 
+  let b1 := str2block "ADD" in
+  let b2 := str2block "POP" in
+  let init_state := (parse_init_state "[e0,v1] [] [] [ 0 = OP ADD [v2,0x0]] [[v2=0]]") in
+  match init_state with
+  | Some (cs,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
 
 
 (* JUMPI with constant condition 1 <> 0 *)
