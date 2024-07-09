@@ -225,14 +225,14 @@ Eval cbv in
   | None => false
   end.
 
+
 (* JUMPI with condition 0 < C_VAR 0 *)
 Compute
   let b1 := str2block "PUSH1 0x10 JUMPI" in
   let b2 := str2block "POP PUSH1 0x10" in
-  let init_state := (parse_init_state "1") in
-  let cs := [[C_LT (C_VAL 0) (C_VAR 0)]] in
+  let init_state := (parse_init_state "1 [[0 < v0]]") in
   match init_state with
-  | Some (_,sst) =>
+  | Some (cs,sst) =>
       (evm_eq_block_chkr_lazy
          SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
          all_optimization_steps 10 10
@@ -245,10 +245,9 @@ Compute
 Compute
   let b1 := str2block "LT" in
   let b2 := str2block "POP POP PUSH1 0x1" in
-  let init_state := (parse_init_state "2") in
-  let cs := [[C_LT (C_VAR 0) (C_VAR 1)]] in
+  let init_state := (parse_init_state "2 [[v0 < v1]]") in
   match init_state with
-  | Some (_,sst) =>
+  | Some (cs,sst) =>
       (evm_eq_block_chkr_lazy
          SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
          all_optimization_steps 10 10
@@ -260,10 +259,9 @@ Compute
 Compute
   let b1 := str2block "PUSH1 0x5 LT" in
   let b2 := str2block "POP PUSH1 0x1" in
-  let init_state := (parse_init_state "1") in
-  let cs := [[C_LT (C_VAL 10) (C_VAR 0)]] in
+  let init_state := (parse_init_state "1 [[10 < v0]]") in
   match init_state with
-  | Some (_,sst) =>
+  | Some (cs,sst) =>
       (evm_eq_block_chkr_lazy
          SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
          all_optimization_steps 10 10
@@ -275,10 +273,9 @@ Compute
 Compute
 let b1 := str2block "PUSH1 0x20 SWAP1 LT" in
 let b2 := str2block "POP PUSH1 0x1" in
-let init_state := (parse_init_state "1") in
-let cs := [[C_LT (C_VAR 0) (C_VAL 10)]] in
+let init_state := (parse_init_state "1 [[v0 < 10]]") in
 match init_state with
-| Some (_,sst) =>
+| Some (cs,sst) =>
     (evm_eq_block_chkr_lazy
        SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
        all_optimization_steps 10 10
@@ -291,10 +288,9 @@ end.
 Compute
   let b1 := str2block "LT" in
   let b2 := str2block "POP POP PUSH1 0x0" in
-  let init_state := (parse_init_state "2") in
-  let cs := [[C_LE (C_VAR 1) (C_VAR 0)]] in
+  let init_state := (parse_init_state "2 [[v1 <= v0]]") in
   match init_state with
-  | Some (_,sst) =>
+  | Some (cs,sst) =>
       (evm_eq_block_chkr_lazy
          SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
          all_optimization_steps 10 10
@@ -307,10 +303,9 @@ Compute
 Compute
 let b1 := str2block "LT ISZERO" in
 let b2 := str2block "POP POP PUSH1 0x1" in
-let init_state := (parse_init_state "2") in
-let cs := [[C_LE (C_VAR 1) (C_VAR 0)]] in
+let init_state := (parse_init_state "2 [[v1 <= v0]]") in
 match init_state with
-| Some (_,sst) =>
+| Some (cs,sst) =>
     (evm_eq_block_chkr_lazy
        SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
        all_optimization_steps 10 10
@@ -323,10 +318,9 @@ end.
 Compute
   let b1 := str2block "GT" in
   let b2 := str2block "POP POP PUSH1 0x1" in
-  let init_state := (parse_init_state "2") in
-  let cs := [[C_LT (C_VAR 1) (C_VAR 0)]] in
+  let init_state := (parse_init_state "2 [[v1 < v0]]") in
   match init_state with
-  | Some (_,sst) =>
+  | Some (cs,sst) =>
       (evm_eq_block_chkr_lazy
          SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
          all_optimization_steps 10 10
@@ -334,14 +328,13 @@ Compute
   | None => false
   end.
 
-(* LT(X, Y) with ctx when we know Y <= X *)
+(* GT(X, Y) with ctx when we know Y <= Y *)
 Compute
   let b1 := str2block "GT" in
   let b2 := str2block "POP POP PUSH1 0x0" in
-  let init_state := (parse_init_state "2") in
-  let cs := [[C_LE (C_VAR 0) (C_VAR 1)]] in
+  let init_state := (parse_init_state "2 [[v0 <= v1]]") in
   match init_state with
-  | Some (_,sst) =>
+  | Some (cs,sst) =>
       (evm_eq_block_chkr_lazy
          SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
          all_optimization_steps 10 10
@@ -354,15 +347,178 @@ Compute
 Compute
 let b1 := str2block "GT ISZERO" in
 let b2 := str2block "POP POP PUSH1 0x1" in
-let init_state := (parse_init_state "2") in
-let cs := [[C_LE (C_VAR 0) (C_VAR 1)]] in
+let init_state := (parse_init_state "2 [[v0 <= v1]]") in
 match init_state with
-| Some (_,sst) =>
+| Some (cs,sst) =>
     (evm_eq_block_chkr_lazy
        SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
        all_optimization_steps 10 10
        cs sst b1 b2)
 | None => false
 end.
+
+
+(* EQ(X, Y) with ctx *)
+Compute
+  let b1 := str2block "EQ" in
+  let b2 := str2block "POP POP PUSH1 0x1" in
+  let init_state := (parse_init_state "2 [[v1 = v0]]") in
+  match init_state with
+  | Some (cs,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+(* EQ(X, Y) with ctx when we know X < Y *)
+Compute
+  let b1 := str2block "EQ" in
+  let b2 := str2block "POP POP PUSH1 0x0" in
+  let init_state := (parse_init_state "2 [[v0 < v1]]") in
+  match init_state with
+  | Some (cs,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+  
+(* EQ(X, Y) with ctx when we know Y < X *)
+Compute
+  let b1 := str2block "EQ" in
+  let b2 := str2block "POP POP PUSH1 0x0" in
+  let init_state := (parse_init_state "2 [[v1 < v0]]") in
+  match init_state with
+  | Some (cs,sst) =>
+      (evm_eq_block_chkr_lazy
+         SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+         all_optimization_steps 10 10
+         cs sst b1 b2)
+  | None => false
+  end.
+
+(* EQ(X, Y) with ctx when we know X < Y *)
+Compute
+let b1 := str2block "EQ ISZERO" in
+let b2 := str2block "POP POP PUSH1 0x1" in
+let init_state := (parse_init_state "2 [[v0 < v1]]") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
+(* EVAL with EQ constants in constraints. MUST RETURN FALSE *)
+Compute
+let b1 := str2block "ADD" in
+let b2 := str2block "POP POP PUSH1 0x4" in
+let init_state := (parse_init_state "2 [[v0 = 2, v1 = 2]]") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
+(* EVAL with EQ constants in stack. MUST RETURN TRUE *)
+Eval cbv in
+let b1 := str2block "ADD" in
+let b2 := str2block "POP POP PUSH1 0x4" in
+let init_state := (parse_init_state "[0x2,0x2] [] [] [] []") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
+(* SUB(X,X) with EQ constants in constraints. *)
+Compute
+let b1 := str2block "SUB" in
+let b2 := str2block "POP POP PUSH1 0x0" in
+let init_state := (parse_init_state "2 [[v0=v1,v0<v1],[v0=v1,v1<v0]]") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
+(* DIV(X,X) with constants <> 0*)
+Eval cbv in
+let b1 := str2block "DIV" in
+let b2 := str2block "POP POP PUSH1 0x1" in
+let init_state := (parse_init_state "[0x2,0x2] [] [] [] []") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+(* DIV(X,X) with constants = 0*)
+Eval cbv in
+let b1 := str2block "DIV" in
+let b2 := str2block "POP POP PUSH1 0x0" in
+let init_state := (parse_init_state "[0x0,0x0] [] [] [] []") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
+(* DIV(X,0) with constraints *)
+Compute
+let b1 := str2block "DIV" in
+let b2 := str2block "POP POP PUSH1 0x0" in
+let init_state := (parse_init_state "2 [[v0=v1,v0=0]]") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
+(* DIV(X,x) with X > 0 in constraints *)
+Eval cbv in
+let b1 := str2block "DIV" in
+let b2 := str2block "POP POP PUSH1 0x1" in
+let init_state := (parse_init_state "2 [[v0=v1,0<v1]]") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => false
+end.
+
+
 
 End Tests.
