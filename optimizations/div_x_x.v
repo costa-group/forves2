@@ -65,6 +65,11 @@ Import ToolsTypes.
 Require Import List.
 Import ListNotations.
 
+(*
+From ReductionEffect Require Import PrintingEffect.
+From Coq Require Import Strings.String.
+*)
+
 
 Module Opt_div_x_x.
 

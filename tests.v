@@ -12,6 +12,9 @@ Import Program.
 Require Import FORVES2.block_equiv_checker.
 Import BlockEquivChecker.
 
+Require Import FORVES2.block_equiv_checker_dbg.
+Import BlockEquivCheckerDbg.
+
 Require Import FORVES2.symbolic_state.
 Import SymbolicState.
 
@@ -36,6 +39,13 @@ Import Constraints.
 From Coq Require Import Strings.String.
 
 From Coq Require Import Lists.List. Import ListNotations.
+
+(* Needed for print-debugging with Reduction Effects 
+   (https://github.com/coq-community/reduction-effects)
+   even if the print/print_id are in other files
+*)
+(* From ReductionEffect Require Import PrintingEffect. *)
+
 
 
 Module Tests.
@@ -517,6 +527,20 @@ match init_state with
        all_optimization_steps 10 10
        cs sst b1 b2)
 | None => false
+end.
+
+(* Testing debug *)
+Eval cbv in
+let b1 := str2block "DIV" in
+let b2 := str2block "POP POP PUSH1 0x0" in
+let init_state := (parse_init_state "2 [[v0=v1, 0<v1]]") in
+match init_state with
+| Some (cs,sst) =>
+    (evm_eq_block_chkr_lazy_dbg
+       SMemUpdater_Basic SStrgUpdater_Basic MLoadSolver_Basic SLoadSolver_Basic SStackValCmp_Basic SMemCmp_PO SStrgCmp_PO SHA3Cmp_Basic ImpChkr_Oct 
+       all_optimization_steps 10 10
+       cs sst b1 b2)
+| None => (false, empty_sst', empty_sst', "Unable to parse init state"%string)
 end.
 
 
