@@ -2,18 +2,18 @@
 -- X* means a list separated with comma, and can be empty
 -- N and i are a natural number (including 0)
 -- HEX is a hex number, representing a 256bit word: 0x...
--- Anythin in inside "" is a non-terminal symbol
+-- Anythin in inside "" is a terminal symbol
 
 
 OP => "<" | "<=" | "="
-LIT => N | "V"i | "V"i "+" N
+LIT => N | "v"i | "v"i "+" N
 
 CONS => LIT OP LIT
 CONJ => "[" CONS* "]"
 DISJ => "[" CONJ* "]"
 CTX  => DISJ
 
-STKVAR => HEX | Vi | Ei
+STKVAR => HEX | "v"i | "e"i
 
 STK => "[" STKVAR* "]"
 
