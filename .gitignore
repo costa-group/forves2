@@ -5,3 +5,8 @@
 *.aux
 *.cache
 
+ocaml_interface/checker.cmi
+ocaml_interface/checker.cmx
+ocaml_interface/checker.o
+ocaml_interface/main.cmx
+ocaml_interface/main.o
