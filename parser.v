@@ -513,7 +513,8 @@ Definition parse_sha3_cmp (s: string) :=
 
 Definition parse_imp_chkr (s: string) :=
   match s with
-  | "trivial"%string => Some ImpChkr_Trivial
+  | "dummy"%string => Some ImpChkr_Dummy
+  | "syntactic"%string => Some ImpChkr_Syntactic
   | "oct"%string => Some ImpChkr_Oct
   | _ => None
   end.

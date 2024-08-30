@@ -260,10 +260,11 @@ Definition inclusion_imp_checker := mk_imp_checker inclusion_conj_imp_checker.
 (*}}} End Inclusion implication checker *)
 
 
-(* 
-   just an operation that checks if the constraints are specifiable.
-   For now it simply returns true. 
-*)
+Program Definition dummy_imp_checker : imp_checker := {|
+  imp_checker_fun (cs : constraints) c := false
+|}.
+
+
 
 Record sat_checker : Type := 
   { sat_checker_fun : constraints -> bool 

@@ -1,4 +1,4 @@
-Require Import List.
+Require Import List. 
 Import ListNotations.
 Require Import bbv.Word.
 Require Import Nat. 
@@ -23,7 +23,8 @@ Module Context.
     }.
 
   Inductive available_imp_chkr :=
-  | ImpChkr_Trivial
+  | ImpChkr_Dummy
+  | ImpChkr_Syntactic
   | ImpChkr_Oct.
 
   Definition compute_n_iter_for_oct (cs : constraints) :=
@@ -31,7 +32,8 @@ Module Context.
   
   Definition get_impl_chkr (tag: available_imp_chkr) (cs: constraints) : imp_checker :=
     match tag with
-    | ImpChkr_Trivial => inclusion_imp_checker
+    | ImpChkr_Dummy => dummy_imp_checker
+    | ImpChkr_Syntactic => inclusion_imp_checker
     | ImpChkr_Oct => mk_imp_checker (ForvesIntegration.conj_trans_closure_checker (compute_n_iter_for_oct cs))
     end.
 
